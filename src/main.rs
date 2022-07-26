@@ -12,6 +12,7 @@ use nom::{
 };
 use std::{
     fmt, fs,
+    io::stdout,
     process::{self, Command},
 };
 
@@ -63,7 +64,7 @@ impl<'a> fmt::Display for Item<'a> {
                     "\n{}{}{}{}",
                     Attribute::Reset,
                     cursor::MoveToColumn(0),
-                    style::SetColors(Colors::new(Color::Black, Color::DarkGreen)),
+                    style::SetColors(Colors::new(Color::Black, Color::Green)),
                     file_content
                 )?;
             }
@@ -171,7 +172,9 @@ fn main() {
         ..Default::default()
     };
 
-    terminal::enable_raw_mode().expect("couldn't put terminal in raw mode");
+    crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
+        .expect("failed to enter alternate screen");
+    terminal::enable_raw_mode().expect("failed to put terminal in raw mode");
     print!("{}", cursor::Hide);
     loop {
         println!(
@@ -195,6 +198,8 @@ fn main() {
                 KeyCode::Tab => status.expand(),
                 KeyCode::Char('q') => {
                     terminal::disable_raw_mode().unwrap();
+                    crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
+                        .expect("failed to leave alternate screen");
                     print!("{}", cursor::Show);
                     process::exit(0);
                 }
