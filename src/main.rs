@@ -57,14 +57,14 @@ impl<'a> fmt::Display for Item<'a> {
                 let file_content: String = file_content
                     .lines()
                     .collect::<Vec<&str>>()
-                    .join(&format!("\n{}", cursor::MoveToColumn(0)));
+                    .join(&format!("\n{}+ ", cursor::MoveToColumn(0)));
 
                 write!(
                     f,
-                    "\n{}{}{}{}",
+                    "\n{}{}{}+ {}",
                     Attribute::Reset,
                     cursor::MoveToColumn(0),
-                    style::SetColors(Colors::new(Color::Black, Color::Green)),
+                    style::SetForegroundColor(Color::DarkGreen),
                     file_content
                 )?;
             }
@@ -95,6 +95,7 @@ impl<'a> Status<'a> {
         if self.cursor >= self.untracked.len() {
             index -= self.untracked.len();
             self.staged[index].expanded = !self.staged[index].expanded;
+            return;
         }
         self.untracked[index].expanded = !self.untracked[index].expanded;
     }
