@@ -44,11 +44,11 @@ impl<'a> fmt::Display for Item<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(
             f,
-            "{}   {} {}",
+            "{}{}{}",
             cursor::MoveToColumn(0),
             match self.expanded {
-                true => "v",
-                false => "-",
+                true => "⌄",
+                false => "›",
             },
             self.path,
         )?;
@@ -94,7 +94,12 @@ impl<'a> Status<'a> {
         let mut index = self.cursor;
         if self.cursor >= self.untracked.len() {
             index -= self.untracked.len();
-            self.staged[index].expanded = !self.staged[index].expanded;
+            if index >= self.unstaged.len() {
+                index -= self.unstaged.len();
+                self.staged[index].expanded = !self.staged[index].expanded;
+                return;
+            }
+            self.unstaged[index].expanded = !self.unstaged[index].expanded;
             return;
         }
         self.untracked[index].expanded = !self.untracked[index].expanded;
@@ -115,7 +120,13 @@ impl<'a> fmt::Display for Status<'a> {
             self.branch,
         )?;
 
-        write!(f, "{}Untracked files:\n", cursor::MoveToColumn(0))?;
+        write!(
+            f,
+            "{}{}Untracked files:{}\n",
+            cursor::MoveToColumn(0),
+            style::SetForegroundColor(Color::Yellow),
+            style::ResetColor
+        )?;
         for (index, path) in self.untracked.iter().enumerate() {
             if self.cursor == index {
                 write!(f, "{}", Attribute::Reverse)?;
@@ -129,7 +140,13 @@ impl<'a> fmt::Display for Status<'a> {
             )?;
         }
 
-        write!(f, "\n{}Changed files:\n", cursor::MoveToColumn(0))?;
+        write!(
+            f,
+            "\n{}{}Changed files:{}\n",
+            cursor::MoveToColumn(0),
+            style::SetForegroundColor(Color::Yellow),
+            style::ResetColor
+        )?;
         for (index, path) in self.unstaged.iter().enumerate() {
             if self.cursor == index + self.untracked.len() {
                 write!(f, "{}", Attribute::Reverse)?;
@@ -143,7 +160,13 @@ impl<'a> fmt::Display for Status<'a> {
             )?;
         }
 
-        write!(f, "\n{}Staged for commit:\n", cursor::MoveToColumn(0))?;
+        write!(
+            f,
+            "\n{}{}Staged for commit:{}\n",
+            cursor::MoveToColumn(0),
+            style::SetForegroundColor(Color::Yellow),
+            style::ResetColor
+        )?;
         for (index, path) in self.staged.iter().enumerate() {
             if self.cursor == index + self.untracked.len() + self.unstaged.len() {
                 write!(f, "{}", Attribute::Reverse)?;
@@ -164,11 +187,8 @@ impl<'a> fmt::Display for Status<'a> {
 fn main() {
     let mut status = Status {
         branch: "main",
-        untracked: vec![
-            Item::new(".gitignore"),
-            Item::new("Cargo.toml"),
-            Item::new("src/"),
-        ],
+        untracked: vec![Item::new(".gitignore"), Item::new("Cargo.toml")],
+        unstaged: vec![Item::new("src/main.rs")],
         staged: vec![Item::new("Cargo.lock")],
         ..Default::default()
     };
