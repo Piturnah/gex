@@ -1,15 +1,10 @@
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode},
-    style::{self, Attribute, Color, Colors},
+    style::{self, Attribute, Color},
     terminal::{self, ClearType},
 };
-use nom::{
-    bytes::complete::{tag, take_till},
-    character::is_newline,
-    error::Error,
-    IResult,
-};
+use nom::{bytes::complete::tag, IResult};
 use std::{
     fmt, fs,
     io::stdout,
@@ -74,7 +69,13 @@ impl fmt::Display for Item {
 }
 
 impl Status {
-    fn fetch() -> Self {
+    fn new() -> Self {
+        let mut status = Self::default();
+        status.fetch();
+        status
+    }
+
+    fn fetch(&mut self) {
         let output = Command::new("git")
             .arg("status")
             .output()
@@ -89,6 +90,7 @@ impl Status {
 
         let mut untracked = Vec::new();
         let mut staged = Vec::new();
+        let mut unstaged = Vec::new();
         while let Some(line) = lines.next() {
             if line == "Untracked files:" {
                 lines.next().unwrap(); // Skip message from git
@@ -111,30 +113,62 @@ impl Status {
                             .trim_start(),
                     ));
                 }
+            } else if line == "Changes not staged for commit:" {
+                lines.next().unwrap(); // Skip message from git
+                lines.next().unwrap();
+                'unstaged: while let Some(line) = lines.next() {
+                    if line == "" {
+                        break 'unstaged;
+                    }
+                    unstaged.push(Item::new(
+                        line.trim_start()
+                            .strip_prefix("modified:")
+                            .unwrap()
+                            .trim_start(),
+                    ));
+                }
             }
         }
 
-        Status {
-            branch: branch.to_string(),
-            untracked: untracked.try_into().unwrap(),
-            staged: staged.try_into().unwrap(),
-            ..Default::default()
-        }
+        self.branch = branch.to_string();
+        self.untracked = untracked;
+        self.staged = staged;
+        self.unstaged = unstaged;
     }
 
-    fn expand(&mut self) {
-        let mut index = self.cursor;
-        if self.cursor >= self.untracked.len() {
+    fn get_mut(&mut self, mut index: usize) -> &mut Item {
+        if index >= self.untracked.len() {
             index -= self.untracked.len();
             if index >= self.unstaged.len() {
                 index -= self.unstaged.len();
-                self.staged[index].expanded = !self.staged[index].expanded;
-                return;
+                return self.staged.get_mut(index).unwrap();
             }
-            self.unstaged[index].expanded = !self.unstaged[index].expanded;
-            return;
+            return self.unstaged.get_mut(index).unwrap();
         }
-        self.untracked[index].expanded = !self.untracked[index].expanded;
+        return self.untracked.get_mut(index).unwrap();
+    }
+
+    fn stage(&mut self) {
+        let item = self.get_mut(self.cursor);
+        Command::new("git")
+            .args(["add", &item.path])
+            .output()
+            .expect("failed to run `git add`");
+        self.fetch();
+    }
+
+    fn unstage(&mut self) {
+        let item = self.get_mut(self.cursor);
+        Command::new("git")
+            .args(["restore", "--staged", &item.path])
+            .output()
+            .expect("failed to run `git restore --staged`");
+        self.fetch();
+    }
+
+    fn expand(&mut self) {
+        let mut item = self.get_mut(self.cursor);
+        item.expanded = !item.expanded;
     }
 
     fn len(&self) -> usize {
@@ -217,15 +251,7 @@ impl fmt::Display for Status {
 }
 
 fn main() {
-    // let mut status = Status {
-    //     branch: "main",
-    //     untracked: vec![Item::new(".gitignore"), Item::new("Cargo.toml")],
-    //     unstaged: vec![Item::new("src/main.rs")],
-    //     staged: vec![Item::new("Cargo.lock")],
-    //     ..Default::default()
-    // };
-
-    let mut status = Status::fetch();
+    let mut status = Status::new();
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
         .expect("failed to enter alternate screen");
     terminal::enable_raw_mode().expect("failed to put terminal in raw mode");
@@ -249,12 +275,21 @@ fn main() {
                 KeyCode::Char('k') | KeyCode::Up => {
                     status.cursor = status.cursor.checked_sub(1).unwrap_or(0)
                 }
+                KeyCode::Char('s') => status.stage(),
                 KeyCode::Char('S') => {
                     Command::new("git")
                         .args(["add", "."])
                         .output()
                         .expect("couldn't run `git add .`");
-                    status = Status::fetch();
+                    status.fetch();
+                }
+                KeyCode::Char('u') => status.unstage(),
+                KeyCode::Char('U') => {
+                    Command::new("git")
+                        .arg("reset")
+                        .output()
+                        .expect("failed to run `git reset`");
+                    status.fetch();
                 }
                 KeyCode::Tab => status.expand(),
                 KeyCode::Char('q') => {
