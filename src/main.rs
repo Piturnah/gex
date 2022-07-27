@@ -181,18 +181,20 @@ impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(
             f,
-            "{}On branch {}\n\n",
+            "{}On branch {}\n",
             cursor::MoveToColumn(0),
             self.branch,
         )?;
 
-        write!(
-            f,
-            "{}{}Untracked files:{}\n",
-            cursor::MoveToColumn(0),
-            style::SetForegroundColor(Color::Yellow),
-            style::ResetColor
-        )?;
+        if self.untracked.len() > 0 {
+            write!(
+                f,
+                "\n{}{}Untracked files:{}\n",
+                cursor::MoveToColumn(0),
+                style::SetForegroundColor(Color::Yellow),
+                style::ResetColor
+            )?;
+        }
         for (index, path) in self.untracked.iter().enumerate() {
             if self.cursor == index {
                 write!(f, "{}", Attribute::Reverse)?;
@@ -206,13 +208,15 @@ impl fmt::Display for Status {
             )?;
         }
 
-        write!(
-            f,
-            "\n{}{}Changed files:{}\n",
-            cursor::MoveToColumn(0),
-            style::SetForegroundColor(Color::Yellow),
-            style::ResetColor
-        )?;
+        if self.unstaged.len() > 0 {
+            write!(
+                f,
+                "\n{}{}Changed files:{}\n",
+                cursor::MoveToColumn(0),
+                style::SetForegroundColor(Color::Yellow),
+                style::ResetColor
+            )?;
+        }
         for (index, path) in self.unstaged.iter().enumerate() {
             if self.cursor == index + self.untracked.len() {
                 write!(f, "{}", Attribute::Reverse)?;
@@ -226,13 +230,15 @@ impl fmt::Display for Status {
             )?;
         }
 
-        write!(
-            f,
-            "\n{}{}Staged for commit:{}\n",
-            cursor::MoveToColumn(0),
-            style::SetForegroundColor(Color::Yellow),
-            style::ResetColor
-        )?;
+        if self.staged.len() > 0 {
+            write!(
+                f,
+                "\n{}{}Staged for commit:{}\n",
+                cursor::MoveToColumn(0),
+                style::SetForegroundColor(Color::Yellow),
+                style::ResetColor
+            )?;
+        }
         for (index, path) in self.staged.iter().enumerate() {
             if self.cursor == index + self.untracked.len() + self.unstaged.len() {
                 write!(f, "{}", Attribute::Reverse)?;
