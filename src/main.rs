@@ -17,30 +17,30 @@ use std::{
 };
 
 #[derive(Debug, Default)]
-struct Status<'a> {
-    branch: &'a str,
-    untracked: Vec<Item<'a>>,
-    unstaged: Vec<Item<'a>>,
-    staged: Vec<Item<'a>>,
+struct Status {
+    branch: String,
+    untracked: Vec<Item>,
+    unstaged: Vec<Item>,
+    staged: Vec<Item>,
     cursor: usize,
 }
 
 #[derive(Debug, Default)]
-struct Item<'a> {
-    path: &'a str,
+struct Item {
+    path: String,
     expanded: bool,
 }
 
-impl<'a> Item<'a> {
-    fn new(path: &'a str) -> Self {
+impl Item {
+    fn new(path: &str) -> Self {
         Self {
-            path,
+            path: path.to_string(),
             expanded: false,
         }
     }
 }
 
-impl<'a> fmt::Display for Item<'a> {
+impl fmt::Display for Item {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(
             f,
@@ -53,7 +53,7 @@ impl<'a> fmt::Display for Item<'a> {
             self.path,
         )?;
         if self.expanded {
-            if let Ok(file_content) = fs::read_to_string(self.path) {
+            if let Ok(file_content) = fs::read_to_string(&self.path) {
                 let file_content: String = file_content
                     .lines()
                     .collect::<Vec<&str>>()
@@ -73,21 +73,53 @@ impl<'a> fmt::Display for Item<'a> {
     }
 }
 
-impl<'a> Status<'a> {
-    fn parse(input: &'a str) -> IResult<&str, Self> {
-        let branch_line = input
-            .lines()
-            .next()
-            .expect("not a valid `git status` output");
-        let (branch, _) = tag("On branch ")(branch_line)?;
+impl Status {
+    fn fetch() -> Self {
+        let output = Command::new("git")
+            .arg("status")
+            .output()
+            .expect("failed to execute `git status`");
 
-        Ok((
-            "",
-            Status {
-                branch,
-                ..Default::default()
-            },
-        ))
+        let input = std::str::from_utf8(&output.stdout).unwrap();
+
+        let mut lines = input.lines();
+        let branch_line = lines.next().expect("not a valid `git status` output");
+        let branch: IResult<&str, &str> = tag("On branch ")(branch_line);
+        let (branch, _) = branch.unwrap();
+
+        let mut untracked = Vec::new();
+        let mut staged = Vec::new();
+        while let Some(line) = lines.next() {
+            if line == "Untracked files:" {
+                lines.next().unwrap(); // Skip message from git
+                'untrackeds: while let Some(line) = lines.next() {
+                    if line == "" {
+                        break 'untrackeds;
+                    }
+                    untracked.push(Item::new(line.trim_start()));
+                }
+            } else if line == "Changes to be committed:" {
+                lines.next().unwrap(); // Skip message from git
+                'staged: while let Some(line) = lines.next() {
+                    if line == "" {
+                        break 'staged;
+                    }
+                    staged.push(Item::new(
+                        line.trim_start()
+                            .strip_prefix("modified:")
+                            .unwrap_or_else(|| line.trim_start().strip_prefix("new file:").unwrap())
+                            .trim_start(),
+                    ));
+                }
+            }
+        }
+
+        Status {
+            branch: branch.to_string(),
+            untracked: untracked.try_into().unwrap(),
+            staged: staged.try_into().unwrap(),
+            ..Default::default()
+        }
     }
 
     fn expand(&mut self) {
@@ -110,7 +142,7 @@ impl<'a> Status<'a> {
     }
 }
 
-impl<'a> fmt::Display for Status<'a> {
+impl fmt::Display for Status {
     // NOTE: Intended for use in raw mode, hence `writeln!` cannot be used.
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(
@@ -185,14 +217,15 @@ impl<'a> fmt::Display for Status<'a> {
 }
 
 fn main() {
-    let mut status = Status {
-        branch: "main",
-        untracked: vec![Item::new(".gitignore"), Item::new("Cargo.toml")],
-        unstaged: vec![Item::new("src/main.rs")],
-        staged: vec![Item::new("Cargo.lock")],
-        ..Default::default()
-    };
+    // let mut status = Status {
+    //     branch: "main",
+    //     untracked: vec![Item::new(".gitignore"), Item::new("Cargo.toml")],
+    //     unstaged: vec![Item::new("src/main.rs")],
+    //     staged: vec![Item::new("Cargo.lock")],
+    //     ..Default::default()
+    // };
 
+    let mut status = Status::fetch();
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
         .expect("failed to enter alternate screen");
     terminal::enable_raw_mode().expect("failed to put terminal in raw mode");
@@ -215,6 +248,13 @@ fn main() {
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
                     status.cursor = status.cursor.checked_sub(1).unwrap_or(0)
+                }
+                KeyCode::Char('S') => {
+                    Command::new("git")
+                        .args(["add", "."])
+                        .output()
+                        .expect("couldn't run `git add .`");
+                    status = Status::fetch();
                 }
                 KeyCode::Tab => status.expand(),
                 KeyCode::Char('q') => {
