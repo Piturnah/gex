@@ -26,17 +26,17 @@ struct Status {
 struct Item {
     path: String,
     expanded: bool,
-    diff: Vec<Diff>,
+    diff: Vec<Hunk>,
 }
 
 #[derive(Debug)]
-struct Diff {
+struct Hunk {
     diffs: Vec<String>,
     expanded: bool,
 }
 
 // TODO: Reorganise a bit
-impl Diff {
+impl Hunk {
     fn new(diffs: Vec<String>) -> Self {
         Self {
             diffs,
@@ -97,7 +97,7 @@ impl fmt::Display for Item {
     }
 }
 
-impl fmt::Display for Diff {
+impl fmt::Display for Hunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let mut outbuf = format!(
             "\n{}{}{}{}",
@@ -210,7 +210,7 @@ impl Status {
                     item.diff = diff
                         .iter()
                         .map(|d| {
-                            Diff::new(
+                            Hunk::new(
                                 d.to_owned()
                                     .iter()
                                     .map(|l| l.to_string())
@@ -231,7 +231,7 @@ impl Status {
                     item.diff = diff
                         .iter()
                         .map(|d| {
-                            Diff::new(
+                            Hunk::new(
                                 d.to_owned()
                                     .iter()
                                     .map(|l| l.to_string())

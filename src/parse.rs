@@ -9,7 +9,7 @@ pub fn parse_diff(input: &str) -> HashMap<&str, Vec<Vec<&str>>> {
         .split(|l| l.starts_with("diff"))
         .skip(1)
     {
-        diffs.insert(get_path(diff), get_changes(diff));
+        diffs.insert(get_path(diff), get_hunks(diff));
     }
     diffs
 }
@@ -25,14 +25,14 @@ fn get_path<'a>(diff: &[&'a str]) -> &'a str {
     path
 }
 
-fn get_changes<'a>(diff: &[&'a str]) -> Vec<Vec<&'a str>> {
-    let mut changes = Vec::new();
+fn get_hunks<'a>(diff: &[&'a str]) -> Vec<Vec<&'a str>> {
+    let mut hunks = Vec::new();
     for line in diff {
         if line.starts_with("@@") {
-            changes.push(vec![*line]);
-        } else if let Some(last_diff) = changes.last_mut() {
+            hunks.push(vec![*line]);
+        } else if let Some(last_diff) = hunks.last_mut() {
             last_diff.push(*line)
         }
     }
-    changes
+    hunks
 }
