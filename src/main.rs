@@ -167,11 +167,8 @@ impl Status {
             .expect("failed to run `git diff --cached`");
 
         let diff = std::str::from_utf8(&diff.stdout).unwrap();
-        let staged_diff = std::str::from_utf8(&staged_diff.stdout).unwrap();
-
-        let diffs = diff.to_string() + staged_diff;
-        let diffs = parse::parse_diff(&diffs);
-        for (path, diff) in diffs {
+        let diffs = parse::parse_diff(&diff);
+        'outer_unstaged: for (path, diff) in diffs {
             for mut item in &mut unstaged {
                 if item.path == path {
                     item.diff = diff
@@ -182,9 +179,15 @@ impl Status {
                                 .map(|l| l.to_string())
                                 .collect::<Vec<_>>()
                         })
-                        .collect::<Vec<_>>()
+                        .collect::<Vec<_>>();
+                    continue 'outer_unstaged;
                 }
             }
+        }
+
+        let staged_diff = std::str::from_utf8(&staged_diff.stdout).unwrap();
+        let diffs = parse::parse_diff(&staged_diff);
+        'outer_staged: for (path, diff) in diffs {
             for mut item in &mut staged {
                 if item.path == path {
                     item.diff = diff
@@ -195,7 +198,8 @@ impl Status {
                                 .map(|l| l.to_string())
                                 .collect::<Vec<_>>()
                         })
-                        .collect::<Vec<_>>()
+                        .collect::<Vec<_>>();
+                    continue 'outer_staged;
                 }
             }
         }
