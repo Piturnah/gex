@@ -26,7 +26,23 @@ struct Status {
 struct Item {
     path: String,
     expanded: bool,
-    diff: Vec<Vec<String>>,
+    diff: Vec<Diff>,
+}
+
+#[derive(Debug)]
+struct Diff {
+    diffs: Vec<String>,
+    expanded: bool,
+}
+
+// TODO: Reorganise a bit
+impl Diff {
+    fn new(diffs: Vec<String>) -> Self {
+        Self {
+            diffs,
+            expanded: false,
+        }
+    }
 }
 
 impl Item {
@@ -62,7 +78,7 @@ impl fmt::Display for Item {
 
                         write!(
                             f,
-                            "\n{}{}{}+ {}",
+                            "\n{}{}{}+{}",
                             Attribute::Reset,
                             cursor::MoveToColumn(0),
                             style::SetForegroundColor(Color::DarkGreen),
@@ -71,27 +87,47 @@ impl fmt::Display for Item {
                     }
                 }
                 false => {
-                    let mut outbuf = format!("{}", Attribute::Reset);
                     for diff in &self.diff {
-                        for line in diff {
-                            outbuf += &format!(
-                                "\n{}{}{}",
-                                cursor::MoveToColumn(0),
-                                match line.chars().nth(0) {
-                                    Some('+') => style::SetForegroundColor(Color::DarkGreen),
-                                    Some('-') => style::SetForegroundColor(Color::DarkRed),
-                                    Some('@') => style::SetForegroundColor(Color::Blue),
-                                    _ => style::SetForegroundColor(Color::Reset),
-                                },
-                                line
-                            );
-                        }
+                        write!(f, "{}{}", Attribute::Reset, diff)?;
                     }
-                    write!(f, "{}", outbuf)?;
                 }
             }
         }
         Ok(())
+    }
+}
+
+impl fmt::Display for Diff {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let mut outbuf = format!(
+            "\n{}{}{}{}",
+            cursor::MoveToColumn(0),
+            style::SetForegroundColor(Color::Blue),
+            match self.expanded {
+                true => "⌄",
+                false => "›",
+            },
+            self.diffs[0].replace(
+                " @@",
+                &format!(" @@{}", Attribute::Reset)
+            )
+        );
+
+        if self.expanded {
+            for line in self.diffs.iter().skip(1) {
+                outbuf += &format!(
+                    "\n{}{}{}",
+                    cursor::MoveToColumn(0),
+                    match line.chars().nth(0) {
+                        Some('+') => style::SetForegroundColor(Color::DarkGreen),
+                        Some('-') => style::SetForegroundColor(Color::DarkRed),
+                        _ => style::SetForegroundColor(Color::Reset),
+                    },
+                    line
+                );
+            }
+        }
+        write!(f, "{}", outbuf)
     }
 }
 
@@ -174,10 +210,12 @@ impl Status {
                     item.diff = diff
                         .iter()
                         .map(|d| {
-                            d.to_owned()
-                                .iter()
-                                .map(|l| l.to_string())
-                                .collect::<Vec<_>>()
+                            Diff::new(
+                                d.to_owned()
+                                    .iter()
+                                    .map(|l| l.to_string())
+                                    .collect::<Vec<_>>(),
+                            )
                         })
                         .collect::<Vec<_>>();
                     continue 'outer_unstaged;
@@ -193,10 +231,12 @@ impl Status {
                     item.diff = diff
                         .iter()
                         .map(|d| {
-                            d.to_owned()
-                                .iter()
-                                .map(|l| l.to_string())
-                                .collect::<Vec<_>>()
+                            Diff::new(
+                                d.to_owned()
+                                    .iter()
+                                    .map(|l| l.to_string())
+                                    .collect::<Vec<_>>(),
+                            )
                         })
                         .collect::<Vec<_>>();
                     continue 'outer_staged;
