@@ -408,7 +408,7 @@ fn main() {
                 }
                 KeyCode::Tab => status.expand(),
                 KeyCode::Char('r') => status.fetch(),
-                KeyCode::Char('q') => {
+                KeyCode::Char('q') | KeyCode::Esc => {
                     terminal::disable_raw_mode().unwrap();
                     crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                         .expect("failed to leave alternate screen");
