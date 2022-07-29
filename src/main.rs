@@ -11,6 +11,8 @@ use std::{
     process::{self, Command},
 };
 
+mod parse;
+
 #[derive(Debug, Default)]
 struct Status {
     branch: String,
@@ -24,6 +26,7 @@ struct Status {
 struct Item {
     path: String,
     expanded: bool,
+    diff: Vec<Vec<String>>,
 }
 
 impl Item {
@@ -31,6 +34,7 @@ impl Item {
         Self {
             path: path.to_string(),
             expanded: false,
+            diff: Vec::new(),
         }
     }
 }
@@ -48,20 +52,43 @@ impl fmt::Display for Item {
             self.path,
         )?;
         if self.expanded {
-            if let Ok(file_content) = fs::read_to_string(&self.path) {
-                let file_content: String = file_content
-                    .lines()
-                    .collect::<Vec<&str>>()
-                    .join(&format!("\n{}+ ", cursor::MoveToColumn(0)));
+            match self.diff.is_empty() {
+                true => {
+                    if let Ok(file_content) = fs::read_to_string(&self.path) {
+                        let file_content: String = file_content
+                            .lines()
+                            .collect::<Vec<&str>>()
+                            .join(&format!("\n{}+ ", cursor::MoveToColumn(0)));
 
-                write!(
-                    f,
-                    "\n{}{}{}+ {}",
-                    Attribute::Reset,
-                    cursor::MoveToColumn(0),
-                    style::SetForegroundColor(Color::DarkGreen),
-                    file_content
-                )?;
+                        write!(
+                            f,
+                            "\n{}{}{}+ {}",
+                            Attribute::Reset,
+                            cursor::MoveToColumn(0),
+                            style::SetForegroundColor(Color::DarkGreen),
+                            file_content
+                        )?;
+                    }
+                }
+                false => {
+                    let mut outbuf = format!("{}", Attribute::Reset);
+                    for diff in &self.diff {
+                        for line in diff {
+                            outbuf += &format!(
+                                "\n{}{}{}",
+                                cursor::MoveToColumn(0),
+                                match line.chars().nth(0) {
+                                    Some('+') => style::SetForegroundColor(Color::DarkGreen),
+                                    Some('-') => style::SetForegroundColor(Color::DarkRed),
+                                    Some('@') => style::SetForegroundColor(Color::Blue),
+                                    _ => style::SetForegroundColor(Color::Reset),
+                                },
+                                line
+                            );
+                        }
+                    }
+                    write!(f, "{}", outbuf)?;
+                }
             }
         }
         Ok(())
@@ -130,6 +157,49 @@ impl Status {
             }
         }
 
+        let diff = Command::new("git")
+            .arg("diff")
+            .output()
+            .expect("failed to run `git diff`");
+        let staged_diff = Command::new("git")
+            .args(["diff", "--cached"])
+            .output()
+            .expect("failed to run `git diff --cached`");
+
+        let diff = std::str::from_utf8(&diff.stdout).unwrap();
+        let staged_diff = std::str::from_utf8(&staged_diff.stdout).unwrap();
+
+        let diffs = diff.to_string() + staged_diff;
+        let diffs = parse::parse_diff(&diffs);
+        for (path, diff) in diffs {
+            for mut item in &mut unstaged {
+                if item.path == path {
+                    item.diff = diff
+                        .iter()
+                        .map(|d| {
+                            d.to_owned()
+                                .iter()
+                                .map(|l| l.to_string())
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>()
+                }
+            }
+            for mut item in &mut staged {
+                if item.path == path {
+                    item.diff = diff
+                        .iter()
+                        .map(|d| {
+                            d.to_owned()
+                                .iter()
+                                .map(|l| l.to_string())
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>()
+                }
+            }
+        }
+
         self.branch = branch.to_string();
         self.untracked = untracked;
         self.staged = staged;
@@ -179,12 +249,7 @@ impl Status {
 impl fmt::Display for Status {
     // NOTE: Intended for use in raw mode, hence `writeln!` cannot be used.
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "{}On branch {}\n",
-            cursor::MoveToColumn(0),
-            self.branch,
-        )?;
+        write!(f, "{}On branch {}\n", cursor::MoveToColumn(0), self.branch,)?;
 
         if self.untracked.len() > 0 {
             write!(
