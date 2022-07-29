@@ -367,6 +367,7 @@ fn main() {
                     status.fetch();
                 }
                 KeyCode::Tab => status.expand(),
+                KeyCode::Char('r') => status.fetch(),
                 KeyCode::Char('q') => {
                     terminal::disable_raw_mode().unwrap();
                     crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
