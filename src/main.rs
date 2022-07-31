@@ -53,6 +53,40 @@ impl Item {
             diff: Vec::new(),
         }
     }
+
+    fn len(&self) -> usize {
+        match self.expanded {
+            true => self.diff.len(),
+            false => 0,
+        }
+    }
+}
+
+trait Expand {
+    fn toggle_expand(&mut self);
+    fn expanded(&self) -> bool;
+
+}
+
+impl Expand for Item {
+    fn toggle_expand(&mut self) {
+        self.expanded = !self.expanded;
+    }
+
+    fn expanded(&self) -> bool {
+        self.expanded
+    }
+
+}
+
+impl Expand for Hunk {
+    fn toggle_expand(&mut self) {
+        self.expanded = !self.expanded;
+    }
+
+    fn expanded(&self) -> bool {
+        self.expanded
+    }
 }
 
 impl fmt::Display for Item {
@@ -87,8 +121,8 @@ impl fmt::Display for Item {
                     }
                 }
                 false => {
-                    for diff in &self.diff {
-                        write!(f, "{}{}", Attribute::Reset, diff)?;
+                    for hunk in &self.diff {
+                        write!(f, "{}{}", Attribute::Reset, hunk)?;
                     }
                 }
             }
@@ -107,10 +141,7 @@ impl fmt::Display for Hunk {
                 true => "⌄",
                 false => "›",
             },
-            self.diffs[0].replace(
-                " @@",
-                &format!(" @@{}", Attribute::Reset)
-            )
+            self.diffs[0].replace(" @@", &format!(" @@{}", Attribute::Reset))
         );
 
         if self.expanded {
@@ -304,7 +335,7 @@ impl fmt::Display for Status {
                 style::ResetColor
             )?;
         }
-        for (index, path) in self.untracked.iter().enumerate() {
+        for (index, item) in self.untracked.iter().enumerate() {
             if self.cursor == index {
                 write!(f, "{}", Attribute::Reverse)?;
             }
@@ -312,7 +343,7 @@ impl fmt::Display for Status {
                 f,
                 "{}    {}{}",
                 cursor::MoveToColumn(0),
-                path,
+                item,
                 Attribute::Reset
             )?;
         }
@@ -326,15 +357,24 @@ impl fmt::Display for Status {
                 style::ResetColor
             )?;
         }
-        for (index, path) in self.unstaged.iter().enumerate() {
-            if self.cursor == index + self.untracked.len() {
+        for (index, item) in self.unstaged.iter().enumerate() {
+            if self.cursor
+                == index
+                    + self.untracked.len()
+                    + self
+                        .unstaged
+                        .iter()
+                        .take(index)
+                        .map(|item| item.len())
+                        .sum::<usize>()
+            {
                 write!(f, "{}", Attribute::Reverse)?;
             }
             writeln!(
                 f,
                 "{}    {}{}",
                 cursor::MoveToColumn(0),
-                path,
+                item,
                 Attribute::Reset
             )?;
         }
@@ -348,7 +388,7 @@ impl fmt::Display for Status {
                 style::ResetColor
             )?;
         }
-        for (index, path) in self.staged.iter().enumerate() {
+        for (index, item) in self.staged.iter().enumerate() {
             if self.cursor == index + self.untracked.len() + self.unstaged.len() {
                 write!(f, "{}", Attribute::Reverse)?;
             }
@@ -356,7 +396,7 @@ impl fmt::Display for Status {
                 f,
                 "{}    {}{}\n",
                 cursor::MoveToColumn(0),
-                path,
+                item,
                 Attribute::Reset
             )?;
         }
@@ -383,9 +423,9 @@ fn main() {
             Event::Key(event) => match event.code {
                 KeyCode::Char('j') | KeyCode::Down => {
                     status.cursor += 1;
-                    if status.cursor >= status.len() {
-                        status.cursor = status.len() - 1;
-                    }
+                    //if status.cursor >= status.len() {
+                    //    status.cursor = status.len() - 1;
+                    //}
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
                     status.cursor = status.cursor.checked_sub(1).unwrap_or(0)
