@@ -48,6 +48,7 @@ $ gex
 
 | Key                           | Action   |
 | ----------------------------- | -------- |
+| <kbd>r</kbd>                  | refresh  |
 | <kbd>q</kbd> / <kbd>Esc</kbd> | quit gex |
 
 ## Contributing
