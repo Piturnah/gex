@@ -421,9 +421,9 @@ fn main() {
             Event::Key(event) => match event.code {
                 KeyCode::Char('j') | KeyCode::Down => {
                     status.cursor += 1;
-                    //if status.cursor >= status.len() {
-                    //    status.cursor = status.len() - 1;
-                    //}
+                    if status.cursor >= status.len() {
+                        status.cursor = status.len() - 1;
+                    }
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
                     status.cursor = status.cursor.checked_sub(1).unwrap_or(0)
