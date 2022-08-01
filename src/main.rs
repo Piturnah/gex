@@ -8,7 +8,7 @@ use nom::{bytes::complete::tag, IResult};
 use std::{
     fmt, fs,
     io::stdout,
-    process::{self, Command},
+    process::{self, Command, Stdio},
 };
 
 mod parse;
@@ -40,7 +40,7 @@ impl Hunk {
     fn new(diffs: Vec<String>) -> Self {
         Self {
             diffs,
-            expanded: false,
+            expanded: true,
         }
     }
 }
@@ -65,7 +65,6 @@ impl File {
 trait Expand {
     fn toggle_expand(&mut self);
     fn expanded(&self) -> bool;
-
 }
 
 impl Expand for File {
@@ -76,7 +75,6 @@ impl Expand for File {
     fn expanded(&self) -> bool {
         self.expanded
     }
-
 }
 
 impl Expand for Hunk {
@@ -447,12 +445,29 @@ fn main() {
                     status.fetch();
                 }
                 KeyCode::Tab => status.expand(),
+                KeyCode::Char('c') => {
+                    crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
+                        .expect("failed to leave alternate screen");
+                    Command::new("git")
+                        .arg("commit")
+                        .stdout(Stdio::inherit())
+                        .stdin(Stdio::inherit())
+                        .stderr(Stdio::inherit())
+                        .output()
+                        .expect("failed to run `git commit`");
+                    crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
+                        .expect("failed to enter alternate screen");
+                }
                 KeyCode::Char('r') => status.fetch(),
                 KeyCode::Char('q') | KeyCode::Esc => {
                     terminal::disable_raw_mode().unwrap();
-                    crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
-                        .expect("failed to leave alternate screen");
-                    print!("{}", cursor::Show);
+                    crossterm::execute!(
+                        stdout(),
+                        terminal::LeaveAlternateScreen,
+                        cursor::Show,
+                        cursor::MoveToColumn(0)
+                    )
+                    .expect("failed to leave alternate screen");
                     process::exit(0);
                 }
                 _ => {}
