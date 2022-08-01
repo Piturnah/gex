@@ -16,14 +16,14 @@ mod parse;
 #[derive(Debug, Default)]
 struct Status {
     branch: String,
-    untracked: Vec<Item>,
-    unstaged: Vec<Item>,
-    staged: Vec<Item>,
+    untracked: Vec<File>,
+    unstaged: Vec<File>,
+    staged: Vec<File>,
     cursor: usize,
 }
 
 #[derive(Debug, Default)]
-struct Item {
+struct File {
     path: String,
     expanded: bool,
     diff: Vec<Hunk>,
@@ -45,7 +45,7 @@ impl Hunk {
     }
 }
 
-impl Item {
+impl File {
     fn new(path: &str) -> Self {
         Self {
             path: path.to_string(),
@@ -68,7 +68,7 @@ trait Expand {
 
 }
 
-impl Expand for Item {
+impl Expand for File {
     fn toggle_expand(&mut self) {
         self.expanded = !self.expanded;
     }
@@ -89,7 +89,7 @@ impl Expand for Hunk {
     }
 }
 
-impl fmt::Display for Item {
+impl fmt::Display for File {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(
             f,
@@ -192,7 +192,7 @@ impl Status {
                     if line == "" {
                         break 'untrackeds;
                     }
-                    untracked.push(Item::new(line.trim_start()));
+                    untracked.push(File::new(line.trim_start()));
                 }
             } else if line == "Changes to be committed:" {
                 lines.next().unwrap(); // Skip message from git
@@ -200,7 +200,7 @@ impl Status {
                     if line == "" {
                         break 'staged;
                     }
-                    staged.push(Item::new(
+                    staged.push(File::new(
                         line.trim_start()
                             .strip_prefix("modified:")
                             .unwrap_or_else(|| line.trim_start().strip_prefix("new file:").unwrap())
@@ -214,7 +214,7 @@ impl Status {
                     if line == "" {
                         break 'unstaged;
                     }
-                    unstaged.push(Item::new(
+                    unstaged.push(File::new(
                         line.trim_start()
                             .strip_prefix("modified:")
                             .unwrap()
@@ -236,9 +236,9 @@ impl Status {
         let diff = std::str::from_utf8(&diff.stdout).unwrap();
         let diffs = parse::parse_diff(&diff);
         'outer_unstaged: for (path, diff) in diffs {
-            for mut item in &mut unstaged {
-                if item.path == path {
-                    item.diff = diff
+            for mut file in &mut unstaged {
+                if file.path == path {
+                    file.diff = diff
                         .iter()
                         .map(|d| {
                             Hunk::new(
@@ -257,9 +257,9 @@ impl Status {
         let staged_diff = std::str::from_utf8(&staged_diff.stdout).unwrap();
         let diffs = parse::parse_diff(&staged_diff);
         'outer_staged: for (path, diff) in diffs {
-            for mut item in &mut staged {
-                if item.path == path {
-                    item.diff = diff
+            for mut file in &mut staged {
+                if file.path == path {
+                    file.diff = diff
                         .iter()
                         .map(|d| {
                             Hunk::new(
@@ -281,7 +281,7 @@ impl Status {
         self.unstaged = unstaged;
     }
 
-    fn get_mut(&mut self, mut index: usize) -> &mut Item {
+    fn get_mut(&mut self, mut index: usize) -> &mut File {
         if index >= self.untracked.len() {
             index -= self.untracked.len();
             if index >= self.unstaged.len() {
@@ -294,26 +294,26 @@ impl Status {
     }
 
     fn stage(&mut self) {
-        let item = self.get_mut(self.cursor);
+        let file = self.get_mut(self.cursor);
         Command::new("git")
-            .args(["add", &item.path])
+            .args(["add", &file.path])
             .output()
             .expect("failed to run `git add`");
         self.fetch();
     }
 
     fn unstage(&mut self) {
-        let item = self.get_mut(self.cursor);
+        let file = self.get_mut(self.cursor);
         Command::new("git")
-            .args(["restore", "--staged", &item.path])
+            .args(["restore", "--staged", &file.path])
             .output()
             .expect("failed to run `git restore --staged`");
         self.fetch();
     }
 
     fn expand(&mut self) {
-        let mut item = self.get_mut(self.cursor);
-        item.expanded = !item.expanded;
+        let mut file = self.get_mut(self.cursor);
+        file.expanded = !file.expanded;
     }
 
     fn len(&self) -> usize {
@@ -335,7 +335,7 @@ impl fmt::Display for Status {
                 style::ResetColor
             )?;
         }
-        for (index, item) in self.untracked.iter().enumerate() {
+        for (index, file) in self.untracked.iter().enumerate() {
             if self.cursor == index {
                 write!(f, "{}", Attribute::Reverse)?;
             }
@@ -343,7 +343,7 @@ impl fmt::Display for Status {
                 f,
                 "{}    {}{}",
                 cursor::MoveToColumn(0),
-                item,
+                file,
                 Attribute::Reset
             )?;
         }
@@ -357,7 +357,7 @@ impl fmt::Display for Status {
                 style::ResetColor
             )?;
         }
-        for (index, item) in self.unstaged.iter().enumerate() {
+        for (index, file) in self.unstaged.iter().enumerate() {
             if self.cursor
                 == index
                     + self.untracked.len()
@@ -365,7 +365,7 @@ impl fmt::Display for Status {
                         .unstaged
                         .iter()
                         .take(index)
-                        .map(|item| item.len())
+                        .map(|file| file.len())
                         .sum::<usize>()
             {
                 write!(f, "{}", Attribute::Reverse)?;
@@ -374,7 +374,7 @@ impl fmt::Display for Status {
                 f,
                 "{}    {}{}",
                 cursor::MoveToColumn(0),
-                item,
+                file,
                 Attribute::Reset
             )?;
         }
@@ -388,7 +388,7 @@ impl fmt::Display for Status {
                 style::ResetColor
             )?;
         }
-        for (index, item) in self.staged.iter().enumerate() {
+        for (index, file) in self.staged.iter().enumerate() {
             if self.cursor == index + self.untracked.len() + self.unstaged.len() {
                 write!(f, "{}", Attribute::Reverse)?;
             }
@@ -396,7 +396,7 @@ impl fmt::Display for Status {
                 f,
                 "{}    {}{}\n",
                 cursor::MoveToColumn(0),
-                item,
+                file,
                 Attribute::Reset
             )?;
         }
