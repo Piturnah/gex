@@ -455,6 +455,7 @@ fn main() {
                         .stderr(Stdio::inherit())
                         .output()
                         .expect("failed to run `git commit`");
+                    status.fetch();
                     crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                         .expect("failed to enter alternate screen");
                 }
