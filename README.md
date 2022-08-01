@@ -5,9 +5,16 @@ Git workflow improvement CLI tool inspired by [Magit](https://github.com/magit/m
 Primarily, this is a personal project since I recently switched to Neovim from Emacs and miss the simplicity and efficiency of using Magit. However, I do have some general aims, which are subject to change:
 
 - [x] Simple - uncluttered UI.
-- [x] Intuitive - it should be easy to learn to use `gex`.
-- [ ] Configurable - certain preferences in `gex` should be configurable to suit your own workflow.
-- [ ] Comprehensive - you should be able to use `gex` to do everything you can do in `git`.
+- [x] Intuitive - it should be easy to learn to use gex.
+- [ ] Configurable - certain preferences in gex should be configurable to suit your own workflow.
+- [ ] Comprehensive - you should be able to use gex to do everything you can do in git.
+
+## Installation
+In the future I may publish this crate as a binary to [Crates.io](https://crates.io/). For now you can either install from source, or you can use cargo:
+
+```console
+$ cargo install https://github.com/Piturnah/gex
+```
 
 ## Usage
 
@@ -42,3 +49,7 @@ $ gex
 | Key                           | Action   |
 | ----------------------------- | -------- |
 | <kbd>q</kbd> / <kbd>Esc</kbd> | quit gex |
+
+## Contributing
+
+If you want to contribute to gex, thank you so much! If you find a bug or want a new feature, please open an [issue](https://github.com/Piturnah/gex/issues) or submit a PR! I am happy to review and merge PRs.
