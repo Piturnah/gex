@@ -13,7 +13,7 @@ Primarily, this is a personal project since I recently switched to Neovim from E
 In the future I may publish this crate as a binary to [Crates.io](https://crates.io/). For now you can either install from source, or you can use cargo:
 
 ```console
-$ cargo install https://github.com/Piturnah/gex
+$ cargo install --git https://github.com/Piturnah/gex
 ```
 
 ## Usage
