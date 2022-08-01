@@ -18,7 +18,7 @@ $ cargo install --git https://github.com/Piturnah/gex
 
 ## Usage
 
-To enter `gex`, simply type `gex` in console.
+To enter gex, simply type `gex` in console.
 
 ```console
 $ gex
