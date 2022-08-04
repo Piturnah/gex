@@ -16,14 +16,15 @@ mod parse;
 #[derive(Debug, Default)]
 struct Status {
     branch: String,
-    untracked: Vec<File>,
-    unstaged: Vec<File>,
-    staged: Vec<File>,
+    diffs: Vec<FileDiff>,
+    count_untracked: usize,
+    count_unstaged: usize,
+    count_staged: usize,
     cursor: usize,
 }
 
 #[derive(Debug, Default)]
-struct File {
+struct FileDiff {
     path: String,
     expanded: bool,
     diff: Vec<Hunk>,
@@ -45,7 +46,7 @@ impl Hunk {
     }
 }
 
-impl File {
+impl FileDiff {
     fn new(path: &str) -> Self {
         Self {
             path: path.to_string(),
@@ -89,7 +90,7 @@ trait Expand {
     fn expanded(&self) -> bool;
 }
 
-impl Expand for File {
+impl Expand for FileDiff {
     fn toggle_expand(&mut self) {
         self.expanded = !self.expanded;
     }
@@ -109,7 +110,7 @@ impl Expand for Hunk {
     }
 }
 
-impl fmt::Display for File {
+impl fmt::Display for FileDiff {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(
             f,
@@ -216,7 +217,7 @@ impl Status {
                     if line == "" {
                         break 'untrackeds;
                     }
-                    untracked.push(File::new(line.trim_start()));
+                    untracked.push(FileDiff::new(line.trim_start()));
                 }
             } else if line == "Changes to be committed:" {
                 lines.next().unwrap(); // Skip message from git
@@ -224,7 +225,7 @@ impl Status {
                     if line == "" {
                         break 'staged;
                     }
-                    staged.push(File::new(
+                    staged.push(FileDiff::new(
                         line.trim_start()
                             .strip_prefix("modified:")
                             .unwrap_or_else(|| line.trim_start().strip_prefix("new file:").unwrap())
@@ -238,7 +239,7 @@ impl Status {
                     if line == "" {
                         break 'unstaged;
                     }
-                    unstaged.push(File::new(
+                    unstaged.push(FileDiff::new(
                         line.trim_start()
                             .strip_prefix("modified:")
                             .unwrap()
@@ -300,25 +301,17 @@ impl Status {
         }
 
         self.branch = branch.to_string();
-        self.untracked = untracked;
-        self.staged = staged;
-        self.unstaged = unstaged;
-    }
+        self.count_untracked = untracked.len();
+        self.count_staged = staged.len();
+        self.count_unstaged = unstaged.len();
 
-    fn get_mut(&mut self, mut index: usize) -> &mut File {
-        if index >= self.untracked.len() {
-            index -= self.untracked.len();
-            if index >= self.unstaged.len() {
-                index -= self.unstaged.len();
-                return self.staged.get_mut(index).unwrap();
-            }
-            return self.unstaged.get_mut(index).unwrap();
-        }
-        return self.untracked.get_mut(index).unwrap();
+        self.diffs = untracked;
+        self.diffs.append(&mut unstaged);
+        self.diffs.append(&mut staged);
     }
 
     fn stage(&mut self) {
-        let file = self.get_mut(self.cursor);
+        let file = self.diffs.get_mut(self.cursor).unwrap();
         Command::new("git")
             .args(["add", &file.path])
             .output()
@@ -327,7 +320,7 @@ impl Status {
     }
 
     fn unstage(&mut self) {
-        let file = self.get_mut(self.cursor);
+        let file = self.diffs.get_mut(self.cursor).unwrap();
         Command::new("git")
             .args(["restore", "--staged", &file.path])
             .output()
@@ -336,7 +329,7 @@ impl Status {
     }
 
     fn expand(&mut self) {
-        let mut file = self.get_mut(self.cursor);
+        let mut file = self.diffs.get_mut(self.cursor).unwrap();
         if file.cursor == 0 {
             file.expanded = !file.expanded;
         } else {
@@ -344,46 +337,26 @@ impl Status {
         }
     }
 
-    fn len(&self) -> usize {
-        self.untracked.len() + self.unstaged.len() + self.staged.len()
-    }
-
     fn up(&mut self) {
-        if self.cursor >= self.untracked.len() {
-            let index = self.cursor - self.untracked.len();
-            // need to handle case that it's in the `staged` (remove call to unwrap)
-            let file = self.unstaged.get_mut(index).unwrap();
-            if file.up().is_err() {
-                match self.cursor.checked_sub(1) {
-                    Some(v) => {
-                        self.cursor = v;
-                        if let Some(i) = self.cursor.checked_sub(self.untracked.len()) {
-                            let _ = self.unstaged[i].up();
-                        }
-                    }
-                    None => self.cursor = 0,
+        let file = self.diffs.get_mut(self.cursor).unwrap();
+        if file.up().is_err() {
+            match self.cursor.checked_sub(1) {
+                Some(v) => {
+                    self.cursor = v;
+                    let _ = self.diffs[self.cursor].up();
                 }
+                None => self.cursor = 0,
             }
-        } else {
-            self.cursor = self.cursor.checked_sub(1).unwrap_or(0);
         }
     }
 
     fn down(&mut self) {
-        if self.cursor >= self.untracked.len() {
-            let index = self.cursor - self.untracked.len();
-            // need to handle case that it's in the `staged` (remove call to unwrap)
-            let file = self.unstaged.get_mut(index).unwrap();
-            if file.down().is_err() {
-                self.cursor += 1;
-                if self.cursor >= self.len() {
-                    self.cursor = self.len() - 1;
-                }
-            }
-        } else {
+        let file = self.diffs.get_mut(self.cursor).unwrap();
+        if file.down().is_err() {
             self.cursor += 1;
-            if self.cursor >= self.len() {
-                self.cursor = self.len() - 1;
+            // TODO bugs
+            if self.cursor >= self.diffs.len() {
+                self.cursor = self.diffs.len() - 1;
             }
         }
     }
@@ -394,66 +367,41 @@ impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}On branch {}\n", cursor::MoveToColumn(0), self.branch,)?;
 
-        if self.untracked.len() > 0 {
-            write!(
-                f,
-                "\n{}{}Untracked files:{}\n",
-                cursor::MoveToColumn(0),
-                style::SetForegroundColor(Color::Yellow),
-                style::ResetColor
-            )?;
-        }
-        for (index, file) in self.untracked.iter().enumerate() {
-            if self.cursor == index {
+        for (index, file) in self.diffs.iter().enumerate() {
+            if index == 0 {
+                write!(
+                    f,
+                    "\n{}{}Untracked files:{}\n",
+                    cursor::MoveToColumn(0),
+                    style::SetForegroundColor(Color::Yellow),
+                    style::ResetColor
+                )?;
+            }
+            if index == self.count_untracked {
+                write!(
+                    f,
+                    "\n{}{}Unstaged files:{}\n",
+                    cursor::MoveToColumn(0),
+                    style::SetForegroundColor(Color::Yellow),
+                    style::ResetColor
+                )?;
+            }
+            if index == self.count_untracked + self.count_unstaged {
+                write!(
+                    f,
+                    "\n{}{}Staged files:{}\n",
+                    cursor::MoveToColumn(0),
+                    style::SetForegroundColor(Color::Yellow),
+                    style::ResetColor
+                )?;
+            }
+
+            if file.cursor == 0 && self.cursor == index {
                 write!(f, "{}", Attribute::Reverse)?;
             }
             writeln!(
                 f,
                 "{}    {}{}",
-                cursor::MoveToColumn(0),
-                file,
-                Attribute::Reset
-            )?;
-        }
-
-        if self.unstaged.len() > 0 {
-            write!(
-                f,
-                "\n{}{}Changed files:{}\n",
-                cursor::MoveToColumn(0),
-                style::SetForegroundColor(Color::Yellow),
-                style::ResetColor
-            )?;
-        }
-        for (index, file) in self.unstaged.iter().enumerate() {
-            if file.cursor == 0 && self.cursor == index + self.untracked.len() {
-                write!(f, "{}", Attribute::Reverse)?;
-            }
-            writeln!(
-                f,
-                "{}    {}{}",
-                cursor::MoveToColumn(0),
-                file,
-                Attribute::Reset
-            )?;
-        }
-
-        if self.staged.len() > 0 {
-            write!(
-                f,
-                "\n{}{}Staged for commit:{}\n",
-                cursor::MoveToColumn(0),
-                style::SetForegroundColor(Color::Yellow),
-                style::ResetColor
-            )?;
-        }
-        for (index, file) in self.staged.iter().enumerate() {
-            if self.cursor == index + self.untracked.len() + self.unstaged.len() {
-                write!(f, "{}", Attribute::Reverse)?;
-            }
-            write!(
-                f,
-                "{}    {}{}\n",
                 cursor::MoveToColumn(0),
                 file,
                 Attribute::Reset
