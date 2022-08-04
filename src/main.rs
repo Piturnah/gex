@@ -27,6 +27,7 @@ struct File {
     path: String,
     expanded: bool,
     diff: Vec<Hunk>,
+    cursor: usize,
 }
 
 #[derive(Debug)]
@@ -35,12 +36,11 @@ struct Hunk {
     expanded: bool,
 }
 
-// TODO: Reorganise a bit
 impl Hunk {
     fn new(diffs: Vec<String>) -> Self {
         Self {
             diffs,
-            expanded: true,
+            expanded: false,
         }
     }
 }
@@ -51,13 +51,35 @@ impl File {
             path: path.to_string(),
             expanded: false,
             diff: Vec::new(),
+            cursor: 0,
         }
+    }
+
+    /// Fails on the case that we are already on the first hunk
+    fn up(&mut self) -> Result<(), ()> {
+        match self.cursor.checked_sub(1) {
+            Some(val) => {
+                self.cursor = val;
+                return Ok(());
+            }
+            None => return Err(()),
+        }
+    }
+
+    /// Fails on the case that we are already on the final hunk
+    fn down(&mut self) -> Result<(), ()> {
+        self.cursor += 1;
+        if self.cursor >= self.len() {
+            return Err(());
+        }
+
+        Ok(())
     }
 
     fn len(&self) -> usize {
         match self.expanded {
-            true => self.diff.len(),
-            false => 0,
+            true => self.diff.len() + 1,
+            false => 1,
         }
     }
 }
@@ -119,8 +141,12 @@ impl fmt::Display for File {
                     }
                 }
                 false => {
-                    for hunk in &self.diff {
-                        write!(f, "{}{}", Attribute::Reset, hunk)?;
+                    for (i, hunk) in self.diff.iter().enumerate() {
+                        if i + 1 == self.cursor {
+                            write!(f, "{}{}{}", Attribute::Reset, Attribute::Reverse, hunk)?;
+                        } else {
+                            write!(f, "{}{}", Attribute::Reset, hunk)?;
+                        }
                     }
                 }
             }
@@ -311,11 +337,55 @@ impl Status {
 
     fn expand(&mut self) {
         let mut file = self.get_mut(self.cursor);
-        file.expanded = !file.expanded;
+        if file.cursor == 0 {
+            file.expanded = !file.expanded;
+        } else {
+            file.diff[file.cursor - 1].expanded = !file.diff[file.cursor - 1].expanded;
+        }
     }
 
     fn len(&self) -> usize {
         self.untracked.len() + self.unstaged.len() + self.staged.len()
+    }
+
+    fn up(&mut self) {
+        if self.cursor >= self.untracked.len() {
+            let index = self.cursor - self.untracked.len();
+            // need to handle case that it's in the `staged` (remove call to unwrap)
+            let file = self.unstaged.get_mut(index).unwrap();
+            if file.up().is_err() {
+                match self.cursor.checked_sub(1) {
+                    Some(v) => {
+                        self.cursor = v;
+                        if let Some(i) = self.cursor.checked_sub(self.untracked.len()) {
+                            let _ = self.unstaged[i].up();
+                        }
+                    }
+                    None => self.cursor = 0,
+                }
+            }
+        } else {
+            self.cursor = self.cursor.checked_sub(1).unwrap_or(0);
+        }
+    }
+
+    fn down(&mut self) {
+        if self.cursor >= self.untracked.len() {
+            let index = self.cursor - self.untracked.len();
+            // need to handle case that it's in the `staged` (remove call to unwrap)
+            let file = self.unstaged.get_mut(index).unwrap();
+            if file.down().is_err() {
+                self.cursor += 1;
+                if self.cursor >= self.len() {
+                    self.cursor = self.len() - 1;
+                }
+            }
+        } else {
+            self.cursor += 1;
+            if self.cursor >= self.len() {
+                self.cursor = self.len() - 1;
+            }
+        }
     }
 }
 
@@ -356,16 +426,7 @@ impl fmt::Display for Status {
             )?;
         }
         for (index, file) in self.unstaged.iter().enumerate() {
-            if self.cursor
-                == index
-                    + self.untracked.len()
-                    + self
-                        .unstaged
-                        .iter()
-                        .take(index)
-                        .map(|file| file.len())
-                        .sum::<usize>()
-            {
+            if file.cursor == 0 && self.cursor == index + self.untracked.len() {
                 write!(f, "{}", Attribute::Reverse)?;
             }
             writeln!(
@@ -419,15 +480,8 @@ fn main() {
         );
         match event::read().unwrap() {
             Event::Key(event) => match event.code {
-                KeyCode::Char('j') | KeyCode::Down => {
-                    status.cursor += 1;
-                    if status.cursor >= status.len() {
-                        status.cursor = status.len() - 1;
-                    }
-                }
-                KeyCode::Char('k') | KeyCode::Up => {
-                    status.cursor = status.cursor.checked_sub(1).unwrap_or(0)
-                }
+                KeyCode::Char('j') | KeyCode::Down => status.down(),
+                KeyCode::Char('k') | KeyCode::Up => status.up(),
                 KeyCode::Char('s') => status.stage(),
                 KeyCode::Char('S') => {
                     Command::new("git")
