@@ -399,7 +399,7 @@ impl fmt::Display for Status {
         write!(f, "{}On branch {}\n", cursor::MoveToColumn(0), self.branch,)?;
 
         for (index, file) in self.diffs.iter().enumerate() {
-            if index == 0 {
+            if index == 0 && self.count_untracked != 0 {
                 write!(
                     f,
                     "\n{}{}Untracked files:{}\n",
@@ -408,7 +408,7 @@ impl fmt::Display for Status {
                     style::ResetColor
                 )?;
             }
-            if index == self.count_untracked {
+            if index == self.count_untracked && self.count_unstaged != 0 {
                 write!(
                     f,
                     "\n{}{}Unstaged files:{}\n",
