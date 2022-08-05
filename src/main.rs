@@ -308,6 +308,10 @@ impl Status {
         self.diffs = untracked;
         self.diffs.append(&mut unstaged);
         self.diffs.append(&mut staged);
+
+        if self.diffs.len() > 0 && self.cursor >= self.diffs.len() {
+            self.cursor = self.diffs.len() - 1;
+        }
     }
 
     fn stage(&mut self) {
