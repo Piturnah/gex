@@ -354,9 +354,9 @@ impl Status {
         let file = self.diffs.get_mut(self.cursor).unwrap();
         if file.down().is_err() {
             self.cursor += 1;
-            // TODO bugs
             if self.cursor >= self.diffs.len() {
                 self.cursor = self.diffs.len() - 1;
+                self.up();
             }
         }
     }
