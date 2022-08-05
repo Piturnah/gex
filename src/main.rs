@@ -7,7 +7,7 @@ use crossterm::{
 use nom::{bytes::complete::tag, IResult};
 use std::{
     fmt, fs,
-    io::stdout,
+    io::{stdout, Write},
     process::{self, Command, Stdio},
 };
 
@@ -314,22 +314,49 @@ impl Status {
         }
     }
 
-    fn stage(&mut self) {
+    fn stage_or_unstage(&mut self, command: &str) {
         let file = self.diffs.get_mut(self.cursor).unwrap();
-        Command::new("git")
-            .args(["add", &file.path])
-            .output()
-            .expect("failed to run `git add`");
+        match file.cursor {
+            0 => {
+                Command::new("git")
+                    .args([command, &file.path])
+                    .output()
+                    .expect(&format!("failed to run `git {}`", command));
+            }
+            i => {
+                let mut patch = Command::new("git")
+                    .args([command, "-p", &file.path])
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .spawn()
+                    .expect("failed to spawn interactive git process");
+
+                let mut stdin = patch.stdin.take().expect("failed to open child stdin");
+
+                let mut bufs = Vec::with_capacity(i);
+                for _ in 0..i - 1 {
+                    bufs.push(b"n\n");
+                }
+                bufs.push(b"y\n");
+
+                std::thread::spawn(move || {
+                    for buf in bufs {
+                        stdin.write_all(buf).expect("failed to patch hunk");
+                    }
+                });
+
+                let _ = patch.wait();
+            }
+        }
         self.fetch();
     }
 
+    fn stage(&mut self) {
+        self.stage_or_unstage("add");
+    }
+
     fn unstage(&mut self) {
-        let file = self.diffs.get_mut(self.cursor).unwrap();
-        Command::new("git")
-            .args(["restore", "--staged", &file.path])
-            .output()
-            .expect("failed to run `git restore --staged`");
-        self.fetch();
+        self.stage_or_unstage("reset");
     }
 
     fn expand(&mut self) {
