@@ -6,7 +6,7 @@
 ### Fixed
 - gex crashing on encountering deleted files
 
-## [0.1.0] - 2022-08-05
+## [0.1.0](https://github.com/Piturnah/gex/commits/v0.1.0) - 2022-08-05
 ### Added
 - `git status` display with diff information and current branch
 - Keyboard navigation between diffs of files and hunks
