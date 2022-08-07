@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+### Added
+- [DELETE] or [RENAME] indicators in status view
+### Fixed
+- gex crashing on encountering deleted files
+
 ## [0.1.0] - 2022-08-05
 ### Added
 - `git status` display with diff information and current branch
