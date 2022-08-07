@@ -4,7 +4,10 @@ use crossterm::{
     style::{self, Attribute, Color},
     terminal::{self, ClearType},
 };
-use nom::{bytes::complete::tag, IResult};
+use nom::{
+    bytes::complete::{tag, take_until},
+    IResult,
+};
 use std::{
     fmt, fs,
     io::{stdout, Write},
@@ -23,12 +26,22 @@ struct Status {
     cursor: usize,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
+enum DiffType {
+    Modified,
+    Created,
+    Untracked,
+    Renamed,
+    Deleted,
+}
+
+#[derive(Debug)]
 struct FileDiff {
     path: String,
     expanded: bool,
     diff: Vec<Hunk>,
     cursor: usize,
+    kind: DiffType,
 }
 
 #[derive(Debug)]
@@ -47,12 +60,13 @@ impl Hunk {
 }
 
 impl FileDiff {
-    fn new(path: &str) -> Self {
+    fn new(path: &str, kind: DiffType) -> Self {
         Self {
             path: path.to_string(),
             expanded: false,
             diff: Vec::new(),
             cursor: 0,
+            kind,
         }
     }
 
@@ -114,11 +128,16 @@ impl fmt::Display for FileDiff {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(
             f,
-            "{}{}{}",
+            "{}{}{}{}",
             cursor::MoveToColumn(0),
             match self.expanded {
                 true => "⌄",
                 false => "›",
+            },
+            match self.kind {
+                DiffType::Renamed => "[RENAME] ",
+                DiffType::Deleted => "[DELETE] ",
+                _ => "",
             },
             self.path,
         )?;
@@ -217,7 +236,7 @@ impl Status {
                     if line == "" {
                         break 'untrackeds;
                     }
-                    untracked.push(FileDiff::new(line.trim_start()));
+                    untracked.push(FileDiff::new(line.trim_start(), DiffType::Untracked));
                 }
             } else if line == "Changes to be committed:" {
                 lines.next().unwrap(); // Skip message from git
@@ -225,11 +244,20 @@ impl Status {
                     if line == "" {
                         break 'staged;
                     }
+
+                    let parse_result: IResult<&str, &str> = take_until("  ")(line.trim_start());
+                    let (line, prefix) = parse_result.expect("strange diff output");
+
                     staged.push(FileDiff::new(
-                        line.trim_start()
-                            .strip_prefix("modified:")
-                            .unwrap_or_else(|| line.trim_start().strip_prefix("new file:").unwrap())
-                            .trim_start(),
+                        line.trim_start(),
+                        match prefix {
+                            "" => DiffType::Untracked,        // untracked files
+                            "new file:" => DiffType::Created, // staged new files
+                            "modified:" => DiffType::Modified,
+                            "renamed:" => DiffType::Renamed,
+                            "deleted:" => DiffType::Deleted,
+                            _ => panic!("Unknown prefix: `{}`", prefix),
+                        },
                     ));
                 }
             } else if line == "Changes not staged for commit:" {
@@ -239,11 +267,20 @@ impl Status {
                     if line == "" {
                         break 'unstaged;
                     }
+
+                    let parse_result: IResult<&str, &str> = take_until("  ")(line.trim_start());
+                    let (line, prefix) = parse_result.expect("strange diff output");
+
                     unstaged.push(FileDiff::new(
-                        line.trim_start()
-                            .strip_prefix("modified:")
-                            .unwrap()
-                            .trim_start(),
+                        line.trim_start(),
+                        match prefix {
+                            "" => DiffType::Untracked,        // untracked files
+                            "new file:" => DiffType::Created, // staged new files
+                            "modified:" => DiffType::Modified,
+                            "renamed:" => DiffType::Renamed,
+                            "deleted:" => DiffType::Deleted,
+                            _ => panic!("Unknown prefix: `{}`", prefix),
+                        },
                     ));
                 }
             }
