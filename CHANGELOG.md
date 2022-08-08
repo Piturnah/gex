@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- Indication that working tree is clean
 - [DELETE] or [RENAME] indicators in status view
 ### Fixed
 - gex crashing on encountering deleted files

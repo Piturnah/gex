@@ -461,6 +461,16 @@ impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}On branch {}\n", cursor::MoveToColumn(0), self.branch,)?;
 
+        if self.diffs.is_empty() {
+            write!(
+                f,
+                "\n{}{}nothing to commit, working tree clean{}",
+                cursor::MoveToColumn(0),
+                style::SetForegroundColor(Color::Yellow),
+                style::SetForegroundColor(Color::Reset)
+            )?;
+        }
+
         for (index, file) in self.diffs.iter().enumerate() {
             if index == 0 && self.count_untracked != 0 {
                 write!(
