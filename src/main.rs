@@ -444,8 +444,7 @@ impl fmt::Display for Status {
                     style::SetForegroundColor(Color::Yellow),
                     style::ResetColor
                 )?;
-            }
-            if index == self.count_untracked && self.count_unstaged != 0 {
+            } else if index == self.count_untracked && self.count_unstaged != 0 {
                 write!(
                     f,
                     "\n{}{}Unstaged files:{}\n",
@@ -453,8 +452,7 @@ impl fmt::Display for Status {
                     style::SetForegroundColor(Color::Yellow),
                     style::ResetColor
                 )?;
-            }
-            if index == self.count_untracked + self.count_unstaged {
+            } else if index == self.count_untracked + self.count_unstaged {
                 write!(
                     f,
                     "\n{}{}Staged files:{}\n",
