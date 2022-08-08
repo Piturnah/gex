@@ -206,6 +206,26 @@ impl fmt::Display for Hunk {
     }
 }
 
+// Enum for `Status.stage_or_unstage`
+#[derive(Clone, Copy)]
+enum Stage {
+    Add,
+    Reset,
+}
+
+impl fmt::Display for Stage {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{}",
+            match self {
+                Stage::Add => "add",
+                Stage::Reset => "reset",
+            }
+        )
+    }
+}
+
 impl Status {
     fn new() -> Self {
         let mut status = Self::default();
@@ -351,18 +371,24 @@ impl Status {
         }
     }
 
-    fn stage_or_unstage(&mut self, command: &str) {
+    fn stage_or_unstage(&mut self, command: Stage) {
         let file = self.diffs.get_mut(self.cursor).unwrap();
         match file.cursor {
             0 => {
                 Command::new("git")
-                    .args([command, &file.path])
+                    .args(match command {
+                        Stage::Add => vec!["add", &file.path],
+                        Stage::Reset => vec!["reset", "HEAD", &file.path],
+                    })
                     .output()
                     .expect(&format!("failed to run `git {}`", command));
             }
             i => {
                 let mut patch = Command::new("git")
-                    .args([command, "-p", &file.path])
+                    .args(match command {
+                        Stage::Add => ["add", "-p", &file.path],
+                        Stage::Reset => ["reset", "-p", &file.path],
+                    })
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())
                     .spawn()
@@ -389,11 +415,11 @@ impl Status {
     }
 
     fn stage(&mut self) {
-        self.stage_or_unstage("add");
+        self.stage_or_unstage(Stage::Add);
     }
 
     fn unstage(&mut self) {
-        self.stage_or_unstage("reset");
+        self.stage_or_unstage(Stage::Reset);
     }
 
     fn expand(&mut self) {
