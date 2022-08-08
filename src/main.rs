@@ -372,6 +372,10 @@ impl Status {
     }
 
     fn stage_or_unstage(&mut self, command: Stage) {
+        if self.diffs.len() == 0 {
+            return;
+        }
+
         let file = self.diffs.get_mut(self.cursor).unwrap();
         match file.cursor {
             0 => {
@@ -423,6 +427,10 @@ impl Status {
     }
 
     fn expand(&mut self) {
+        if self.diffs.len() == 0 {
+            return;
+        }
+
         let mut file = self.diffs.get_mut(self.cursor).unwrap();
         if file.cursor == 0 {
             file.expanded = !file.expanded;
@@ -432,6 +440,10 @@ impl Status {
     }
 
     fn up(&mut self) {
+        if self.diffs.len() == 0 {
+            return;
+        }
+
         let file = self.diffs.get_mut(self.cursor).unwrap();
         if file.up().is_err() {
             match self.cursor.checked_sub(1) {
@@ -445,6 +457,10 @@ impl Status {
     }
 
     fn down(&mut self) {
+        if self.diffs.len() == 0 {
+            return;
+        }
+
         let file = self.diffs.get_mut(self.cursor).unwrap();
         if file.down().is_err() {
             self.cursor += 1;
