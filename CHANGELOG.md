@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- Init git repository by running gex in a folder that is not a git repository
 - Indication that working tree is clean
 - [DELETE] or [RENAME] indicators in status view
 ### Changed
