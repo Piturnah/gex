@@ -7,6 +7,7 @@
 ### Changed
 - Branch name is now highlighted in bold
 ### Fixed
+- gex crashing on attempts to perform actions when working tree clean
 - gex crashing on encountering deleted files
 
 ## [0.1.0](https://github.com/Piturnah/gex/commits/v0.1.0) - 2022-08-05
