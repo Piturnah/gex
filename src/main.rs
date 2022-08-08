@@ -10,7 +10,8 @@ use nom::{
 };
 use std::{
     fmt, fs,
-    io::{stdout, Write},
+    io::{stdin, stdout, BufRead, Write},
+    path::Path,
     process::{self, Command, Stdio},
 };
 
@@ -538,6 +539,21 @@ impl fmt::Display for Status {
 }
 
 fn main() {
+    if !Path::new("./.git").is_dir() {
+        print!("Not a git repository. Initialise one? [y/N]");
+        let _ = stdout().flush();
+        if let Some(Ok(input)) = stdin().lock().lines().next() {
+            if input.to_lowercase() != "y" {
+                process::exit(0);
+            }
+
+            Command::new("git")
+                .arg("init")
+                .output()
+                .expect("failed to run `git init`");
+        }
+    }
+
     let mut status = Status::new();
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
         .expect("failed to enter alternate screen");
