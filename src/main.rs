@@ -459,7 +459,14 @@ impl Status {
 impl fmt::Display for Status {
     // NOTE: Intended for use in raw mode, hence `writeln!` cannot be used.
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "{}On branch {}\n", cursor::MoveToColumn(0), self.branch,)?;
+        write!(
+            f,
+            "{}On branch {}{}{}\n",
+            cursor::MoveToColumn(0),
+            Attribute::Bold,
+            self.branch,
+            Attribute::Reset
+        )?;
 
         if self.diffs.is_empty() {
             write!(

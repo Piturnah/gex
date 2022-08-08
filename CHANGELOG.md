@@ -4,6 +4,8 @@
 ### Added
 - Indication that working tree is clean
 - [DELETE] or [RENAME] indicators in status view
+### Changed
+- Branch name is now highlighted in bold
 ### Fixed
 - gex crashing on encountering deleted files
 
