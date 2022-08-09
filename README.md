@@ -11,6 +11,7 @@ Primarily, this is a personal project since I recently switched to Neovim from E
 
 - [x] Simple - uncluttered UI.
 - [x] Intuitive - it should be easy to learn to use gex.
+- [x] Cross compatible - primary focus on Linux, but should work well on Windows and MacOS.
 - [ ] Configurable - certain preferences in gex should be configurable to suit your own workflow.
 - [ ] Comprehensive - you should be able to use gex to do everything you can do in git.
 
