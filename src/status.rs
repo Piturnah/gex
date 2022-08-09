@@ -441,6 +441,7 @@ impl Status {
                 Command::new("git")
                     .args(match command {
                         Stage::Add => vec!["add", &file.path],
+                        // TODO: "HEAD" breaks on initial commit
                         Stage::Reset => vec!["reset", "HEAD", &file.path],
                     })
                     .output()
