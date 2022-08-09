@@ -133,6 +133,11 @@ fn main() {
                             branch_list.cursor = branch_list.branches.len() - 1;
                         }
                     }
+                    KeyCode::Char(' ') | KeyCode::Enter => {
+                        branch_list.checkout();
+                        branch_list.fetch();
+                        status.fetch()
+                    }
                     KeyCode::Esc => state = State::Status,
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().unwrap();

@@ -48,4 +48,11 @@ impl BranchList {
             .map(|l| l.to_string())
             .collect::<Vec<_>>();
     }
+
+    pub fn checkout(&self) {
+        Command::new("git")
+            .args(["checkout", &self.branches[self.cursor][2..]])
+            .output()
+            .expect("failed to run `git checkout`");
+    }
 }
