@@ -52,10 +52,10 @@ $ gex
 
 ### Gex actions
 
-| Key                           | Action   |
-| ----------------------------- | -------- |
-| <kbd>r</kbd>                  | refresh  |
-| <kbd>q</kbd> / <kbd>Esc</kbd> | quit gex |
+| Key          | Action   |
+| ------------ | -------- |
+| <kbd>r</kbd> | refresh  |
+| <kbd>q</kbd> | quit gex |
 
 ### Branch mode
 
