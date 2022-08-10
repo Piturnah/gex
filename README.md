@@ -57,6 +57,14 @@ $ gex
 | <kbd>r</kbd>                  | refresh  |
 | <kbd>q</kbd> / <kbd>Esc</kbd> | quit gex |
 
+### Branch mode
+
+| Key                                 | Action            |
+| ----------------------------------- | ----------------- |
+| <kbd>b</kbd>                        | enter branch mode |
+| <kbd>Space</kbd> / <kbd>Enter</kbd> | checkout branch   |
+| <kbd>Esc</kbd>                      | exit branch mode  |
+
 ## Contributing
 
 If you want to contribute to gex, thank you so much! If you find a bug or want a new feature, please open an [issue](https://github.com/Piturnah/gex/issues) or submit a PR! I am happy to review and merge PRs.
