@@ -1,4 +1,7 @@
-use crossterm::{cursor, style::Attribute};
+use crossterm::{
+    cursor,
+    style::{Attribute, Color, SetForegroundColor},
+};
 use std::{fmt, process::Command};
 
 pub struct BranchList {
@@ -9,17 +12,19 @@ pub struct BranchList {
 impl fmt::Display for BranchList {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         for (i, branch) in self.branches.iter().enumerate() {
+            if branch.starts_with('*') {
+                write!(f, "{}", SetForegroundColor(Color::Yellow))?;
+            }
             if i == self.cursor {
-                write!(
-                    f,
-                    "{}{}{}{}\n",
-                    cursor::MoveToColumn(0),
-                    Attribute::Reverse,
-                    branch,
-                    Attribute::Reset
-                )?;
+                let mut branch = branch.to_string();
+                branch.insert_str(2, &format!("{}", Attribute::Reverse));
+                branch.push_str(&format!("{}", Attribute::Reset));
+                write!(f, "{}{}\n", cursor::MoveToColumn(0), branch,)?;
             } else {
                 write!(f, "{}{}\n", cursor::MoveToColumn(0), branch)?;
+            }
+            if branch.starts_with('*') {
+                write!(f, "{}", SetForegroundColor(Color::Reset))?;
             }
         }
         Ok(())
