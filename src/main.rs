@@ -135,8 +135,8 @@ fn main() {
                     }
                     KeyCode::Char(' ') | KeyCode::Enter => {
                         branch_list.checkout();
-                        branch_list.fetch();
-                        status.fetch()
+                        status.fetch();
+                        state = State::Status;
                     }
                     KeyCode::Esc => state = State::Status,
                     KeyCode::Char('q') => {
