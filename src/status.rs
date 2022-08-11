@@ -441,8 +441,10 @@ impl Status {
                 Command::new("git")
                     .args(match command {
                         Stage::Add => vec!["add", &file.path],
-                        // TODO: "HEAD" breaks on initial commit
-                        Stage::Reset => vec!["reset", "HEAD", &file.path],
+                        Stage::Reset => match file.kind {
+                            DiffType::Deleted => vec!["reset", "HEAD", &file.path],
+                            _ => vec!["reset", &file.path],
+                        },
                     })
                     .output()
                     .expect(&format!("failed to run `git {}`", command));
