@@ -108,7 +108,10 @@ fn main() {
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .expect("failed to enter alternate screen");
                     }
-                    KeyCode::Char('b') => state = State::Branch,
+                    KeyCode::Char('b') => {
+                        branch_list.fetch();
+                        state = State::Branch;
+                    }
                     KeyCode::Char('r') => status.fetch(),
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().unwrap();
