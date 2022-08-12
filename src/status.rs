@@ -463,7 +463,7 @@ impl Status {
 
                 let mut stdin = patch.stdin.take().expect("failed to open child stdin");
 
-                let mut bufs = vec![b"n\n"; i];
+                let mut bufs = vec![b"n\n"; i - 1];
                 bufs.push(b"y\n");
 
                 std::thread::spawn(move || {
