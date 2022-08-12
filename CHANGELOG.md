@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.0](https://github.com/Piturnah/gex/compare/v0.2.0...v0.2.1) - 2022-08-12
+### Fixed
+- gex crashing on untracked files in some cases
+- gex not displaying "working tree clean" message
+
 ## [0.2.0](https://github.com/Piturnah/gex/compare/v0.1.0...v0.2.0) - 2022-08-12
 ### Added
 - Press <kbd>b</kbd> to switch to a new `Branch` mode where you can switch branches with <kbd>Space</kbd>
