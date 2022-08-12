@@ -9,7 +9,7 @@ use nom::{
 };
 use std::{
     fmt, fs,
-    io::Write,
+    io::{stdout, Write},
     process::{Command, Stdio},
 };
 
@@ -241,6 +241,7 @@ impl fmt::Display for Status {
                 style::SetForegroundColor(Color::Yellow),
                 style::SetForegroundColor(Color::Reset)
             )?;
+            let _ = stdout().flush();
         }
 
         for (index, file) in self.diffs.iter().enumerate() {
