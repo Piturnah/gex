@@ -16,6 +16,7 @@ pub struct BranchList {
 
 impl fmt::Display for BranchList {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use fmt::Write;
         for (i, branch) in self.branches.iter().enumerate() {
             if branch.starts_with('*') {
                 write!(f, "{}", SetForegroundColor(Color::Yellow))?;
@@ -23,10 +24,10 @@ impl fmt::Display for BranchList {
             if i == self.cursor {
                 let mut branch = branch.to_string();
                 branch.insert_str(2, &format!("{}", Attribute::Reverse));
-                branch.push_str(&format!("{}", Attribute::Reset));
-                write!(f, "{}{}\n", cursor::MoveToColumn(0), branch,)?;
+                write!(&mut branch, "{}", Attribute::Reset)?;
+                writeln!(f, "{}{}", cursor::MoveToColumn(0), branch,)?;
             } else {
-                write!(f, "{}{}\n", cursor::MoveToColumn(0), branch)?;
+                writeln!(f, "{}{}", cursor::MoveToColumn(0), branch)?;
             }
             if branch.starts_with('*') {
                 write!(f, "{}", SetForegroundColor(Color::Reset))?;

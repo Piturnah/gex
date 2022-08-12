@@ -128,7 +128,7 @@ fn main() {
                 },
                 State::Branch => match event.code {
                     KeyCode::Char('k') | KeyCode::Up => {
-                        branch_list.cursor = branch_list.cursor.checked_sub(1).unwrap_or(0);
+                        branch_list.cursor = branch_list.cursor.saturating_sub(1);
                     }
                     KeyCode::Char('j') | KeyCode::Down => {
                         branch_list.cursor += 1;

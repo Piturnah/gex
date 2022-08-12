@@ -32,6 +32,7 @@ struct Hunk {
 
 impl fmt::Display for Hunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use fmt::Write;
         let mut outbuf = format!(
             "\n{}{}{}{}",
             cursor::MoveToColumn(0),
@@ -45,16 +46,17 @@ impl fmt::Display for Hunk {
 
         if self.expanded {
             for line in self.diffs.iter().skip(1) {
-                outbuf += &format!(
+                write!(
+                    &mut outbuf,
                     "\n{}{}{}",
                     cursor::MoveToColumn(0),
-                    match line.chars().nth(0) {
+                    match line.chars().next() {
                         Some('+') => style::SetForegroundColor(Color::DarkGreen),
                         Some('-') => style::SetForegroundColor(Color::DarkRed),
                         _ => style::SetForegroundColor(Color::Reset),
                     },
                     line
-                );
+                )?;
             }
         }
         write!(f, "{}", outbuf)
@@ -156,9 +158,9 @@ impl FileDiff {
         match self.cursor.checked_sub(1) {
             Some(val) => {
                 self.cursor = val;
-                return Ok(());
+                Ok(())
             }
-            None => return Err(()),
+            None => Err(()),
         }
     }
 
@@ -221,11 +223,10 @@ pub struct Status {
 }
 
 impl fmt::Display for Status {
-    // NOTE: Intended for use in raw mode, hence `writeln!` cannot be used.
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(
+        writeln!(
             f,
-            "{}On branch {}{}{}\n",
+            "{}On branch {}{}{}",
             cursor::MoveToColumn(0),
             Attribute::Bold,
             self.branch,
@@ -311,16 +312,16 @@ impl Status {
         while let Some(line) = lines.next() {
             if line == "Untracked files:" {
                 lines.next().unwrap(); // Skip message from git
-                'untrackeds: while let Some(line) = lines.next() {
-                    if line == "" {
+                'untrackeds: for line in lines.by_ref() {
+                    if line.is_empty() {
                         break 'untrackeds;
                     }
                     untracked.push(FileDiff::new(line.trim_start(), DiffType::Untracked));
                 }
             } else if line == "Changes to be committed:" {
                 lines.next().unwrap(); // Skip message from git
-                'staged: while let Some(line) = lines.next() {
-                    if line == "" {
+                'staged: for line in lines.by_ref() {
+                    if line.is_empty() {
                         break 'staged;
                     }
 
@@ -342,8 +343,8 @@ impl Status {
             } else if line == "Changes not staged for commit:" {
                 lines.next().unwrap(); // Skip message from git
                 lines.next().unwrap();
-                'unstaged: while let Some(line) = lines.next() {
-                    if line == "" {
+                'unstaged: for line in lines.by_ref() {
+                    if line.is_empty() {
                         break 'unstaged;
                     }
 
@@ -375,7 +376,7 @@ impl Status {
             .expect("failed to run `git diff --cached`");
 
         let diff = std::str::from_utf8(&diff.stdout).unwrap();
-        let diffs = parse::parse_diff(&diff);
+        let diffs = parse::parse_diff(diff);
         'outer_unstaged: for (path, diff) in diffs {
             for mut file in &mut unstaged {
                 if file.path == path {
@@ -396,7 +397,7 @@ impl Status {
         }
 
         let staged_diff = std::str::from_utf8(&staged_diff.stdout).unwrap();
-        let diffs = parse::parse_diff(&staged_diff);
+        let diffs = parse::parse_diff(staged_diff);
         'outer_staged: for (path, diff) in diffs {
             for mut file in &mut staged {
                 if file.path == path {
@@ -425,13 +426,13 @@ impl Status {
         self.diffs.append(&mut unstaged);
         self.diffs.append(&mut staged);
 
-        if self.diffs.len() > 0 && self.cursor >= self.diffs.len() {
+        if !self.diffs.is_empty() && self.cursor >= self.diffs.len() {
             self.cursor = self.diffs.len() - 1;
         }
     }
 
     fn stage_or_unstage(&mut self, command: Stage) {
-        if self.diffs.len() == 0 {
+        if self.diffs.is_empty() {
             return;
         }
 
@@ -447,7 +448,7 @@ impl Status {
                         },
                     })
                     .output()
-                    .expect(&format!("failed to run `git {}`", command));
+                    .unwrap_or_else(|_| panic!("failed to run `git {}`", command));
             }
             i => {
                 let mut patch = Command::new("git")
@@ -462,10 +463,7 @@ impl Status {
 
                 let mut stdin = patch.stdin.take().expect("failed to open child stdin");
 
-                let mut bufs = Vec::with_capacity(i);
-                for _ in 0..i - 1 {
-                    bufs.push(b"n\n");
-                }
+                let mut bufs = vec![b"n\n"; i];
                 bufs.push(b"y\n");
 
                 std::thread::spawn(move || {
@@ -490,7 +488,7 @@ impl Status {
 
     /// Toggles expand on the selected diff item.
     pub fn expand(&mut self) {
-        if self.diffs.len() == 0 {
+        if self.diffs.is_empty() {
             return;
         }
 
@@ -504,7 +502,7 @@ impl Status {
 
     /// Move the cursor up one
     pub fn up(&mut self) {
-        if self.diffs.len() == 0 {
+        if self.diffs.is_empty() {
             return;
         }
 
@@ -522,7 +520,7 @@ impl Status {
 
     /// Move the cursor down one
     pub fn down(&mut self) {
-        if self.diffs.len() == 0 {
+        if self.diffs.is_empty() {
             return;
         }
 
