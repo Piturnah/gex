@@ -52,18 +52,19 @@ $ gex
 
 ### Gex actions
 
-| Key          | Action   |
-| ------------ | -------- |
-| <kbd>r</kbd> | refresh  |
-| <kbd>q</kbd> | quit gex |
+| Key          | Action            |
+| ------------ | ----------------- |
+| <kbd>b</kbd> | enter branch mode |
+| <kbd>r</kbd> | refresh           |
+| <kbd>q</kbd> | quit gex          |
 
 ### Branch mode
 
-| Key                                 | Action            |
-| ----------------------------------- | ----------------- |
-| <kbd>b</kbd>                        | enter branch mode |
-| <kbd>Space</kbd> / <kbd>Enter</kbd> | checkout branch   |
-| <kbd>Esc</kbd>                      | exit branch mode  |
+| Key                                 | Action              |
+| ----------------------------------- | ------------------- |
+| <kbd>b</kbd>                        | checkout new branch | 
+| <kbd>Space</kbd> / <kbd>Enter</kbd> | checkout branch     |
+| <kbd>Esc</kbd>                      | exit branch mode    |
 
 ## Contributing
 

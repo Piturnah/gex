@@ -141,6 +141,11 @@ fn main() {
                         status.fetch();
                         state = State::Status;
                     }
+                    KeyCode::Char('b') => {
+                        BranchList::checkout_new();
+                        status.fetch();
+                        state = State::Status;
+                    }
                     KeyCode::Esc => state = State::Status,
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().unwrap();

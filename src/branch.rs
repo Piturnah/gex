@@ -1,8 +1,13 @@
 use crossterm::{
     cursor,
     style::{Attribute, Color, SetForegroundColor},
+    terminal::{self, ClearType},
 };
-use std::{fmt, process::Command};
+use std::{
+    fmt,
+    io::{stdin, stdout, BufRead, Write},
+    process::Command,
+};
 
 pub struct BranchList {
     pub branches: Vec<String>,
@@ -59,5 +64,32 @@ impl BranchList {
             .args(["checkout", &self.branches[self.cursor][2..]])
             .output()
             .expect("failed to run `git checkout`");
+    }
+
+    pub fn checkout_new() {
+        terminal::disable_raw_mode().expect("failed to exit raw mode");
+        print!(
+            "{}{}{}Name for the new branch: ",
+            cursor::MoveTo(0, 0),
+            terminal::Clear(ClearType::All),
+            cursor::Show
+        );
+        let _ = stdout().flush();
+
+        // TODO: error reporting when the branch name is invalid rather than
+        // silently ignore
+        let input = stdin()
+            .lock()
+            .lines()
+            .next()
+            .expect("no stdin")
+            .expect("malformed stdin");
+        Command::new("git")
+            .args(["checkout", "-b", &input])
+            .output()
+            .expect("failed to checkout new branch");
+
+        terminal::enable_raw_mode().expect("failed to enter raw mode");
+        print!("{}", cursor::Hide);
     }
 }
