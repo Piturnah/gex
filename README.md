@@ -3,6 +3,7 @@
 [![](https://img.shields.io/crates/v/gex)](https://crates.io/crates/gex)
 [![](https://img.shields.io/crates/d/gex)](https://crates.io/crates/gex)
 [![](https://img.shields.io/crates/l/gex)](https://crates.io/crates/gex)
+[![](https://img.shields.io/github/stars/Piturnah/gex?style=social)](https://github.com/Piturnah/gex/stargazers)
 
 Git workflow improvement CLI tool inspired by [Magit](https://github.com/magit/magit). **This project is still under initial development**, but I am actively [dogfooding](https://en.wikipedia.org/wiki/Eating_your_own_dog_food) it and features *should* be added relatively quickly.
 
