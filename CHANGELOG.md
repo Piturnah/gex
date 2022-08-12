@@ -2,8 +2,8 @@
 
 ## [Unreleased]
 ### Added
-- Checkout new branch within gex (<kbd>b</kbd> in `Branch` mode)
 - Press <kbd>b</kbd> to switch to a new `Branch` mode where you can switch branches with <kbd>Space</kbd>
+- Checkout new branch within gex (<kbd>b</kbd> in `Branch` mode)
 - Exit `Branch` mode with <kbd>Esc</kbd>
 - Init git repository by running gex in a folder that is not a git repository
 - Indication that working tree is clean
