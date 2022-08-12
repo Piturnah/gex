@@ -7,7 +7,7 @@
 
 ## [0.2.0](https://github.com/Piturnah/gex/compare/v0.1.0...v0.2.0) - 2022-08-12
 ### Added
-- Press <kbd>b</kbd> to switch to a new `Branch` mode where you can switch branches with <kbd>Space</kbd>
+- Press <kbd>b</kbd> to switch to a new `Branch` mode where you can switch between local branches with <kbd>Space</kbd>
 - Checkout new branch within gex (<kbd>b</kbd> in `Branch` mode)
 - Exit `Branch` mode with <kbd>Esc</kbd>
 - Init git repository by running gex in a folder that is not a git repository
