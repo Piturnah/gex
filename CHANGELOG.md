@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.0](https://github.com/Piturnah/gex/compare/v0.2.0...v0.2.1) - 2022-08-12
+## [0.2.1](https://github.com/Piturnah/gex/compare/v0.2.0...v0.2.1) - 2022-08-12
 ### Fixed
 - gex crashing on untracked files in some cases
 - gex not displaying "working tree clean" message
