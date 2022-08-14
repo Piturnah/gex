@@ -1,6 +1,7 @@
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode},
+    style::{Color, SetForegroundColor},
     terminal::{self, ClearType},
 };
 use std::{
@@ -44,6 +45,7 @@ fn main() {
 
     let mut status = Status::new();
     let mut branch_list = BranchList::new();
+    let mut gex_err = String::new();
 
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
         .expect("failed to enter alternate screen");
@@ -72,6 +74,27 @@ fn main() {
                 );
             }
         }
+
+        if !gex_err.is_empty() {
+            let (term_width, term_height) =
+                terminal::size().expect("failed to query terminal dimensions");
+
+            terminal::disable_raw_mode().unwrap();
+            print!(
+                "{}{:─<5$}\n{}{}{}",
+                cursor::MoveTo(0, term_height - gex_err.lines().count() as u16 - 2),
+                "",
+                SetForegroundColor(Color::Red),
+                gex_err,
+                SetForegroundColor(Color::Reset),
+                term_width as usize,
+            );
+            terminal::enable_raw_mode().unwrap();
+            stdout().flush().unwrap();
+
+            gex_err = String::new();
+        }
+
         if let Event::Key(event) = event::read().unwrap() {
             match state {
                 State::Status => match event.code {
@@ -107,6 +130,21 @@ fn main() {
                         status.fetch();
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .expect("failed to enter alternate screen");
+                    }
+                    KeyCode::Char('F') => {
+                        let output = Command::new("git")
+                            .arg("pull")
+                            .output()
+                            .expect("failed to run `git pull`");
+
+                        if !output.status.success() {
+                            gex_err = std::str::from_utf8(&output.stderr)
+                                .unwrap()
+                                .trim_end()
+                                .to_string();
+                        }
+
+                        status.fetch();
                     }
                     KeyCode::Char('b') => {
                         branch_list.fetch();
