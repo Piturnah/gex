@@ -47,6 +47,7 @@ $ gex
 | <kbd>S</kbd> | stage all items   |
 | <kbd>u</kbd> | unstage item      |
 | <kbd>U</kbd> | unstage all items |
+| <kbd>F</kbd> | pull from remote  |
 | <kbd>c</kbd> | commit\*          |
 
 \* uses default editor configured with git
