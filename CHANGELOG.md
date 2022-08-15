@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- `--version` or `-v` flag to display gex version
 - Notice if there are no existing branches in branch list
 - Propagation of errors and stdout from git subprocesses
 - <kbd>F</kbd> to pull remote changes
