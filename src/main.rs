@@ -7,7 +7,7 @@ use crossterm::{
 use std::{
     io::{stdin, stdout, BufRead, Write},
     path::Path,
-    process::{self, Command, Stdio},
+    process::{self, Command, Output, Stdio},
 };
 
 mod branch;
@@ -27,6 +27,15 @@ enum State {
     Branch,
 }
 
+pub fn git_process(args: &[&str]) -> Output {
+    Command::new("git").args(args).output().unwrap_or_else(|_| {
+        panic!(
+            "failed to run `git{}`",
+            args.iter().map(|a| " ".to_string() + a).collect::<String>()
+        )
+    })
+}
+
 fn main() {
     if !Path::new("./.git").is_dir() {
         print!("Not a git repository. Initialise one? [y/N]");
@@ -36,16 +45,13 @@ fn main() {
                 process::exit(0);
             }
 
-            Command::new("git")
-                .arg("init")
-                .output()
-                .expect("failed to run `git init`");
+            git_process(&["init"]);
         }
     }
 
     let mut status = Status::new();
     let mut branch_list = BranchList::new();
-    let mut gex_err = String::new();
+    let mut git_output: Option<Output> = None;
 
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
         .expect("failed to enter alternate screen");
@@ -75,24 +81,51 @@ fn main() {
             }
         }
 
-        if !gex_err.is_empty() {
+        if let Some(output) = git_output {
             let (term_width, term_height) =
                 terminal::size().expect("failed to query terminal dimensions");
 
             terminal::disable_raw_mode().unwrap();
-            print!(
-                "{}{:─<5$}\n{}{}{}",
-                cursor::MoveTo(0, term_height - gex_err.lines().count() as u16 - 2),
-                "",
-                SetForegroundColor(Color::Red),
-                gex_err,
-                SetForegroundColor(Color::Reset),
-                term_width as usize,
-            );
+
+            match output.status.success() {
+                true => {
+                    // NOTE: I am still unsure if we want to propagate stdout on success. I fear
+                    // that it may clutter the UI and a successful change should be communicated
+                    // through seeing the results in gex anyway.
+                    let git_msg = std::str::from_utf8(&output.stdout)
+                        .unwrap()
+                        .lines()
+                        .next()
+                        .unwrap_or("");
+
+                    if !git_msg.is_empty() {
+                        print!(
+                            "{}{:─<term_width$}\n{}",
+                            cursor::MoveTo(0, term_height - 2),
+                            "",
+                            git_msg,
+                            term_width = term_width as usize,
+                        );
+                    }
+                }
+                false => {
+                    let git_msg = std::str::from_utf8(&output.stderr).unwrap().trim_end();
+                    print!(
+                        "{}{:─<term_width$}\n{}{}{}",
+                        cursor::MoveTo(0, term_height - git_msg.lines().count() as u16 - 1),
+                        "",
+                        SetForegroundColor(Color::Red),
+                        git_msg,
+                        SetForegroundColor(Color::Reset),
+                        term_width = term_width as usize,
+                    );
+                }
+            }
+
             terminal::enable_raw_mode().unwrap();
             stdout().flush().unwrap();
 
-            gex_err = String::new();
+            git_output = None;
         }
 
         if let Event::Key(event) = event::read().unwrap() {
@@ -102,47 +135,32 @@ fn main() {
                     KeyCode::Char('k') | KeyCode::Up => status.up(),
                     KeyCode::Char('s') => status.stage(),
                     KeyCode::Char('S') => {
-                        Command::new("git")
-                            .args(["add", "."])
-                            .output()
-                            .expect("couldn't run `git add .`");
+                        git_output = Some(git_process(&["add", "."]));
                         status.fetch();
                     }
                     KeyCode::Char('u') => status.unstage(),
                     KeyCode::Char('U') => {
-                        Command::new("git")
-                            .arg("reset")
-                            .output()
-                            .expect("failed to run `git reset`");
+                        git_output = Some(git_process(&["reset"]));
                         status.fetch();
                     }
                     KeyCode::Tab => status.expand(),
                     KeyCode::Char('c') => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .expect("failed to leave alternate screen");
-                        Command::new("git")
-                            .arg("commit")
-                            .stdout(Stdio::inherit())
-                            .stdin(Stdio::inherit())
-                            .stderr(Stdio::inherit())
-                            .output()
-                            .expect("failed to run `git commit`");
+                        git_output = Some(
+                            Command::new("git")
+                                .arg("commit")
+                                .stdout(Stdio::inherit())
+                                .stdin(Stdio::inherit())
+                                .output()
+                                .expect("failed to run `git commit`"),
+                        );
                         status.fetch();
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .expect("failed to enter alternate screen");
                     }
                     KeyCode::Char('F') => {
-                        let output = Command::new("git")
-                            .arg("pull")
-                            .output()
-                            .expect("failed to run `git pull`");
-
-                        if !output.status.success() {
-                            gex_err = std::str::from_utf8(&output.stderr)
-                                .unwrap()
-                                .trim_end()
-                                .to_string();
-                        }
+                        git_output = Some(git_process(&["pull"]));
 
                         status.fetch();
                     }
@@ -175,12 +193,12 @@ fn main() {
                         }
                     }
                     KeyCode::Char(' ') | KeyCode::Enter => {
-                        branch_list.checkout();
+                        git_output = Some(branch_list.checkout());
                         status.fetch();
                         state = State::Status;
                     }
                     KeyCode::Char('b') => {
-                        BranchList::checkout_new();
+                        git_output = Some(BranchList::checkout_new());
                         status.fetch();
                         state = State::Status;
                     }

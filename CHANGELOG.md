@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- Propagation of errors and stdout from git subprocesses
 - <kbd>F</kbd> to pull remote changes
 
 ## [0.2.1](https://github.com/Piturnah/gex/compare/v0.2.0...v0.2.1) - 2022-08-12
