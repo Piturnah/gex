@@ -123,7 +123,7 @@ fn main() {
             }
 
             terminal::enable_raw_mode().unwrap();
-            stdout().flush().unwrap();
+            let _ = stdout().flush();
 
             git_output = None;
         }
