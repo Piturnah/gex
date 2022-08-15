@@ -15,7 +15,7 @@ pub fn parse_diff(input: &str) -> HashMap<&str, Vec<Vec<&str>>> {
 }
 
 fn get_path<'a>(diff: &[&'a str]) -> &'a str {
-    let diff: IResult<&str, &str> = tag("+++ b/")(diff.get(2).unwrap_or_else(|| return &""));
+    let diff: IResult<&str, &str> = tag("+++ b/")(diff.get(2).unwrap_or(&""));
     let (diff, _) = match diff {
         Ok((diff, rest)) => (diff, rest),
         _ => return "",
