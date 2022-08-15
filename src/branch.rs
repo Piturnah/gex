@@ -19,6 +19,17 @@ pub struct BranchList {
 impl fmt::Display for BranchList {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         use fmt::Write;
+
+        if self.branches.is_empty() {
+            return write!(
+                f,
+                "{}No branches yet.{}\n\n{}Make a commit or press b again to switch branch.",
+                SetForegroundColor(Color::Yellow),
+                SetForegroundColor(Color::Reset),
+                cursor::MoveToColumn(0)
+            );
+        }
+
         for (i, branch) in self.branches.iter().enumerate() {
             if branch.starts_with('*') {
                 write!(f, "{}", SetForegroundColor(Color::Yellow))?;

@@ -78,6 +78,7 @@ fn main() {
                     terminal::Clear(ClearType::All),
                     branch_list
                 );
+                let _ = stdout().flush();
             }
         }
 
@@ -161,7 +162,6 @@ fn main() {
                     }
                     KeyCode::Char('F') => {
                         git_output = Some(git_process(&["pull"]));
-
                         status.fetch();
                     }
                     KeyCode::Char('b') => {
