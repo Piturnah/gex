@@ -1,6 +1,6 @@
 [package]
 name = "gex"
-version = "0.2.1"
+version = "0.2.3-dev"
 edition = "2021"
 categories = ["command-line-utilities", "development-tools"]
 description = "Git workflow improvement CLI tool inspired by Magit"
@@ -12,7 +12,7 @@ repository = "https://github.com/Piturnah/gex"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-crossterm = "0.24.0"
+crossterm = "0.25.0"
 nom = "7.1.1"
 
 #       Tokee

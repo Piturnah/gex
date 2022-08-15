@@ -1,8 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.2](https://github.com/Piturnah/gex/compare/v0.2.1...v0.2.2) - 2022-08-15
 ### Added
+- `--version` or `-v` flag to display gex version
+- Notice if there are no existing branches in branch list
+- Propagation of errors and stdout from git subprocesses
 - <kbd>F</kbd> to pull remote changes
+### Fixed
+- gex freezing on viewing branch list before initial commit
 
 ## [0.2.1](https://github.com/Piturnah/gex/compare/v0.2.0...v0.2.1) - 2022-08-12
 ### Fixed

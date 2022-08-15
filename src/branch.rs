@@ -6,8 +6,10 @@ use crossterm::{
 use std::{
     fmt,
     io::{stdin, stdout, BufRead, Write},
-    process::Command,
+    process::{Command, Output},
 };
+
+use crate::git_process;
 
 pub struct BranchList {
     pub branches: Vec<String>,
@@ -17,6 +19,17 @@ pub struct BranchList {
 impl fmt::Display for BranchList {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         use fmt::Write;
+
+        if self.branches.is_empty() {
+            return write!(
+                f,
+                "{}No branches yet.{}\n\n{}Make a commit or press b again to switch branch.",
+                SetForegroundColor(Color::Yellow),
+                SetForegroundColor(Color::Reset),
+                cursor::MoveToColumn(0)
+            );
+        }
+
         for (i, branch) in self.branches.iter().enumerate() {
             if branch.starts_with('*') {
                 write!(f, "{}", SetForegroundColor(Color::Yellow))?;
@@ -60,14 +73,11 @@ impl BranchList {
             .collect::<Vec<_>>();
     }
 
-    pub fn checkout(&self) {
-        Command::new("git")
-            .args(["checkout", &self.branches[self.cursor][2..]])
-            .output()
-            .expect("failed to run `git checkout`");
+    pub fn checkout(&self) -> Output {
+        git_process(&["checkout", &self.branches[self.cursor][2..]])
     }
 
-    pub fn checkout_new() {
+    pub fn checkout_new() -> Output {
         terminal::disable_raw_mode().expect("failed to exit raw mode");
         print!(
             "{}{}{}Name for the new branch: ",
@@ -77,20 +87,16 @@ impl BranchList {
         );
         let _ = stdout().flush();
 
-        // TODO: error reporting when the branch name is invalid rather than
-        // silently ignore
         let input = stdin()
             .lock()
             .lines()
             .next()
             .expect("no stdin")
             .expect("malformed stdin");
-        Command::new("git")
-            .args(["checkout", "-b", &input])
-            .output()
-            .expect("failed to checkout new branch");
 
         terminal::enable_raw_mode().expect("failed to enter raw mode");
         print!("{}", cursor::Hide);
+
+        git_process(&["checkout", "-b", &input])
     }
 }

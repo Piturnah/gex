@@ -19,6 +19,7 @@ Primarily, this is a personal project since I recently switched to Neovim from E
 ## Installation
 Gex is hosted on [crates.io](https://crates.io/crates/gex). You can either install from source, or you can use cargo:
 
+> **NOTE:** You will need [Rust](https://www.rust-lang.org/) on your system for this installation method.
 ```console
 $ cargo install gex
 ```
