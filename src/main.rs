@@ -37,6 +37,13 @@ pub fn git_process(args: &[&str]) -> Output {
 }
 
 fn main() {
+    for arg in std::env::args() {
+        if arg == "--version" || arg == "-v" {
+            println!("gex version {}", env!("CARGO_PKG_VERSION"));
+            process::exit(0);
+        }
+    }
+
     if !Path::new("./.git").is_dir() {
         print!("Not a git repository. Initialise one? [y/N]");
         let _ = stdout().flush();
