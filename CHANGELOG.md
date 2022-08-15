@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.2](https://github.com/Piturnah/gex/compare/v0.2.1...v0.2.2) - 2022-08-15
 ### Added
 - `--version` or `-v` flag to display gex version
 - Notice if there are no existing branches in branch list
