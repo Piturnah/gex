@@ -14,7 +14,7 @@ Git workflow improvement CLI tool inspired by [Magit](https://github.com/magit/m
 ## Aims
 Primarily, this is a personal project since I recently switched to Neovim from Emacs and miss the simplicity and efficiency of using Magit. However, I do have some general aims, which are subject to change:
 
-<img align="right" width="45%" src="https://user-images.githubusercontent.com/20472367/184849490-49c9e5a7-0f04-428d-b3f8-b0fc6c170f00.png">
+<img align="right" width="45%" src="https://user-images.githubusercontent.com/20472367/184855127-303c5f77-a9b4-44a6-9d88-9ce0884bb69e.png">
 
 - [x] Simple - uncluttered UI.
 - [x] Intuitive - it should be easy to learn to use gex.
