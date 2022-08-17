@@ -1,12 +1,13 @@
+use std::{
+    fmt,
+    io::{stdin, stdout, BufRead, Write},
+    process::Output,
+};
+
 use crossterm::{
     cursor,
     style::{Attribute, Color, SetForegroundColor},
     terminal::{self, ClearType},
-};
-use std::{
-    fmt,
-    io::{stdin, stdout, BufRead, Write},
-    process::{Command, Output},
 };
 
 use crate::git_process;
@@ -61,12 +62,9 @@ impl BranchList {
     }
 
     pub fn fetch(&mut self) {
-        let branches = Command::new("git")
-            .arg("branch")
-            .output()
-            .expect("failed to run `git branch`");
+        let output = git_process(&["branch"]);
 
-        self.branches = std::str::from_utf8(&branches.stdout)
+        self.branches = std::str::from_utf8(&output.stdout)
             .expect("broken stdout from `git branch`")
             .lines()
             .map(|l| l.to_string())

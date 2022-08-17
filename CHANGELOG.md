@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+### Fixed
+- gex not recognising git repositories from within subdirectories ([#2](https://github.com/Piturnah/gex/issues/2))
+
 ## [0.2.2](https://github.com/Piturnah/gex/compare/v0.2.1...v0.2.2) - 2022-08-15
 ### Added
 - `--version` or `-v` flag to display gex version

@@ -1,5 +1,6 @@
-use nom::{bytes::complete::tag, character::complete::not_line_ending, IResult};
 use std::collections::HashMap;
+
+use nom::{bytes::complete::tag, character::complete::not_line_ending, IResult};
 
 pub fn parse_diff(input: &str) -> HashMap<&str, Vec<Vec<&str>>> {
     let mut diffs = HashMap::new();

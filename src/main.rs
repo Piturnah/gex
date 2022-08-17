@@ -1,13 +1,14 @@
+use std::{
+    io::{stdin, stdout, BufRead, Write},
+    path::Path,
+    process::{self, Command, Output, Stdio},
+};
+
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode},
     style::{Color, SetForegroundColor},
     terminal::{self, ClearType},
-};
-use std::{
-    io::{stdin, stdout, BufRead, Write},
-    path::Path,
-    process::{self, Command, Output, Stdio},
 };
 
 mod branch;
@@ -16,11 +17,6 @@ mod status;
 
 use branch::BranchList;
 use status::Status;
-
-pub trait Expand {
-    fn toggle_expand(&mut self);
-    fn expanded(&self) -> bool;
-}
 
 enum State {
     Status,
@@ -44,7 +40,17 @@ fn main() {
         }
     }
 
-    if !Path::new("./.git").is_dir() {
+    let top_level_stdout = git_process(&["rev-parse", "--show-toplevel"]).stdout;
+
+    let top_level_stdout = Path::new(
+        std::str::from_utf8(&top_level_stdout)
+            .expect("`git rev-parse` did not give valid utf-8")
+            .trim_end(),
+    );
+
+    if top_level_stdout.is_dir() {
+        std::env::set_current_dir(top_level_stdout).expect("failed to set working directory");
+    } else {
         print!("Not a git repository. Initialise one? [y/N]");
         let _ = stdout().flush();
         if let Some(Ok(input)) = stdin().lock().lines().next() {

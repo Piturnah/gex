@@ -1,4 +1,11 @@
-//! Module relating to the Status diplay, including diffs of files.
+//! Module relating to the Status display, including diffs of files.
+
+use std::{
+    fmt, fs,
+    io::{stdout, Write},
+    process::{Command, Stdio},
+};
+
 use crossterm::{
     cursor,
     style::{self, Attribute, Color},
@@ -7,13 +14,13 @@ use nom::{
     bytes::complete::{tag, take_until},
     IResult,
 };
-use std::{
-    fmt, fs,
-    io::{stdout, Write},
-    process::{Command, Stdio},
-};
 
-use crate::{parse, Expand};
+use crate::{git_process, parse};
+
+pub trait Expand {
+    fn toggle_expand(&mut self);
+    fn expanded(&self) -> bool;
+}
 
 #[derive(Debug)]
 enum DiffType {
@@ -295,10 +302,7 @@ impl Status {
     }
 
     pub fn fetch(&mut self) {
-        let output = Command::new("git")
-            .arg("status")
-            .output()
-            .expect("failed to execute `git status`");
+        let output = git_process(&["status"]);
 
         let input = std::str::from_utf8(&output.stdout).unwrap();
 
@@ -367,14 +371,8 @@ impl Status {
             }
         }
 
-        let diff = Command::new("git")
-            .arg("diff")
-            .output()
-            .expect("failed to run `git diff`");
-        let staged_diff = Command::new("git")
-            .args(["diff", "--cached"])
-            .output()
-            .expect("failed to run `git diff --cached`");
+        let diff = git_process(&["diff"]);
+        let staged_diff = git_process(&["diff", "--cached"]);
 
         let diff = std::str::from_utf8(&diff.stdout).unwrap();
         let diffs = parse::parse_diff(diff);
@@ -440,16 +438,14 @@ impl Status {
         let file = self.diffs.get_mut(self.cursor).unwrap();
         match file.cursor {
             0 => {
-                Command::new("git")
-                    .args(match command {
-                        Stage::Add => vec!["add", &file.path],
-                        Stage::Reset => match file.kind {
-                            DiffType::Deleted => vec!["reset", "HEAD", &file.path],
-                            _ => vec!["reset", &file.path],
-                        },
-                    })
-                    .output()
-                    .unwrap_or_else(|_| panic!("failed to run `git {}`", command));
+                let args = match command {
+                    Stage::Add => vec!["add", &file.path],
+                    Stage::Reset => match file.kind {
+                        DiffType::Deleted => vec!["reset", "HEAD", &file.path],
+                        _ => vec!["reset", &file.path],
+                    },
+                };
+                git_process(&args);
             }
             i => {
                 let mut patch = Command::new("git")

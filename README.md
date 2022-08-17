@@ -7,8 +7,14 @@
 
 Git workflow improvement CLI tool inspired by [Magit](https://github.com/magit/magit). **This project is still under initial development**, but I am actively [dogfooding](https://en.wikipedia.org/wiki/Eating_your_own_dog_food) it and features *should* be added relatively quickly.
 
+<p align="center">
+  <img width="70%" style="box-shadow: 10px 10px 5px black" src="https://user-images.githubusercontent.com/20472367/184849679-31b7d919-af1a-4f2d-a614-50a3637a8df4.png" alt="Gex">
+</p>
+
 ## Aims
 Primarily, this is a personal project since I recently switched to Neovim from Emacs and miss the simplicity and efficiency of using Magit. However, I do have some general aims, which are subject to change:
+
+<img align="right" width="45%" src="https://user-images.githubusercontent.com/20472367/184855127-303c5f77-a9b4-44a6-9d88-9ce0884bb69e.png" alt="Gex being used in the VS Code terminal" href="https://user-images.githubusercontent.com/20472367/184855127-303c5f77-a9b4-44a6-9d88-9ce0884bb69e.png">
 
 - [x] Simple - uncluttered UI.
 - [x] Intuitive - it should be easy to learn to use gex.
