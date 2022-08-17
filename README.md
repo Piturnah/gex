@@ -1,9 +1,9 @@
-# Gex 
+# Gex
 
-[![](https://img.shields.io/crates/v/gex)](https://crates.io/crates/gex)
-[![](https://img.shields.io/crates/d/gex)](https://crates.io/crates/gex)
-[![](https://img.shields.io/crates/l/gex)](https://crates.io/crates/gex)
-[![](https://img.shields.io/github/stars/Piturnah/gex?style=social)](https://github.com/Piturnah/gex/stargazers)
+[![crates.io](https://img.shields.io/crates/v/gex)](https://crates.io/crates/gex)
+[![download](https://img.shields.io/crates/d/gex)](https://crates.io/crates/gex)
+[![license](https://img.shields.io/crates/l/gex)](https://crates.io/crates/gex)
+[![stargazers](https://img.shields.io/github/stars/Piturnah/gex?style=social)](https://github.com/Piturnah/gex/stargazers)
 
 Git workflow improvement CLI tool inspired by [Magit](https://github.com/magit/magit). **This project is still under initial development**, but I am actively [dogfooding](https://en.wikipedia.org/wiki/Eating_your_own_dog_food) it and features *should* be added relatively quickly.
 
@@ -12,6 +12,7 @@ Git workflow improvement CLI tool inspired by [Magit](https://github.com/magit/m
 </p>
 
 ## Aims
+
 Primarily, this is a personal project since I recently switched to Neovim from Emacs and miss the simplicity and efficiency of using Magit. However, I do have some general aims, which are subject to change:
 
 <img align="right" width="45%" src="https://user-images.githubusercontent.com/20472367/184855127-303c5f77-a9b4-44a6-9d88-9ce0884bb69e.png" alt="Gex being used in the VS Code terminal" href="https://user-images.githubusercontent.com/20472367/184855127-303c5f77-a9b4-44a6-9d88-9ce0884bb69e.png">
@@ -23,9 +24,11 @@ Primarily, this is a personal project since I recently switched to Neovim from E
 - [ ] Comprehensive - you should be able to use gex to do everything you can do in git.
 
 ## Installation
+
 Gex is hosted on [crates.io](https://crates.io/crates/gex). You can either install from source, or you can use cargo:
 
 > **NOTE:** You will need [Rust](https://www.rust-lang.org/) on your system for this installation method.
+
 ```console
 $ cargo install gex
 ```
@@ -71,7 +74,7 @@ $ gex
 
 | Key                                 | Action              |
 | ----------------------------------- | ------------------- |
-| <kbd>b</kbd>                        | checkout new branch | 
+| <kbd>b</kbd>                        | checkout new branch |
 | <kbd>Space</kbd> / <kbd>Enter</kbd> | checkout branch     |
 | <kbd>Esc</kbd>                      | exit branch mode    |
 
