@@ -10,6 +10,7 @@ use crossterm::{
     style::{Color, SetForegroundColor},
     terminal::{self, ClearType},
 };
+use git2::Repository;
 
 mod branch;
 pub mod parse;
@@ -40,27 +41,27 @@ fn main() {
         }
     }
 
-    let top_level_stdout = git_process(&["rev-parse", "--show-toplevel"]).stdout;
-
-    let top_level_stdout = Path::new(
-        std::str::from_utf8(&top_level_stdout)
-            .expect("`git rev-parse` did not give valid utf-8")
-            .trim_end(),
-    );
-
-    if top_level_stdout.is_dir() {
-        std::env::set_current_dir(top_level_stdout).expect("failed to set working directory");
-    } else {
-        print!("Not a git repository. Initialise one? [y/N]");
-        let _ = stdout().flush();
-        if let Some(Ok(input)) = stdin().lock().lines().next() {
+    let repo = match Repository::discover(Path::new(".")) {
+        Ok(repo) => repo,
+        Err(_) => {
+            print!("Not a git repository. Initialise one? [y/N]");
+            let _ = stdout().flush();
+            let input = stdin()
+                .lock()
+                .lines()
+                .next()
+                .expect("couldn't read stdin")
+                .expect("malformed stdin");
             if input.to_lowercase() != "y" {
                 process::exit(0);
             }
 
-            git_process(&["init"]);
+            Repository::init(Path::new(".")).unwrap()
         }
-    }
+    };
+
+    std::env::set_current_dir(dbg!(repo.path().parent().expect(".git cannot be root dir")))
+        .expect("failed to set working directory");
 
     let mut status = Status::new();
     let mut branch_list = BranchList::new();
