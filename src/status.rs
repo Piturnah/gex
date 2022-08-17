@@ -1,4 +1,5 @@
-//! Module relating to the Status diplay, including diffs of files.
+//! Module relating to the Status display, including diffs of files.
+
 use crossterm::{
     cursor,
     style::{self, Attribute, Color},
