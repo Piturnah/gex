@@ -1,7 +1,10 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- `--help` or `-h` flag for help information
 ### Changed
+- `-v` flag changed to `-V`
 - Status says "Unstaged changes" and "Staged changes" instead of "files"
 ### Fixed
 - gex not recognising git repositories from within subdirectories ([#2](https://github.com/Piturnah/gex/issues/2))

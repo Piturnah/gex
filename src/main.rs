@@ -34,12 +34,7 @@ pub fn git_process(args: &[&str]) -> Output {
 }
 
 fn main() {
-    for arg in std::env::args() {
-        if arg == "--version" || arg == "-v" {
-            println!("gex version {}", env!("CARGO_PKG_VERSION"));
-            process::exit(0);
-        }
-    }
+    clap::command!().get_matches();
 
     let repo = match Repository::discover(Path::new(".")) {
         Ok(repo) => repo,
