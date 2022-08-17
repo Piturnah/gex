@@ -18,11 +18,6 @@ mod status;
 use branch::BranchList;
 use status::Status;
 
-pub trait Expand {
-    fn toggle_expand(&mut self);
-    fn expanded(&self) -> bool;
-}
-
 enum State {
     Status,
     Branch,

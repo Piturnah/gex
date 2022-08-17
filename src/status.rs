@@ -15,7 +15,12 @@ use nom::{
     IResult,
 };
 
-use crate::{parse, Expand};
+use crate::parse;
+
+pub trait Expand {
+    fn toggle_expand(&mut self);
+    fn expanded(&self) -> bool;
+}
 
 #[derive(Debug)]
 enum DiffType {
