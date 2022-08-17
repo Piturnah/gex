@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- Status says "Unstaged changes" and "Staged changes" instead of "files"
 ### Fixed
 - gex not recognising git repositories from within subdirectories ([#2](https://github.com/Piturnah/gex/issues/2))
 

@@ -263,7 +263,7 @@ impl fmt::Display for Status {
             } else if index == self.count_untracked && self.count_unstaged != 0 {
                 write!(
                     f,
-                    "\n{}{}Unstaged files:{}\n",
+                    "\n{}{}Unstaged changes:{}\n",
                     cursor::MoveToColumn(0),
                     style::SetForegroundColor(Color::Yellow),
                     style::ResetColor
@@ -271,7 +271,7 @@ impl fmt::Display for Status {
             } else if index == self.count_untracked + self.count_unstaged {
                 write!(
                     f,
-                    "\n{}{}Staged files:{}\n",
+                    "\n{}{}Staged changes:{}\n",
                     cursor::MoveToColumn(0),
                     style::SetForegroundColor(Color::Yellow),
                     style::ResetColor
