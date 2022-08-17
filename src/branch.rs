@@ -1,12 +1,13 @@
-use crossterm::{
-    cursor,
-    style::{Attribute, Color, SetForegroundColor},
-    terminal::{self, ClearType},
-};
 use std::{
     fmt,
     io::{stdin, stdout, BufRead, Write},
     process::{Command, Output},
+};
+
+use crossterm::{
+    cursor,
+    style::{Attribute, Color, SetForegroundColor},
+    terminal::{self, ClearType},
 };
 
 use crate::git_process;

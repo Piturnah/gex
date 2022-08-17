@@ -1,13 +1,14 @@
+use std::{
+    io::{stdin, stdout, BufRead, Write},
+    path::Path,
+    process::{self, Command, Output, Stdio},
+};
+
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode},
     style::{Color, SetForegroundColor},
     terminal::{self, ClearType},
-};
-use std::{
-    io::{stdin, stdout, BufRead, Write},
-    path::Path,
-    process::{self, Command, Output, Stdio},
 };
 
 mod branch;

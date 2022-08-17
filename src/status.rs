@@ -1,5 +1,11 @@
 //! Module relating to the Status display, including diffs of files.
 
+use std::{
+    fmt, fs,
+    io::{stdout, Write},
+    process::{Command, Stdio},
+};
+
 use crossterm::{
     cursor,
     style::{self, Attribute, Color},
@@ -7,11 +13,6 @@ use crossterm::{
 use nom::{
     bytes::complete::{tag, take_until},
     IResult,
-};
-use std::{
-    fmt, fs,
-    io::{stdout, Write},
-    process::{Command, Stdio},
 };
 
 use crate::{parse, Expand};
