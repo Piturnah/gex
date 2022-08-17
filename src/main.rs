@@ -60,7 +60,7 @@ fn main() {
         }
     };
 
-    std::env::set_current_dir(dbg!(repo.path().parent().expect(".git cannot be root dir")))
+    std::env::set_current_dir(repo.path().parent().expect(".git cannot be root dir"))
         .expect("failed to set working directory");
 
     let mut status = Status::new();
