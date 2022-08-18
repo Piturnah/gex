@@ -58,14 +58,12 @@ $ gex
 | <kbd>u</kbd> | unstage item      |
 | <kbd>U</kbd> | unstage all items |
 | <kbd>F</kbd> | pull from remote  |
-| <kbd>c</kbd> | commit\*          |
-
-\* uses default editor configured with git
 
 ### Gex actions
 
 | Key          | Action            |
 | ------------ | ----------------- |
+| <kbd>c</kbd> | commit menu     |
 | <kbd>b</kbd> | enter branch mode |
 | <kbd>r</kbd> | refresh           |
 | <kbd>q</kbd> | quit gex          |
