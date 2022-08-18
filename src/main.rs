@@ -34,7 +34,9 @@ pub fn git_process(args: &[&str]) -> Output {
 }
 
 fn main() {
-    clap::command!().get_matches();
+    clap::command!()
+        .color(clap::ColorChoice::Never)
+        .get_matches();
 
     let repo = match Repository::discover(Path::new(".")) {
         Ok(repo) => repo,
