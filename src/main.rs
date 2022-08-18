@@ -7,10 +7,11 @@ use std::{
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode},
-    style::{Color, SetForegroundColor},
+    style::{Attribute, Color, SetForegroundColor},
     terminal::{self, ClearType},
 };
 use git2::Repository;
+use phf::phf_ordered_map;
 
 mod branch;
 pub mod parse;
@@ -19,10 +20,18 @@ mod status;
 use branch::BranchList;
 use status::Status;
 
+#[derive(PartialEq)]
 enum State {
     Status,
+    Commit,
     Branch,
 }
+
+static COMMIT_CMDS: phf::OrderedMap<char, &str> = phf_ordered_map! {
+    'c' => "commit",
+    'e' => "extend",
+    'a' => "amend",
+};
 
 pub fn git_process(args: &[&str]) -> Output {
     Command::new("git").args(args).output().unwrap_or_else(|_| {
@@ -73,7 +82,7 @@ fn main() {
 
     loop {
         match state {
-            State::Status => {
+            State::Status | State::Commit => {
                 print!(
                     "{}{}{}{}",
                     cursor::MoveToRow(0),
@@ -91,6 +100,35 @@ fn main() {
                 );
                 let _ = stdout().flush();
             }
+        }
+
+        // Display the available commit commands
+        if state == State::Commit {
+            let (term_width, term_height) =
+                terminal::size().expect("failed to query terminal dimensions");
+
+            print!(
+                "{}{:═^term_width$}{}{}{}",
+                cursor::MoveTo(0, term_height - 1 - COMMIT_CMDS.len() as u16),
+                "Commit Options",
+                SetForegroundColor(Color::Red),
+                COMMIT_CMDS
+                    .into_iter()
+                    .map(|(k, v)| format!(
+                        "\n{} {}{}{}{} => {}",
+                        cursor::MoveToColumn(0),
+                        SetForegroundColor(Color::Green),
+                        Attribute::Bold,
+                        k,
+                        Attribute::Reset,
+                        v
+                    ),)
+                    .collect::<String>(),
+                SetForegroundColor(Color::Reset),
+                term_width = term_width as usize,
+            );
+
+            let _ = stdout().flush();
         }
 
         if let Some(output) = git_output {
@@ -157,6 +195,32 @@ fn main() {
                     }
                     KeyCode::Tab => status.expand(),
                     KeyCode::Char('c') => {
+                        state = State::Commit;
+                    }
+                    KeyCode::Char('F') => {
+                        git_output = Some(git_process(&["pull"]));
+                        status.fetch();
+                    }
+                    KeyCode::Char('b') => {
+                        branch_list.fetch();
+                        state = State::Branch;
+                    }
+                    KeyCode::Char('r') => status.fetch(),
+                    KeyCode::Char('q') => {
+                        terminal::disable_raw_mode().unwrap();
+                        crossterm::execute!(
+                            stdout(),
+                            terminal::LeaveAlternateScreen,
+                            cursor::Show,
+                            cursor::MoveToColumn(0)
+                        )
+                        .expect("failed to leave alternate screen");
+                        process::exit(0);
+                    }
+                    _ => {}
+                },
+                State::Commit => match event.code {
+                    KeyCode::Char('c') => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .expect("failed to leave alternate screen");
                         git_output = Some(
@@ -170,16 +234,44 @@ fn main() {
                         status.fetch();
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .expect("failed to enter alternate screen");
+
+                        state = State::Status;
                     }
-                    KeyCode::Char('F') => {
-                        git_output = Some(git_process(&["pull"]));
+                    KeyCode::Char('e') => {
+                        crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
+                            .expect("failed to leave alternate screen");
+                        git_output = Some(
+                            Command::new("git")
+                                .args(["commit", "--amend", "--no-edit"])
+                                .stdout(Stdio::inherit())
+                                .stdin(Stdio::inherit())
+                                .output()
+                                .expect("failed to run `git commit`"),
+                        );
                         status.fetch();
+                        crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
+                            .expect("failed to enter alternate screen");
+
+                        state = State::Status;
                     }
-                    KeyCode::Char('b') => {
-                        branch_list.fetch();
-                        state = State::Branch;
+                    KeyCode::Char('a') => {
+                        crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
+                            .expect("failed to leave alternate screen");
+                        git_output = Some(
+                            Command::new("git")
+                                .args(["commit", "--amend"])
+                                .stdout(Stdio::inherit())
+                                .stdin(Stdio::inherit())
+                                .output()
+                                .expect("failed to run `git commit`"),
+                        );
+                        status.fetch();
+                        crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
+                            .expect("failed to enter alternate screen");
+
+                        state = State::Status;
                     }
-                    KeyCode::Char('r') => status.fetch(),
+                    KeyCode::Esc => state = State::Status,
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().unwrap();
                         crossterm::execute!(
