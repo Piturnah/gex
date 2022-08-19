@@ -139,7 +139,25 @@ fn main() {
                     // NOTE: I am still unsure if we want to propagate stdout on success. I fear
                     // that it may clutter the UI and a successful change should be communicated
                     // through seeing the results in gex anyway.
-                    let git_msg = std::str::from_utf8(&output.stdout).unwrap().trim();
+                    let git_msg = std::str::from_utf8(&output.stdout)
+                        .unwrap()
+                        .trim()
+                        .replace(
+                            '+',
+                            &format!(
+                                "{}+{}",
+                                SetForegroundColor(Color::DarkGreen),
+                                SetForegroundColor(Color::Reset)
+                            ),
+                        )
+                        .replace(
+                            '-',
+                            &format!(
+                                "{}-{}",
+                                SetForegroundColor(Color::DarkRed),
+                                SetForegroundColor(Color::Reset)
+                            ),
+                        );
                     if !git_msg.is_empty() {
                         msg_buffer_height = git_msg.lines().count() + 1;
                         print!(

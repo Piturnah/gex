@@ -8,6 +8,7 @@
   - extend - add additional changes to previous commit
   - amend - fix commit message
 - UI to display available commit commands
+- Colouring of `+` and `-` in stdout propagation
 - `--help` or `-h` flag for help information
 ### Changed
 - Propagate all of stdout instead of only first line
