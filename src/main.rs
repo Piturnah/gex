@@ -78,8 +78,12 @@ fn main() {
     print!("{}", cursor::Hide);
 
     let mut state = State::Status;
+    let mut msg_buffer_height;
 
     loop {
+        let (term_width, term_height) =
+            terminal::size().expect("failed to query terminal dimensions");
+
         match state {
             State::Status | State::Commit => {
                 print!(
@@ -103,9 +107,6 @@ fn main() {
 
         // Display the available commit commands
         if state == State::Commit {
-            let (term_width, term_height) =
-                terminal::size().expect("failed to query terminal dimensions");
-
             print!(
                 "{}{:═^term_width$}{}{}{}",
                 cursor::MoveTo(0, term_height - 1 - COMMIT_CMDS.len() as u16),
@@ -131,9 +132,6 @@ fn main() {
         }
 
         if let Some(output) = git_output {
-            let (term_width, term_height) =
-                terminal::size().expect("failed to query terminal dimensions");
-
             terminal::disable_raw_mode().unwrap();
 
             match output.status.success() {
@@ -145,12 +143,14 @@ fn main() {
                         .unwrap()
                         .lines()
                         .next()
-                        .unwrap_or("");
+                        .unwrap_or("")
+                        .trim();
 
+                    msg_buffer_height = 2;
                     if !git_msg.is_empty() {
                         print!(
                             "{}{:─<term_width$}\n{}",
-                            cursor::MoveTo(0, term_height - 2),
+                            cursor::MoveTo(0, term_height - msg_buffer_height as u16),
                             "",
                             git_msg,
                             term_width = term_width as usize,
@@ -158,10 +158,11 @@ fn main() {
                     }
                 }
                 false => {
-                    let git_msg = std::str::from_utf8(&output.stderr).unwrap().trim_end();
+                    let git_msg = std::str::from_utf8(&output.stderr).unwrap().trim();
+                    msg_buffer_height = git_msg.lines().count() + 1;
                     print!(
                         "{}{:─<term_width$}\n{}{}{}",
-                        cursor::MoveTo(0, term_height - git_msg.lines().count() as u16 - 1),
+                        cursor::MoveTo(0, term_height - msg_buffer_height as u16),
                         "",
                         SetForegroundColor(Color::Red),
                         git_msg,
@@ -175,6 +176,8 @@ fn main() {
             let _ = stdout().flush();
 
             git_output = None;
+        } else {
+            msg_buffer_height = 0;
         }
 
         if let Event::Key(event) = event::read().unwrap() {
@@ -205,6 +208,39 @@ fn main() {
                         state = State::Branch;
                     }
                     KeyCode::Char('r') => status.fetch(),
+                    KeyCode::Char(':') => {
+                        terminal::disable_raw_mode().expect("failed to disable raw mode");
+
+                        // Clear the git output, if there is any. In future maybe organise the
+                        // output / "terminal" as some kind of minibuffer so this is simpler.
+                        for i in 0..=msg_buffer_height {
+                            print!(
+                                "{}{}",
+                                cursor::MoveTo(0, term_height - i as u16),
+                                terminal::Clear(ClearType::UntilNewLine)
+                            );
+                        }
+
+                        print!(
+                            "{}{}:git ",
+                            cursor::MoveTo(0, term_height - 1),
+                            cursor::Show
+                        );
+                        let _ = stdout().flush();
+                        let input = stdin()
+                            .lock()
+                            .lines()
+                            .next()
+                            .expect("no stdin")
+                            .expect("malformed stdin");
+
+                        git_output =
+                            Some(git_process(&input.split_whitespace().collect::<Vec<_>>()));
+
+                        print!("{}", cursor::Hide);
+                        terminal::enable_raw_mode().expect("failed to enable raw mode");
+                        status.fetch();
+                    }
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().unwrap();
                         crossterm::execute!(

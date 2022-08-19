@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- <kbd>:</kbd> to execute arbitrary git command
 - Two new commit commands
   - extend - add additional changes to previous commit
   - amend - fix commit message

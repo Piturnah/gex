@@ -21,7 +21,9 @@ Primarily, this is a personal project since I recently switched to Neovim from E
 - [x] Intuitive - it should be easy to learn to use gex.
 - [x] Cross platform - primary focus on Linux, but should work well on Windows and MacOS.
 - [ ] Configurable - certain preferences in gex should be configurable to suit your own workflow.
-- [ ] Comprehensive - you should be able to use gex to do everything you can do in git.
+- [ ] Comprehensive\* - you should be able to use gex to do everything you can do in git.
+
+\* gex supports executing arbitrary git commands with <kbd>:</kbd> for when something is not yet available
 
 ## Installation
 
@@ -58,6 +60,7 @@ $ gex
 | <kbd>u</kbd> | unstage item      |
 | <kbd>U</kbd> | unstage all items |
 | <kbd>F</kbd> | pull from remote  |
+| <kbd>:</kbd> | execute git cmd   |
 
 ### Gex actions
 
