@@ -425,7 +425,7 @@ impl Status {
 
         self.branch = branch.to_string();
         self.head = std::str::from_utf8(
-            &git_process(&["log", "HEAD^..HEAD", "--pretty=format:\"%h %s\""]).stdout,
+            &git_process(&["log", "HEAD^..HEAD", "--pretty=format:\"%h %s\"", "-n", "1"]).stdout,
         )
         .expect("invalid utf8 from `git log`")
         .trim_start_matches("\"")
