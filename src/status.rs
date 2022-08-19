@@ -428,8 +428,8 @@ impl Status {
             &git_process(&["log", "HEAD^..HEAD", "--pretty=format:\"%h %s\"", "-n", "1"]).stdout,
         )
         .expect("invalid utf8 from `git log`")
-        .trim_start_matches("\"")
-        .trim_end_matches("\"")
+        .trim_start_matches('\"')
+        .trim_end_matches('\"')
         .to_string();
         self.count_untracked = untracked.len();
         self.count_staged = staged.len();
