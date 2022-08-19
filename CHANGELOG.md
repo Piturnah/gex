@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.1](https://github.com/Piturnah/gex/compare/v0.3.0...v0.3.1) - 2022-08-19
+### Fixed
+- gex crashes on repositories with no commits
+
 ## [0.3.0](https://github.com/Piturnah/gex/compare/v0.2.2...v0.3.0) - 2022-08-19
 ### Added
 - Most recent commit hash and title displayed in status

@@ -232,20 +232,28 @@ pub struct Status {
 
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        // Display the current branch and most recent commit
-        let mut head = self.head.split_whitespace();
+        // Display the current branch
         writeln!(
             f,
-            "{}On branch {}{}{}\n\n{}{}{}{}",
+            "{}On branch {}{}",
             cursor::MoveToColumn(0),
             Attribute::Bold,
             self.branch,
-            Attribute::Dim,
-            cursor::MoveToColumn(0),
-            head.next().unwrap(),
-            Attribute::Reset,
-            head.map(|w| format!(" {}", w)).collect::<String>()
         )?;
+
+        // Display most recent commit
+        if !self.head.is_empty() {
+            let mut head = self.head.split_whitespace();
+            writeln!(
+                f,
+                "{}\n{}{}{}{}",
+                Attribute::Dim,
+                cursor::MoveToColumn(0),
+                head.next().unwrap(),
+                Attribute::Reset,
+                head.map(|w| format!(" {}", w)).collect::<String>()
+            )?;
+        }
 
         if self.diffs.is_empty() {
             write!(
