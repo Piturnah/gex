@@ -78,7 +78,7 @@ fn main() {
     print!("{}", cursor::Hide);
 
     let mut state = State::Status;
-    let mut msg_buffer_height;
+    let mut msg_buffer_height = 0;
 
     loop {
         let (term_width, term_height) =
@@ -139,18 +139,12 @@ fn main() {
                     // NOTE: I am still unsure if we want to propagate stdout on success. I fear
                     // that it may clutter the UI and a successful change should be communicated
                     // through seeing the results in gex anyway.
-                    let git_msg = std::str::from_utf8(&output.stdout)
-                        .unwrap()
-                        .lines()
-                        .next()
-                        .unwrap_or("")
-                        .trim();
-
-                    msg_buffer_height = 2;
+                    let git_msg = std::str::from_utf8(&output.stdout).unwrap().trim();
                     if !git_msg.is_empty() {
+                        msg_buffer_height = git_msg.lines().count() + 1;
                         print!(
                             "{}{:─<term_width$}\n{}",
-                            cursor::MoveTo(0, term_height - msg_buffer_height as u16),
+                            cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
                             "",
                             git_msg,
                             term_width = term_width as usize,
@@ -162,7 +156,7 @@ fn main() {
                     msg_buffer_height = git_msg.lines().count() + 1;
                     print!(
                         "{}{:─<term_width$}\n{}{}{}",
-                        cursor::MoveTo(0, term_height - msg_buffer_height as u16),
+                        cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
                         "",
                         SetForegroundColor(Color::Red),
                         git_msg,
@@ -213,7 +207,7 @@ fn main() {
 
                         // Clear the git output, if there is any. In future maybe organise the
                         // output / "terminal" as some kind of minibuffer so this is simpler.
-                        for i in 0..=msg_buffer_height {
+                        for i in 0..=msg_buffer_height.min(term_height.into()) {
                             print!(
                                 "{}{}",
                                 cursor::MoveTo(0, term_height - i as u16),

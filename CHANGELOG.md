@@ -9,6 +9,7 @@
 - UI to display available commit commands
 - `--help` or `-h` flag for help information
 ### Changed
+- Propagate all of stdout instead of only first line
 - Use <kbd>c</kbd> <kbd>c</kbd> to create a commit
 - `-v` flag changed to `-V`
 - User is notified of unrecognised command line arguments and gex exits instead of quietly ignoring
