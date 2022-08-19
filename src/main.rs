@@ -273,8 +273,6 @@ fn main() {
                         state = State::Status;
                     }
                     KeyCode::Char('e') => {
-                        crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
-                            .expect("failed to leave alternate screen");
                         git_output = Some(
                             Command::new("git")
                                 .args(["commit", "--amend", "--no-edit"])
@@ -284,8 +282,6 @@ fn main() {
                                 .expect("failed to run `git commit`"),
                         );
                         status.fetch();
-                        crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
-                            .expect("failed to enter alternate screen");
 
                         state = State::Status;
                     }
