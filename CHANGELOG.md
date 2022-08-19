@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- Most recent commit hash and title displayed in status
 - <kbd>:</kbd> to execute arbitrary git command
 - Two new commit commands
   - extend - add additional changes to previous commit

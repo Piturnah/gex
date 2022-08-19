@@ -222,6 +222,7 @@ impl fmt::Display for Stage {
 #[derive(Debug, Default)]
 pub struct Status {
     pub branch: String,
+    pub head: String,
     pub diffs: Vec<FileDiff>,
     pub count_untracked: usize,
     pub count_unstaged: usize,
@@ -231,13 +232,19 @@ pub struct Status {
 
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        // Display the current branch and most recent commit
+        let mut head = self.head.split_whitespace();
         writeln!(
             f,
-            "{}On branch {}{}{}",
+            "{}On branch {}{}{}\n\n{}{}{}{}",
             cursor::MoveToColumn(0),
             Attribute::Bold,
             self.branch,
-            Attribute::Reset
+            Attribute::Dim,
+            cursor::MoveToColumn(0),
+            head.next().unwrap(),
+            Attribute::Reset,
+            head.map(|w| format!(" {}", w)).collect::<String>()
         )?;
 
         if self.diffs.is_empty() {
@@ -417,6 +424,13 @@ impl Status {
         }
 
         self.branch = branch.to_string();
+        self.head = std::str::from_utf8(
+            &git_process(&["log", "HEAD^..HEAD", "--pretty=format:\"%h %s\""]).stdout,
+        )
+        .expect("invalid utf8 from `git log`")
+        .trim_start_matches("\"")
+        .trim_end_matches("\"")
+        .to_string();
         self.count_untracked = untracked.len();
         self.count_staged = staged.len();
         self.count_unstaged = unstaged.len();
