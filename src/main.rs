@@ -153,16 +153,18 @@ fn main() {
                 }
                 false => {
                     let git_msg = std::str::from_utf8(&output.stderr).unwrap().trim();
-                    msg_buffer_height = git_msg.lines().count() + 1;
-                    print!(
-                        "{}{:─<term_width$}\n{}{}{}",
-                        cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
-                        "",
-                        SetForegroundColor(Color::Red),
-                        git_msg,
-                        SetForegroundColor(Color::Reset),
-                        term_width = term_width as usize,
-                    );
+                    if !git_msg.is_empty() {
+                        msg_buffer_height = git_msg.lines().count() + 1;
+                        print!(
+                            "{}{:─<term_width$}\n{}{}{}",
+                            cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
+                            "",
+                            SetForegroundColor(Color::Red),
+                            git_msg,
+                            SetForegroundColor(Color::Reset),
+                            term_width = term_width as usize,
+                        );
+                    }
                 }
             }
 

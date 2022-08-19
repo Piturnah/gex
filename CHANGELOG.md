@@ -16,6 +16,7 @@
 - User is notified of unrecognised command line arguments and gex exits instead of quietly ignoring
 - Status says "Unstaged changes" and "Staged changes" instead of "files"
 ### Fixed
+- showing empty stdout or stderr in the case that the exit code didn't match 
 - gex not recognising git repositories from within subdirectories ([#2](https://github.com/Piturnah/gex/issues/2))
 
 ## [0.2.2](https://github.com/Piturnah/gex/compare/v0.2.1...v0.2.2) - 2022-08-15
