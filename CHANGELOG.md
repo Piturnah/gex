@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.0](https://github.com/Piturnah/gex/compare/v0.2.2...v0.3.0) - 2022-08-19
 ### Added
 - Most recent commit hash and title displayed in status
 - <kbd>:</kbd> to execute arbitrary git command
