@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Fixed
+- not showing previous commit information on initial commit ([#6](https://github.com/Piturnah/gex/issues/6))
 - displaying diff of new files with an extra space at beginning of all lines other than first
 
 ## [0.3.1](https://github.com/Piturnah/gex/compare/v0.3.0...v0.3.1) - 2022-08-19
