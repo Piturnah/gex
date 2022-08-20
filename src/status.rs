@@ -224,7 +224,13 @@ pub struct Status {
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         // Display the current branch
-        writeln!(f, "\rOn branch {}{}", Attribute::Bold, self.branch,)?;
+        writeln!(
+            f,
+            "\rOn branch {}{}{}",
+            Attribute::Bold,
+            self.branch,
+            Attribute::Reset
+        )?;
 
         // Display most recent commit
         if !self.head.is_empty() {
