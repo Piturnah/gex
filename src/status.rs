@@ -122,7 +122,7 @@ impl fmt::Display for FileDiff {
                         let file_content: String = file_content
                             .lines()
                             .collect::<Vec<&str>>()
-                            .join(&format!("\n{}+ ", cursor::MoveToColumn(0)));
+                            .join(&format!("\n{}+", cursor::MoveToColumn(0)));
 
                         write!(
                             f,
