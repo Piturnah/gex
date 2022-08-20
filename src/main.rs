@@ -87,11 +87,10 @@ fn main() {
         match state {
             State::Status | State::Commit => {
                 print!(
-                    "{}{}{}{}",
+                    "{}{}{}\r",
                     cursor::MoveToRow(0),
                     terminal::Clear(ClearType::All),
                     status,
-                    cursor::MoveToColumn(0)
                 );
             }
             State::Branch => {
@@ -115,8 +114,7 @@ fn main() {
                 COMMIT_CMDS
                     .into_iter()
                     .map(|(k, v)| format!(
-                        "\n{} {}{}{}{} => {}",
-                        cursor::MoveToColumn(0),
+                        "\r\n {}{}{}{} => {}",
                         SetForegroundColor(Color::Green),
                         Attribute::Bold,
                         k,

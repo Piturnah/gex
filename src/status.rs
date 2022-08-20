@@ -6,10 +6,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crossterm::{
-    cursor,
-    style::{self, Attribute, Color},
-};
+use crossterm::style::{self, Attribute, Color};
 use nom::{
     bytes::complete::{tag, take_until},
     IResult,
@@ -41,8 +38,7 @@ impl fmt::Display for Hunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         use fmt::Write;
         let mut outbuf = format!(
-            "\n{}{}{}{}",
-            cursor::MoveToColumn(0),
+            "\r\n{}{}{}",
             style::SetForegroundColor(Color::Blue),
             match self.expanded {
                 true => "⌄",
@@ -55,8 +51,7 @@ impl fmt::Display for Hunk {
             for line in self.diffs.iter().skip(1) {
                 write!(
                     &mut outbuf,
-                    "\n{}{}{}",
-                    cursor::MoveToColumn(0),
+                    "\r\n{}{}",
                     match line.chars().next() {
                         Some('+') => style::SetForegroundColor(Color::DarkGreen),
                         Some('-') => style::SetForegroundColor(Color::DarkRed),
@@ -102,8 +97,7 @@ impl fmt::Display for FileDiff {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(
             f,
-            "{}{}{}{}",
-            cursor::MoveToColumn(0),
+            "\r{}{}{}",
             match self.expanded {
                 true => "⌄",
                 false => "›",
@@ -119,16 +113,13 @@ impl fmt::Display for FileDiff {
             match self.diff.is_empty() {
                 true => {
                     if let Ok(file_content) = fs::read_to_string(&self.path) {
-                        let file_content: String = file_content
-                            .lines()
-                            .collect::<Vec<&str>>()
-                            .join(&format!("\n{}+", cursor::MoveToColumn(0)));
+                        let file_content: String =
+                            file_content.lines().collect::<Vec<&str>>().join("\r\n+");
 
                         write!(
                             f,
-                            "\n{}{}{}+{}",
+                            "\r\n{}{}+{}",
                             Attribute::Reset,
-                            cursor::MoveToColumn(0),
                             style::SetForegroundColor(Color::DarkGreen),
                             file_content
                         )?;
@@ -233,22 +224,15 @@ pub struct Status {
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         // Display the current branch
-        writeln!(
-            f,
-            "{}On branch {}{}",
-            cursor::MoveToColumn(0),
-            Attribute::Bold,
-            self.branch,
-        )?;
+        writeln!(f, "\rOn branch {}{}", Attribute::Bold, self.branch,)?;
 
         // Display most recent commit
         if !self.head.is_empty() {
             let mut head = self.head.split_whitespace();
             writeln!(
                 f,
-                "{}\n{}{}{}{}",
+                "{}\r\n{}{}{}",
                 Attribute::Dim,
-                cursor::MoveToColumn(0),
                 head.next().unwrap(),
                 Attribute::Reset,
                 head.map(|w| format!(" {}", w)).collect::<String>()
@@ -258,8 +242,7 @@ impl fmt::Display for Status {
         if self.diffs.is_empty() {
             write!(
                 f,
-                "\n{}{}nothing to commit, working tree clean{}",
-                cursor::MoveToColumn(0),
+                "\r\n{}nothing to commit, working tree clean{}",
                 style::SetForegroundColor(Color::Yellow),
                 style::SetForegroundColor(Color::Reset)
             )?;
@@ -270,24 +253,21 @@ impl fmt::Display for Status {
             if index == 0 && self.count_untracked != 0 {
                 write!(
                     f,
-                    "\n{}{}Untracked files:{}\n",
-                    cursor::MoveToColumn(0),
+                    "\r\n{}Untracked files:{}\n",
                     style::SetForegroundColor(Color::Yellow),
                     style::ResetColor
                 )?;
             } else if index == self.count_untracked && self.count_unstaged != 0 {
                 write!(
                     f,
-                    "\n{}{}Unstaged changes:{}\n",
-                    cursor::MoveToColumn(0),
+                    "\r\n{}Unstaged changes:{}\n",
                     style::SetForegroundColor(Color::Yellow),
                     style::ResetColor
                 )?;
             } else if index == self.count_untracked + self.count_unstaged {
                 write!(
                     f,
-                    "\n{}{}Staged changes:{}\n",
-                    cursor::MoveToColumn(0),
+                    "\r\n{}Staged changes:{}\n",
                     style::SetForegroundColor(Color::Yellow),
                     style::ResetColor
                 )?;
@@ -296,13 +276,7 @@ impl fmt::Display for Status {
             if file.cursor == 0 && self.cursor == index {
                 write!(f, "{}", Attribute::Reverse)?;
             }
-            writeln!(
-                f,
-                "{}    {}{}",
-                cursor::MoveToColumn(0),
-                file,
-                Attribute::Reset
-            )?;
+            writeln!(f, "\r    {}{}", file, Attribute::Reset)?;
         }
 
         Ok(())

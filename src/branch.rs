@@ -24,10 +24,9 @@ impl fmt::Display for BranchList {
         if self.branches.is_empty() {
             return write!(
                 f,
-                "{}No branches yet.{}\n\n{}Make a commit or press b again to switch branch.",
+                "{}No branches yet.{}\r\n\nMake a commit or press b again to switch branch.",
                 SetForegroundColor(Color::Yellow),
                 SetForegroundColor(Color::Reset),
-                cursor::MoveToColumn(0)
             );
         }
 
@@ -39,9 +38,9 @@ impl fmt::Display for BranchList {
                 let mut branch = branch.to_string();
                 branch.insert_str(2, &format!("{}", Attribute::Reverse));
                 write!(&mut branch, "{}", Attribute::Reset)?;
-                writeln!(f, "{}{}", cursor::MoveToColumn(0), branch,)?;
+                writeln!(f, "\r{}", branch,)?;
             } else {
-                writeln!(f, "{}{}", cursor::MoveToColumn(0), branch)?;
+                writeln!(f, "\r{}", branch)?;
             }
             if branch.starts_with('*') {
                 write!(f, "{}", SetForegroundColor(Color::Reset))?;
