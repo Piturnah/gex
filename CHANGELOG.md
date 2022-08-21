@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.0...master)
 ### Fixed
 - Erroneously showing first heading in bold before initial commit
 - Not showing previous commit information on initial commit ([#6](https://github.com/Piturnah/gex/issues/6))
