@@ -2,7 +2,7 @@
 
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.1...master)
 ### Fixed
-- Erroneously showing first heading in bold before initial commit
+- Showing first heading in bold before initial commit
 - Not showing previous commit information on initial commit ([#6](https://github.com/Piturnah/gex/issues/6))
 - Displaying diff of new files with an extra space at beginning of all lines other than first
 
