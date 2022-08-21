@@ -51,20 +51,20 @@ $ gex
 
 ### Git actions
 
-| Key          | Action            |
-| ------------ | ----------------- |
-| <kbd>s</kbd> | stage item        |
-| <kbd>S</kbd> | stage all items   |
-| <kbd>u</kbd> | unstage item      |
-| <kbd>U</kbd> | unstage all items |
-| <kbd>F</kbd> | pull from remote  |
-| <kbd>:</kbd> | execute git cmd   |
+| Key          | Action              |
+| ------------ | ------------------- |
+| <kbd>s</kbd> | stage item          |
+| <kbd>S</kbd> | stage all items     |
+| <kbd>u</kbd> | unstage item        |
+| <kbd>U</kbd> | unstage all items   |
+| <kbd>F</kbd> | pull from remote    |
+| <kbd>:</kbd> | execute git command |
 
 ### Gex actions
 
 | Key          | Action            |
 | ------------ | ----------------- |
-| <kbd>c</kbd> | commit menu     |
+| <kbd>c</kbd> | commit menu       |
 | <kbd>b</kbd> | enter branch mode |
 | <kbd>r</kbd> | refresh           |
 | <kbd>q</kbd> | quit gex          |
