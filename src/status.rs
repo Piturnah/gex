@@ -6,6 +6,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+use anyhow::{Context, Result};
 use crossterm::style::{self, Attribute, Color};
 use nom::{
     bytes::complete::{tag, take_until},
@@ -290,21 +291,23 @@ impl fmt::Display for Status {
 }
 
 impl Status {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self> {
         let mut status = Self::default();
-        status.fetch();
-        status
+        status.fetch()?;
+        Ok(status)
     }
 
-    pub fn fetch(&mut self) {
-        let output = git_process(&["status"]);
+    pub fn fetch(&mut self) -> Result<()> {
+        let output = git_process(&["status"])?;
 
         let input = std::str::from_utf8(&output.stdout).unwrap();
 
         let mut lines = input.lines();
-        let branch_line = lines.next().expect("not a valid `git status` output");
+        let branch_line = lines.next().context("no output from `git status`")?;
         let branch: IResult<&str, &str> = tag("On branch ")(branch_line);
-        let (branch, _) = branch.unwrap();
+        let (branch, _) = branch
+            .map_err(|e| e.to_owned())
+            .context("failed to get name of current branch")?;
 
         let mut untracked = Vec::new();
         let mut staged = Vec::new();
@@ -326,7 +329,9 @@ impl Status {
                     }
 
                     let parse_result: IResult<&str, &str> = take_until("  ")(line.trim_start());
-                    let (line, prefix) = parse_result.expect("strange diff output");
+                    let (line, prefix) = parse_result
+                        .map_err(|e| e.to_owned())
+                        .context("strange `git diff` output")?;
 
                     staged.push(FileDiff::new(
                         line.trim_start(),
@@ -349,7 +354,9 @@ impl Status {
                     }
 
                     let parse_result: IResult<&str, &str> = take_until("  ")(line.trim_start());
-                    let (line, prefix) = parse_result.expect("strange diff output");
+                    let (line, prefix) = parse_result
+                        .map_err(|e| e.to_owned())
+                        .context("strange diff output")?;
 
                     unstaged.push(FileDiff::new(
                         line.trim_start(),
@@ -366,8 +373,8 @@ impl Status {
             }
         }
 
-        let diff = git_process(&["diff"]);
-        let staged_diff = git_process(&["diff", "--cached"]);
+        let diff = git_process(&["diff"])?;
+        let staged_diff = git_process(&["diff", "--cached"])?;
 
         let diff = std::str::from_utf8(&diff.stdout).unwrap();
         let diffs = parse::parse_diff(diff);
@@ -413,9 +420,9 @@ impl Status {
 
         self.branch = branch.to_string();
         self.head = std::str::from_utf8(
-            &git_process(&["log", "HEAD", "--pretty=format:\"%h %s\"", "-n", "1"]).stdout,
+            &git_process(&["log", "HEAD", "--pretty=format:\"%h %s\"", "-n", "1"])?.stdout,
         )
-        .expect("invalid utf8 from `git log`")
+        .context("invalid utf8 from `git log`")?
         .trim_start_matches('\"')
         .trim_end_matches('\"')
         .to_string();
@@ -430,11 +437,13 @@ impl Status {
         if !self.diffs.is_empty() && self.cursor >= self.diffs.len() {
             self.cursor = self.diffs.len() - 1;
         }
+
+        Ok(())
     }
 
-    fn stage_or_unstage(&mut self, command: Stage) {
+    fn stage_or_unstage(&mut self, command: Stage) -> Result<()> {
         if self.diffs.is_empty() {
-            return;
+            return Ok(());
         }
 
         let file = self.diffs.get_mut(self.cursor).unwrap();
@@ -447,7 +456,7 @@ impl Status {
                         _ => vec!["reset", &file.path],
                     },
                 };
-                git_process(&args);
+                git_process(&args)?;
             }
             i => {
                 let mut patch = Command::new("git")
@@ -458,9 +467,9 @@ impl Status {
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())
                     .spawn()
-                    .expect("failed to spawn interactive git process");
+                    .context("failed to spawn interactive git process")?;
 
-                let mut stdin = patch.stdin.take().expect("failed to open child stdin");
+                let mut stdin = patch.stdin.take().context("failed to open child stdin")?;
 
                 let mut bufs = vec![b"n\n"; i - 1];
                 bufs.push(b"y\n");
@@ -474,15 +483,15 @@ impl Status {
                 let _ = patch.wait();
             }
         }
-        self.fetch();
+        self.fetch()
     }
 
-    pub fn stage(&mut self) {
-        self.stage_or_unstage(Stage::Add);
+    pub fn stage(&mut self) -> Result<()> {
+        self.stage_or_unstage(Stage::Add)
     }
 
-    pub fn unstage(&mut self) {
-        self.stage_or_unstage(Stage::Reset);
+    pub fn unstage(&mut self) -> Result<()> {
+        self.stage_or_unstage(Stage::Reset)
     }
 
     /// Toggles expand on the selected diff item.

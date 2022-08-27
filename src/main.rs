@@ -4,6 +4,7 @@ use std::{
     process::{self, Command, Output, Stdio},
 };
 
+use anyhow::{Context, Result};
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode},
@@ -32,30 +33,30 @@ static COMMIT_CMDS: phf::OrderedMap<char, &str> = phf_ordered_map! {
     'a' => "amend",
 };
 
-pub fn git_process(args: &[&str]) -> Output {
-    Command::new("git").args(args).output().unwrap_or_else(|_| {
-        panic!(
+pub fn git_process(args: &[&str]) -> Result<Output> {
+    Command::new("git").args(args).output().with_context(|| {
+        format!(
             "failed to run `git{}`",
             args.iter().map(|a| " ".to_string() + a).collect::<String>()
         )
     })
 }
 
-fn main() {
+fn run() -> Result<()> {
     clap::command!()
         .color(clap::ColorChoice::Never)
         .get_matches();
 
-    let top_level_stdout = git_process(&["rev-parse", "--show-toplevel"]).stdout;
+    let top_level_stdout = git_process(&["rev-parse", "--show-toplevel"])?.stdout;
 
     let top_level_stdout = Path::new(
         std::str::from_utf8(&top_level_stdout)
-            .expect("`git rev-parse` did not give valid utf-8")
+            .context("`git rev-parse` did not give valid utf-8")?
             .trim_end(),
     );
 
     if top_level_stdout.is_dir() {
-        std::env::set_current_dir(top_level_stdout).expect("failed to set working directory");
+        std::env::set_current_dir(top_level_stdout).context("failed to set working directory")?;
     } else {
         print!("Not a git repository. Initialise one? [y/N]");
         let _ = stdout().flush();
@@ -64,17 +65,17 @@ fn main() {
                 process::exit(0);
             }
 
-            git_process(&["init"]);
+            git_process(&["init"])?;
         }
     }
 
-    let mut status = Status::new();
-    let mut branch_list = BranchList::new();
+    let mut status = Status::new()?;
+    let mut branch_list = BranchList::new()?;
     let mut git_output: Option<Output> = None;
 
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
-        .expect("failed to enter alternate screen");
-    terminal::enable_raw_mode().expect("failed to put terminal in raw mode");
+        .context("failed to enter alternate screen")?;
+    terminal::enable_raw_mode().context("failed to put terminal in raw mode")?;
     print!("{}", cursor::Hide);
 
     let mut state = State::Status;
@@ -82,7 +83,7 @@ fn main() {
 
     loop {
         let (term_width, term_height) =
-            terminal::size().expect("failed to query terminal dimensions");
+            terminal::size().context("failed to query terminal dimensions")?;
 
         match state {
             State::Status | State::Commit => {
@@ -197,31 +198,31 @@ fn main() {
                 State::Status => match event.code {
                     KeyCode::Char('j') | KeyCode::Down => status.down(),
                     KeyCode::Char('k') | KeyCode::Up => status.up(),
-                    KeyCode::Char('s') => status.stage(),
+                    KeyCode::Char('s') => status.stage()?,
                     KeyCode::Char('S') => {
-                        git_output = Some(git_process(&["add", "."]));
-                        status.fetch();
+                        git_output = Some(git_process(&["add", "."])?);
+                        status.fetch()?;
                     }
-                    KeyCode::Char('u') => status.unstage(),
+                    KeyCode::Char('u') => status.unstage()?,
                     KeyCode::Char('U') => {
-                        git_output = Some(git_process(&["reset"]));
-                        status.fetch();
+                        git_output = Some(git_process(&["reset"])?);
+                        status.fetch()?;
                     }
                     KeyCode::Tab => status.expand(),
                     KeyCode::Char('c') => {
                         state = State::Commit;
                     }
                     KeyCode::Char('F') => {
-                        git_output = Some(git_process(&["pull"]));
-                        status.fetch();
+                        git_output = Some(git_process(&["pull"])?);
+                        status.fetch()?;
                     }
                     KeyCode::Char('b') => {
-                        branch_list.fetch();
+                        branch_list.fetch()?;
                         state = State::Branch;
                     }
-                    KeyCode::Char('r') => status.fetch(),
+                    KeyCode::Char('r') => status.fetch()?,
                     KeyCode::Char(':') => {
-                        terminal::disable_raw_mode().expect("failed to disable raw mode");
+                        terminal::disable_raw_mode().context("failed to disable raw mode")?;
 
                         // Clear the git output, if there is any. In future maybe organise the
                         // output / "terminal" as some kind of minibuffer so this is simpler.
@@ -243,15 +244,15 @@ fn main() {
                             .lock()
                             .lines()
                             .next()
-                            .expect("no stdin")
-                            .expect("malformed stdin");
+                            .context("no stdin")?
+                            .context("malformed stdin")?;
 
                         git_output =
-                            Some(git_process(&input.split_whitespace().collect::<Vec<_>>()));
+                            Some(git_process(&input.split_whitespace().collect::<Vec<_>>())?);
 
                         print!("{}", cursor::Hide);
-                        terminal::enable_raw_mode().expect("failed to enable raw mode");
-                        status.fetch();
+                        terminal::enable_raw_mode().context("failed to enable raw mode")?;
+                        status.fetch()?;
                     }
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().unwrap();
@@ -261,7 +262,7 @@ fn main() {
                             cursor::Show,
                             cursor::MoveToColumn(0)
                         )
-                        .expect("failed to leave alternate screen");
+                        .context("failed to leave alternate screen")?;
                         process::exit(0);
                     }
                     _ => {}
@@ -269,18 +270,18 @@ fn main() {
                 State::Commit => match event.code {
                     KeyCode::Char('c') => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
-                            .expect("failed to leave alternate screen");
+                            .context("failed to leave alternate screen")?;
                         git_output = Some(
                             Command::new("git")
                                 .arg("commit")
                                 .stdout(Stdio::inherit())
                                 .stdin(Stdio::inherit())
                                 .output()
-                                .expect("failed to run `git commit`"),
+                                .context("failed to run `git commit`")?,
                         );
-                        status.fetch();
+                        status.fetch()?;
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
-                            .expect("failed to enter alternate screen");
+                            .context("failed to enter alternate screen")?;
 
                         state = State::Status;
                     }
@@ -291,26 +292,26 @@ fn main() {
                                 .stdout(Stdio::inherit())
                                 .stdin(Stdio::inherit())
                                 .output()
-                                .expect("failed to run `git commit`"),
+                                .context("failed to run `git commit`")?,
                         );
-                        status.fetch();
+                        status.fetch()?;
 
                         state = State::Status;
                     }
                     KeyCode::Char('a') => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
-                            .expect("failed to leave alternate screen");
+                            .context("failed to leave alternate screen")?;
                         git_output = Some(
                             Command::new("git")
                                 .args(["commit", "--amend"])
                                 .stdout(Stdio::inherit())
                                 .stdin(Stdio::inherit())
                                 .output()
-                                .expect("failed to run `git commit`"),
+                                .context("failed to run `git commit`")?,
                         );
-                        status.fetch();
+                        status.fetch()?;
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
-                            .expect("failed to enter alternate screen");
+                            .context("failed to enter alternate screen")?;
 
                         state = State::Status;
                     }
@@ -323,7 +324,7 @@ fn main() {
                             cursor::Show,
                             cursor::MoveToColumn(0)
                         )
-                        .expect("failed to leave alternate screen");
+                        .context("failed to leave alternate screen")?;
                         process::exit(0);
                     }
                     _ => {}
@@ -339,13 +340,13 @@ fn main() {
                         }
                     }
                     KeyCode::Char(' ') | KeyCode::Enter => {
-                        git_output = Some(branch_list.checkout());
-                        status.fetch();
+                        git_output = Some(branch_list.checkout()?);
+                        status.fetch()?;
                         state = State::Status;
                     }
                     KeyCode::Char('b') => {
-                        git_output = Some(BranchList::checkout_new());
-                        status.fetch();
+                        git_output = Some(BranchList::checkout_new()?);
+                        status.fetch()?;
                         state = State::Status;
                     }
                     KeyCode::Esc => state = State::Status,
@@ -357,7 +358,7 @@ fn main() {
                             cursor::Show,
                             cursor::MoveToColumn(0)
                         )
-                        .expect("failed to leave alternate screen");
+                        .context("failed to leave alternate screen")?;
                         process::exit(0);
                     }
                     _ => {}
@@ -365,4 +366,19 @@ fn main() {
             };
         }
     }
+}
+
+fn main() -> Result<()> {
+    run().map_err(|e| {
+        // We don't want to do anything if these fail since then we'll lose the original error
+        // message we are trying to propagate
+        let _ = terminal::disable_raw_mode();
+        let _ = crossterm::execute!(
+            stdout(),
+            terminal::LeaveAlternateScreen,
+            cursor::Show,
+            cursor::MoveToColumn(0)
+        );
+        e
+    })
 }

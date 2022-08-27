@@ -4,6 +4,7 @@ use std::{
     process::Output,
 };
 
+use anyhow::{Context, Result};
 use crossterm::{
     cursor,
     style::{Attribute, Color, SetForegroundColor},
@@ -51,31 +52,33 @@ impl fmt::Display for BranchList {
 }
 
 impl BranchList {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self> {
         let mut branch_list = Self {
             branches: Vec::new(),
             cursor: 0,
         };
-        branch_list.fetch();
-        branch_list
+        branch_list.fetch()?;
+        Ok(branch_list)
     }
 
-    pub fn fetch(&mut self) {
-        let output = git_process(&["branch"]);
+    pub fn fetch(&mut self) -> Result<()> {
+        let output = git_process(&["branch"])?;
 
         self.branches = std::str::from_utf8(&output.stdout)
-            .expect("broken stdout from `git branch`")
+            .context("broken stdout from `git branch`")?
             .lines()
             .map(|l| l.to_string())
             .collect::<Vec<_>>();
+
+        Ok(())
     }
 
-    pub fn checkout(&self) -> Output {
+    pub fn checkout(&self) -> Result<Output> {
         git_process(&["checkout", &self.branches[self.cursor][2..]])
     }
 
-    pub fn checkout_new() -> Output {
-        terminal::disable_raw_mode().expect("failed to exit raw mode");
+    pub fn checkout_new() -> Result<Output> {
+        terminal::disable_raw_mode().context("failed to exit raw mode")?;
         print!(
             "{}{}{}Name for the new branch: ",
             cursor::MoveTo(0, 0),
@@ -88,10 +91,10 @@ impl BranchList {
             .lock()
             .lines()
             .next()
-            .expect("no stdin")
-            .expect("malformed stdin");
+            .context("no stdin")?
+            .context("malformed stdin")?;
 
-        terminal::enable_raw_mode().expect("failed to enter raw mode");
+        terminal::enable_raw_mode().context("failed to enter raw mode")?;
         print!("{}", cursor::Hide);
 
         git_process(&["checkout", "-b", &input])
