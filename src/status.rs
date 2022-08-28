@@ -240,7 +240,7 @@ impl fmt::Display for Status {
                 f,
                 "{}\r\n{}{}{}",
                 Attribute::Dim,
-                head.next().unwrap(),
+                head.next().unwrap(), // !self.head.is_empty()
                 Attribute::Reset,
                 head.map(|w| format!(" {}", w)).collect::<String>()
             )?;
@@ -300,7 +300,8 @@ impl Status {
     pub fn fetch(&mut self) -> Result<()> {
         let output = git_process(&["status"])?;
 
-        let input = std::str::from_utf8(&output.stdout).unwrap();
+        let input =
+            std::str::from_utf8(&output.stdout).context("malformed stdout from `git status`")?;
 
         let mut lines = input.lines();
         let branch_line = lines.next().context("no output from `git status`")?;
@@ -376,8 +377,8 @@ impl Status {
         let diff = git_process(&["diff"])?;
         let staged_diff = git_process(&["diff", "--cached"])?;
 
-        let diff = std::str::from_utf8(&diff.stdout).unwrap();
-        let diffs = parse::parse_diff(diff);
+        let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
+        let diffs = parse::parse_diff(diff)?;
         'outer_unstaged: for (path, diff) in diffs {
             for mut file in &mut unstaged {
                 if file.path == path {
@@ -397,8 +398,9 @@ impl Status {
             }
         }
 
-        let staged_diff = std::str::from_utf8(&staged_diff.stdout).unwrap();
-        let diffs = parse::parse_diff(staged_diff);
+        let staged_diff = std::str::from_utf8(&staged_diff.stdout)
+            .context("malformed stdout from `git diff --cached`")?;
+        let diffs = parse::parse_diff(staged_diff)?;
         'outer_staged: for (path, diff) in diffs {
             for mut file in &mut staged {
                 if file.path == path {
@@ -446,7 +448,11 @@ impl Status {
             return Ok(());
         }
 
-        let file = self.diffs.get_mut(self.cursor).unwrap();
+        let file = self
+            .diffs
+            .get_mut(self.cursor)
+            .context("cursor is at invalid position")?;
+
         match file.cursor {
             0 => {
                 let args = match command {
@@ -495,26 +501,36 @@ impl Status {
     }
 
     /// Toggles expand on the selected diff item.
-    pub fn expand(&mut self) {
+    pub fn expand(&mut self) -> Result<()> {
         if self.diffs.is_empty() {
-            return;
+            return Ok(());
         }
 
-        let mut file = self.diffs.get_mut(self.cursor).unwrap();
+        let mut file = self
+            .diffs
+            .get_mut(self.cursor)
+            .context("cursor is at invalid position")?;
+
         if file.cursor == 0 {
             file.expanded = !file.expanded;
         } else {
             file.diff[file.cursor - 1].expanded = !file.diff[file.cursor - 1].expanded;
         }
+
+        Ok(())
     }
 
     /// Move the cursor up one
-    pub fn up(&mut self) {
+    pub fn up(&mut self) -> Result<()> {
         if self.diffs.is_empty() {
-            return;
+            return Ok(());
         }
 
-        let file = self.diffs.get_mut(self.cursor).unwrap();
+        let file = self
+            .diffs
+            .get_mut(self.cursor)
+            .context("cursor is at invalid position")?;
+
         if file.up().is_err() {
             match self.cursor.checked_sub(1) {
                 Some(v) => {
@@ -524,21 +540,29 @@ impl Status {
                 None => self.cursor = 0,
             }
         }
+
+        Ok(())
     }
 
     /// Move the cursor down one
-    pub fn down(&mut self) {
+    pub fn down(&mut self) -> Result<()> {
         if self.diffs.is_empty() {
-            return;
+            return Ok(());
         }
 
-        let file = self.diffs.get_mut(self.cursor).unwrap();
+        let file = self
+            .diffs
+            .get_mut(self.cursor)
+            .context("cursor is at invalid position")?;
+
         if file.down().is_err() {
             self.cursor += 1;
             if self.cursor >= self.diffs.len() {
                 self.cursor = self.diffs.len() - 1;
-                self.up();
+                self.up()?;
             }
         }
+
+        Ok(())
     }
 }

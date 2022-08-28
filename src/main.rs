@@ -131,7 +131,7 @@ fn run() -> Result<()> {
         }
 
         if let Some(output) = git_output {
-            terminal::disable_raw_mode().unwrap();
+            terminal::disable_raw_mode().context("failed to exit raw mode")?;
 
             match output.status.success() {
                 true => {
@@ -139,7 +139,7 @@ fn run() -> Result<()> {
                     // that it may clutter the UI and a successful change should be communicated
                     // through seeing the results in gex anyway.
                     let git_msg = std::str::from_utf8(&output.stdout)
-                        .unwrap()
+                        .context("malformed stdout from git")?
                         .trim()
                         .replace(
                             '+',
@@ -169,7 +169,9 @@ fn run() -> Result<()> {
                     }
                 }
                 false => {
-                    let git_msg = std::str::from_utf8(&output.stderr).unwrap().trim();
+                    let git_msg = std::str::from_utf8(&output.stderr)
+                        .context("malformed stderr from git")?
+                        .trim();
                     if !git_msg.is_empty() {
                         msg_buffer_height = git_msg.lines().count() + 1;
                         print!(
@@ -185,7 +187,7 @@ fn run() -> Result<()> {
                 }
             }
 
-            terminal::enable_raw_mode().unwrap();
+            terminal::enable_raw_mode().context("failed to enable raw mode")?;
             let _ = stdout().flush();
 
             git_output = None;
@@ -193,11 +195,11 @@ fn run() -> Result<()> {
             msg_buffer_height = 0;
         }
 
-        if let Event::Key(event) = event::read().unwrap() {
+        if let Event::Key(event) = event::read().context("failed to read a terminal event")? {
             match state {
                 State::Status => match event.code {
-                    KeyCode::Char('j') | KeyCode::Down => status.down(),
-                    KeyCode::Char('k') | KeyCode::Up => status.up(),
+                    KeyCode::Char('j') | KeyCode::Down => status.down()?,
+                    KeyCode::Char('k') | KeyCode::Up => status.up()?,
                     KeyCode::Char('s') => status.stage()?,
                     KeyCode::Char('S') => {
                         git_output = Some(git_process(&["add", "."])?);
@@ -208,7 +210,7 @@ fn run() -> Result<()> {
                         git_output = Some(git_process(&["reset"])?);
                         status.fetch()?;
                     }
-                    KeyCode::Tab => status.expand(),
+                    KeyCode::Tab => status.expand()?,
                     KeyCode::Char('c') => {
                         state = State::Commit;
                     }
@@ -255,7 +257,7 @@ fn run() -> Result<()> {
                         status.fetch()?;
                     }
                     KeyCode::Char('q') => {
-                        terminal::disable_raw_mode().unwrap();
+                        terminal::disable_raw_mode().context("failed to disable raw mode")?;
                         crossterm::execute!(
                             stdout(),
                             terminal::LeaveAlternateScreen,
@@ -317,7 +319,7 @@ fn run() -> Result<()> {
                     }
                     KeyCode::Esc => state = State::Status,
                     KeyCode::Char('q') => {
-                        terminal::disable_raw_mode().unwrap();
+                        terminal::disable_raw_mode().context("failed to exit raw mode")?;
                         crossterm::execute!(
                             stdout(),
                             terminal::LeaveAlternateScreen,
@@ -351,7 +353,7 @@ fn run() -> Result<()> {
                     }
                     KeyCode::Esc => state = State::Status,
                     KeyCode::Char('q') => {
-                        terminal::disable_raw_mode().unwrap();
+                        terminal::disable_raw_mode().context("failed to disable raw mode")?;
                         crossterm::execute!(
                             stdout(),
                             terminal::LeaveAlternateScreen,
