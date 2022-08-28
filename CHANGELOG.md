@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.2...master)
+### Changed
+- Errors are reported properly instead of panicking
+
 ## [0.3.2](https://github.com/Piturnah/gex/compare/v0.3.1...v0.3.2) - 2022-08-21
 ### Fixed
 - Showing first heading in bold before initial commit
