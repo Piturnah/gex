@@ -12,7 +12,6 @@ use crossterm::{
     terminal::{self, ClearType},
 };
 use git2::Repository;
-use phf::phf_ordered_map;
 
 mod branch;
 pub mod parse;
@@ -28,11 +27,7 @@ enum State {
     Branch,
 }
 
-static COMMIT_CMDS: phf::OrderedMap<char, &str> = phf_ordered_map! {
-    'c' => "commit",
-    'e' => "extend",
-    'a' => "amend",
-};
+const COMMIT_CMDS: [(char, &str); 3] = [('c', "commit"), ('e', "extend"), ('a', "amend")];
 
 pub fn git_process(args: &[&str]) -> Result<Output> {
     Command::new("git").args(args).output().with_context(|| {
