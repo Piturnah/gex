@@ -8,10 +8,8 @@ use std::{
 
 use anyhow::{Context, Result};
 use crossterm::style::{self, Attribute, Color};
-use nom::{
-    bytes::complete::{tag, take_until},
-    IResult,
-};
+use git2::Repository;
+use nom::{bytes::complete::take_until, IResult};
 
 use crate::{git_process, parse};
 
@@ -291,28 +289,33 @@ impl fmt::Display for Status {
 }
 
 impl Status {
-    pub fn new() -> Result<Self> {
+    pub fn new(repo: &Repository) -> Result<Self> {
         let mut status = Self::default();
-        status.fetch()?;
+        status.fetch(repo)?;
         Ok(status)
     }
 
-    pub fn fetch(&mut self) -> Result<()> {
+    pub fn fetch(&mut self, repo: &Repository) -> Result<()> {
         let output = git_process(&["status"])?;
 
         let input =
             std::str::from_utf8(&output.stdout).context("malformed stdout from `git status`")?;
 
-        let mut lines = input.lines();
-        let branch_line = lines.next().context("no output from `git status`")?;
-        let branch: IResult<&str, &str> = tag("On branch ")(branch_line);
-        let (branch, _) = branch
-            .map_err(|e| e.to_owned())
-            .context("failed to get name of current branch")?;
+        // TODO: When head().is_branch() is false, we should do something different. For example,
+        // use `branch: Option<String>` in `Status` and display something different when head
+        // detached or on tag, etc.
+        let branch = repo
+            .head()
+            .context("failed to get HEAD")?
+            .shorthand()
+            .context("no name found for current HEAD")?
+            .to_string();
 
         let mut untracked = Vec::new();
         let mut staged = Vec::new();
         let mut unstaged = Vec::new();
+
+        let mut lines = input.lines();
         while let Some(line) = lines.next() {
             if line == "Untracked files:" {
                 lines.next().unwrap(); // Skip message from git
@@ -420,7 +423,7 @@ impl Status {
             }
         }
 
-        self.branch = branch.to_string();
+        self.branch = branch;
         self.head = std::str::from_utf8(
             &git_process(&["log", "HEAD", "--pretty=format:\"%h %s\"", "-n", "1"])?.stdout,
         )
@@ -489,7 +492,7 @@ impl Status {
                 let _ = patch.wait();
             }
         }
-        self.fetch()
+        Ok(())
     }
 
     pub fn stage(&mut self) -> Result<()> {

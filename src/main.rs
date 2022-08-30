@@ -11,6 +11,7 @@ use crossterm::{
     style::{Attribute, Color, SetForegroundColor},
     terminal::{self, ClearType},
 };
+use git2::Repository;
 use phf::phf_ordered_map;
 
 mod branch;
@@ -47,29 +48,31 @@ fn run() -> Result<()> {
         .color(clap::ColorChoice::Never)
         .get_matches();
 
-    let top_level_stdout = git_process(&["rev-parse", "--show-toplevel"])?.stdout;
-
-    let top_level_stdout = Path::new(
-        std::str::from_utf8(&top_level_stdout)
-            .context("`git rev-parse` did not give valid utf-8")?
-            .trim_end(),
-    );
-
-    if top_level_stdout.is_dir() {
-        std::env::set_current_dir(top_level_stdout).context("failed to set working directory")?;
-    } else {
-        print!("Not a git repository. Initialise one? [y/N]");
-        let _ = stdout().flush();
-        if let Some(Ok(input)) = stdin().lock().lines().next() {
+    // Attempt to find a git repository at or above current path
+    let repo = match Repository::discover(Path::new(".")) {
+        Ok(repo) => repo,
+        Err(_) => {
+            print!("Not a git repository. Initialise one? [y/N]");
+            let _ = stdout().flush();
+            let input = stdin()
+                .lock()
+                .lines()
+                .next()
+                .expect("couldn't read stdin")
+                .expect("malformed stdin");
             if input.to_lowercase() != "y" {
                 process::exit(0);
             }
 
-            git_process(&["init"])?;
+            Repository::init(Path::new(".")).context("failed to initialise git repository")?
         }
-    }
+    };
 
-    let mut status = Status::new()?;
+    // Set working directory in case the repository is not the current directory
+    std::env::set_current_dir(repo.path().parent().context("`.git` cannot be root dir")?)
+        .context("failed to set working directory")?;
+
+    let mut status = Status::new(&repo)?;
     let mut branch_list = BranchList::new()?;
     let mut git_output: Option<Output> = None;
 
@@ -200,15 +203,21 @@ fn run() -> Result<()> {
                 State::Status => match event.code {
                     KeyCode::Char('j') | KeyCode::Down => status.down()?,
                     KeyCode::Char('k') | KeyCode::Up => status.up()?,
-                    KeyCode::Char('s') => status.stage()?,
+                    KeyCode::Char('s') => {
+                        status.stage()?;
+                        status.fetch(&repo)?;
+                    }
                     KeyCode::Char('S') => {
                         git_output = Some(git_process(&["add", "."])?);
-                        status.fetch()?;
+                        status.fetch(&repo)?;
                     }
-                    KeyCode::Char('u') => status.unstage()?,
+                    KeyCode::Char('u') => {
+                        status.unstage()?;
+                        status.fetch(&repo)?;
+                    }
                     KeyCode::Char('U') => {
                         git_output = Some(git_process(&["reset"])?);
-                        status.fetch()?;
+                        status.fetch(&repo)?;
                     }
                     KeyCode::Tab => status.expand()?,
                     KeyCode::Char('c') => {
@@ -216,13 +225,13 @@ fn run() -> Result<()> {
                     }
                     KeyCode::Char('F') => {
                         git_output = Some(git_process(&["pull"])?);
-                        status.fetch()?;
+                        status.fetch(&repo)?;
                     }
                     KeyCode::Char('b') => {
                         branch_list.fetch()?;
                         state = State::Branch;
                     }
-                    KeyCode::Char('r') => status.fetch()?,
+                    KeyCode::Char('r') => status.fetch(&repo)?,
                     KeyCode::Char(':') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
 
@@ -254,7 +263,7 @@ fn run() -> Result<()> {
 
                         print!("{}", cursor::Hide);
                         terminal::enable_raw_mode().context("failed to enable raw mode")?;
-                        status.fetch()?;
+                        status.fetch(&repo)?;
                     }
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
@@ -281,7 +290,7 @@ fn run() -> Result<()> {
                                 .output()
                                 .context("failed to run `git commit`")?,
                         );
-                        status.fetch()?;
+                        status.fetch(&repo)?;
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .context("failed to enter alternate screen")?;
 
@@ -296,7 +305,7 @@ fn run() -> Result<()> {
                                 .output()
                                 .context("failed to run `git commit`")?,
                         );
-                        status.fetch()?;
+                        status.fetch(&repo)?;
 
                         state = State::Status;
                     }
@@ -311,7 +320,7 @@ fn run() -> Result<()> {
                                 .output()
                                 .context("failed to run `git commit`")?,
                         );
-                        status.fetch()?;
+                        status.fetch(&repo)?;
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .context("failed to enter alternate screen")?;
 
@@ -343,12 +352,12 @@ fn run() -> Result<()> {
                     }
                     KeyCode::Char(' ') | KeyCode::Enter => {
                         git_output = Some(branch_list.checkout()?);
-                        status.fetch()?;
+                        status.fetch(&repo)?;
                         state = State::Status;
                     }
                     KeyCode::Char('b') => {
                         git_output = Some(BranchList::checkout_new()?);
-                        status.fetch()?;
+                        status.fetch(&repo)?;
                         state = State::Status;
                     }
                     KeyCode::Esc => state = State::Status,
