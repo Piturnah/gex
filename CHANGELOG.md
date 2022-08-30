@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.2...master)
+## [0.3.3](https://github.com/Piturnah/gex/compare/v0.3.2...v0.3.3) - 2022-08-30
 ### Changed
 - Errors are reported properly instead of panicking
 
