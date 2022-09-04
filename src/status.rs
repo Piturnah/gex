@@ -425,11 +425,9 @@ impl Status {
 
         self.branch = branch;
         self.head = std::str::from_utf8(
-            &git_process(&["log", "HEAD", "--pretty=format:\"%h %s\"", "-n", "1"])?.stdout,
+            &git_process(&["log", "HEAD", "--pretty=format:%h %s", "-n", "1"])?.stdout,
         )
         .context("invalid utf8 from `git log`")?
-        .trim_start_matches('\"')
-        .trim_end_matches('\"')
         .to_string();
         self.count_untracked = untracked.len();
         self.count_staged = staged.len();
