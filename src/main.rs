@@ -39,10 +39,6 @@ pub fn git_process(args: &[&str]) -> Result<Output> {
 }
 
 fn run() -> Result<()> {
-    clap::command!()
-        .color(clap::ColorChoice::Never)
-        .get_matches();
-
     // Attempt to find a git repository at or above current path
     let repo = match Repository::discover(Path::new(".")) {
         Ok(repo) => repo,
@@ -375,6 +371,11 @@ fn run() -> Result<()> {
 }
 
 fn main() -> Result<()> {
+    clap::command!()
+        .version(env!("GEX_VERSION"))
+        .color(clap::ColorChoice::Never)
+        .get_matches();
+
     run().map_err(|e| {
         // We don't want to do anything if these fail since then we'll lose the original error
         // message we are trying to propagate
