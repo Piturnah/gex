@@ -382,44 +382,52 @@ impl Status {
 
         let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
         let diffs = parse::parse_diff(diff)?;
-        'outer_unstaged: for (path, diff) in diffs {
-            for mut file in &mut unstaged {
-                if file.path == path {
-                    file.diff = diff
-                        .iter()
-                        .map(|d| {
-                            Hunk::new(
-                                d.to_owned()
-                                    .iter()
-                                    .map(|l| l.to_string())
-                                    .collect::<Vec<_>>(),
-                            )
-                        })
-                        .collect::<Vec<_>>();
-                    continue 'outer_unstaged;
-                }
+        for mut file in unstaged.iter_mut() {
+            if let Some(diff) =
+                diffs
+                    .iter()
+                    .find(|(path, _)| ***path == file.path)
+                    .map(|(_, diff)| {
+                        diff.iter()
+                            .map(|hunk_lines| {
+                                Hunk::new(
+                                    hunk_lines
+                                        .to_owned()
+                                        .iter()
+                                        .map(|l| l.to_string())
+                                        .collect::<Vec<_>>(),
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    })
+            {
+                file.diff = diff
             }
         }
 
         let staged_diff = std::str::from_utf8(&staged_diff.stdout)
             .context("malformed stdout from `git diff --cached`")?;
         let diffs = parse::parse_diff(staged_diff)?;
-        'outer_staged: for (path, diff) in diffs {
-            for mut file in &mut staged {
-                if file.path == path {
-                    file.diff = diff
-                        .iter()
-                        .map(|d| {
-                            Hunk::new(
-                                d.to_owned()
-                                    .iter()
-                                    .map(|l| l.to_string())
-                                    .collect::<Vec<_>>(),
-                            )
-                        })
-                        .collect::<Vec<_>>();
-                    continue 'outer_staged;
-                }
+        for mut file in staged.iter_mut() {
+            if let Some(diff) =
+                diffs
+                    .iter()
+                    .find(|(path, _)| ***path == file.path)
+                    .map(|(_, diff)| {
+                        diff.iter()
+                            .map(|hunk_lines| {
+                                Hunk::new(
+                                    hunk_lines
+                                        .to_owned()
+                                        .iter()
+                                        .map(|l| l.to_string())
+                                        .collect::<Vec<_>>(),
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    })
+            {
+                file.diff = diff
             }
         }
 
