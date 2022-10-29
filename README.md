@@ -25,16 +25,22 @@ Primarily, this is a personal project since I recently switched to Neovim from E
 
 ## Installation
 
-[Nix](https://nixos.org/nix): `nix-env -iA nixpkgs.gex`
+### Crates.io
 
-### Building from source
-
-Gex is hosted on [crates.io](https://crates.io/crates/gex). You can either install from source, or you can use cargo:
+[![crates.io](https://img.shields.io/crates/v/gex)](https://crates.io/crates/gex)
 
 > **NOTE:** You will need [Rust](https://www.rust-lang.org/) on your system for this installation method.
 
 ```console
 $ cargo install gex
+```
+
+### Nix
+
+[![nixpkgs](https://repology.org/badge/version-for-repo/nix_unstable/gex.svg)](https://repology.org/project/gex/versions)
+
+```console
+$ nix-env -iA nixpkgs.gex
 ```
 
 ## Usage
