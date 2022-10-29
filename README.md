@@ -37,6 +37,8 @@ $ cargo install gex
 
 ### Nix
 
+> Maintained by [@Br1ght0ne](https://github.com/Br1ght0ne)
+
 [![nixpkgs](https://repology.org/badge/version-for-repo/nix_unstable/gex.svg)](https://repology.org/project/gex/versions)
 
 ```console
