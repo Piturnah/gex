@@ -40,23 +40,22 @@ pub fn git_process(args: &[&str]) -> Result<Output> {
 
 fn run() -> Result<()> {
     // Attempt to find a git repository at or above current path
-    let repo = match Repository::discover(Path::new(".")) {
-        Ok(repo) => repo,
-        Err(_) => {
-            print!("Not a git repository. Initialise one? [y/N]");
-            let _ = stdout().flush();
-            let input = stdin()
-                .lock()
-                .lines()
-                .next()
-                .expect("couldn't read stdin")
-                .expect("malformed stdin");
-            if input.to_lowercase() != "y" {
-                process::exit(0);
-            }
-
-            Repository::init(Path::new(".")).context("failed to initialise git repository")?
+    let repo = if let Ok(repo) = Repository::discover(Path::new(".")) {
+        repo
+    } else {
+        print!("Not a git repository. Initialise one? [y/N]");
+        let _ = stdout().flush();
+        let input = stdin()
+            .lock()
+            .lines()
+            .next()
+            .expect("couldn't read stdin")
+            .expect("malformed stdin");
+        if input.to_lowercase() != "y" {
+            process::exit(0);
         }
+
+        Repository::init(Path::new(".")).context("failed to initialise git repository")?
     };
 
     // Set working directory in case the repository is not the current directory
@@ -127,57 +126,54 @@ fn run() -> Result<()> {
         if let Some(output) = git_output {
             terminal::disable_raw_mode().context("failed to exit raw mode")?;
 
-            match output.status.success() {
-                true => {
-                    // NOTE: I am still unsure if we want to propagate stdout on success. I fear
-                    // that it may clutter the UI and a successful change should be communicated
-                    // through seeing the results in gex anyway.
-                    let git_msg = std::str::from_utf8(&output.stdout)
-                        .context("malformed stdout from git")?
-                        .trim()
-                        .replace(
-                            '+',
-                            &format!(
-                                "{}+{}",
-                                SetForegroundColor(Color::DarkGreen),
-                                SetForegroundColor(Color::Reset)
-                            ),
-                        )
-                        .replace(
-                            '-',
-                            &format!(
-                                "{}-{}",
-                                SetForegroundColor(Color::DarkRed),
-                                SetForegroundColor(Color::Reset)
-                            ),
-                        );
-                    if !git_msg.is_empty() {
-                        msg_buffer_height = git_msg.lines().count() + 1;
-                        print!(
-                            "{}{:─<term_width$}\n{}",
-                            cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
-                            "",
-                            git_msg,
-                            term_width = term_width as usize,
-                        );
-                    }
+            if output.status.success() {
+                // NOTE: I am still unsure if we want to propagate stdout on success. I fear
+                // that it may clutter the UI and a successful change should be communicated
+                // through seeing the results in gex anyway.
+                let git_msg = std::str::from_utf8(&output.stdout)
+                    .context("malformed stdout from git")?
+                    .trim()
+                    .replace(
+                        '+',
+                        &format!(
+                            "{}+{}",
+                            SetForegroundColor(Color::DarkGreen),
+                            SetForegroundColor(Color::Reset)
+                        ),
+                    )
+                    .replace(
+                        '-',
+                        &format!(
+                            "{}-{}",
+                            SetForegroundColor(Color::DarkRed),
+                            SetForegroundColor(Color::Reset)
+                        ),
+                    );
+                if !git_msg.is_empty() {
+                    msg_buffer_height = git_msg.lines().count() + 1;
+                    print!(
+                        "{}{:─<term_width$}\n{}",
+                        cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
+                        "",
+                        git_msg,
+                        term_width = term_width as usize,
+                    );
                 }
-                false => {
-                    let git_msg = std::str::from_utf8(&output.stderr)
-                        .context("malformed stderr from git")?
-                        .trim();
-                    if !git_msg.is_empty() {
-                        msg_buffer_height = git_msg.lines().count() + 1;
-                        print!(
-                            "{}{:─<term_width$}\n{}{}{}",
-                            cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
-                            "",
-                            SetForegroundColor(Color::Red),
-                            git_msg,
-                            SetForegroundColor(Color::Reset),
-                            term_width = term_width as usize,
-                        );
-                    }
+            } else {
+                let git_msg = std::str::from_utf8(&output.stderr)
+                    .context("malformed stderr from git")?
+                    .trim();
+                if !git_msg.is_empty() {
+                    msg_buffer_height = git_msg.lines().count() + 1;
+                    print!(
+                        "{}{:─<term_width$}\n{}{}{}",
+                        cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
+                        "",
+                        SetForegroundColor(Color::Red),
+                        git_msg,
+                        SetForegroundColor(Color::Reset),
+                        term_width = term_width as usize,
+                    );
                 }
             }
 

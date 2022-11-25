@@ -109,28 +109,25 @@ impl fmt::Display for FileDiff {
             self.path,
         )?;
         if self.expanded {
-            match self.diff.is_empty() {
-                true => {
-                    if let Ok(file_content) = fs::read_to_string(&self.path) {
-                        let file_content: String =
-                            file_content.lines().collect::<Vec<&str>>().join("\r\n+");
+            if self.diff.is_empty() {
+                if let Ok(file_content) = fs::read_to_string(&self.path) {
+                    let file_content: String =
+                        file_content.lines().collect::<Vec<&str>>().join("\r\n+");
 
-                        write!(
-                            f,
-                            "\r\n{}{}+{}",
-                            Attribute::Reset,
-                            style::SetForegroundColor(Color::DarkGreen),
-                            file_content
-                        )?;
-                    }
+                    write!(
+                        f,
+                        "\r\n{}{}+{}",
+                        Attribute::Reset,
+                        style::SetForegroundColor(Color::DarkGreen),
+                        file_content
+                    )?;
                 }
-                false => {
-                    for (i, hunk) in self.diff.iter().enumerate() {
-                        if i + 1 == self.cursor {
-                            write!(f, "{}{}{}", Attribute::Reset, Attribute::Reverse, hunk)?;
-                        } else {
-                            write!(f, "{}{}", Attribute::Reset, hunk)?;
-                        }
+            } else {
+                for (i, hunk) in self.diff.iter().enumerate() {
+                    if i + 1 == self.cursor {
+                        write!(f, "{}{}{}", Attribute::Reset, Attribute::Reverse, hunk)?;
+                    } else {
+                        write!(f, "{}{}", Attribute::Reset, hunk)?;
                     }
                 }
             }
