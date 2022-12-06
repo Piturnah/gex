@@ -3,6 +3,8 @@
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.3...master)
 ### Added
 - Colour coding of `--help` flag output
+### Changed
+- Minibuffer now maintains a stack of messages so messages are not lost if more than one is sent per frame
 ### Removed
 - Colouring of `+` and `-` in stdout propagation
 ### Fixed

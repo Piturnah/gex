@@ -13,7 +13,7 @@ use crossterm::{
 };
 use git2::Repository;
 
-use crate::message_buffer::{MessageType, Messages};
+use crate::message_buffer::MiniBuffer;
 
 mod branch;
 mod message_buffer;
@@ -68,7 +68,7 @@ fn run() -> Result<()> {
     let mut status = Status::new(&repo)?;
     let mut branch_list = BranchList::new()?;
     let mut git_output: Option<Output> = None;
-    let mut messages = Messages::new();
+    let mut mini_buffer = MiniBuffer::new();
 
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
         .context("failed to enter alternate screen")?;
@@ -77,6 +77,14 @@ fn run() -> Result<()> {
 
     let mut state = State::Status;
 
+    // Structure of the mainloop
+    //
+    // 1. Clear the terminal
+    // 2. Render status or branch list
+    // 3. Render option overlay
+    // 4. Render minibuffer messages
+    // 5. Wait for event and update state
+    //
     loop {
         let (term_width, term_height) =
             terminal::size().context("failed to query terminal dimensions")?;
@@ -117,7 +125,7 @@ fn run() -> Result<()> {
                         k,
                         Attribute::Reset,
                         v
-                    ),)
+                    ))
                     .collect::<String>(),
                 SetForegroundColor(Color::Reset),
                 term_width = term_width as usize,
@@ -127,26 +135,9 @@ fn run() -> Result<()> {
         }
 
         if let Some(output) = git_output.take() {
-            if !output.stdout.is_empty() {
-                messages.push(
-                    // TODO: we can probably just send the "malformed stdout" as an error here
-                    // rather than crashing the whole execution.
-                    String::from_utf8(output.stdout).context("malformed stdout from git")?,
-                    MessageType::Note,
-                );
-            }
-            if !output.stderr.is_empty() {
-                messages.push(
-                    String::from_utf8(output.stderr)
-                        .context("malformed stderr from git")?
-                        .trim()
-                        .to_string(),
-                    MessageType::Error,
-                );
-            }
+            mini_buffer.push_command_output(output)?;
         }
-
-        messages.render(term_width, term_height)?;
+        mini_buffer.render(term_width, term_height)?;
 
         if let Event::Key(event) = event::read().context("failed to read a terminal event")? {
             match state {
@@ -182,40 +173,7 @@ fn run() -> Result<()> {
                         state = State::Branch;
                     }
                     KeyCode::Char('r') => status.fetch(&repo)?,
-                    KeyCode::Char(':') => {
-                        terminal::disable_raw_mode().context("failed to disable raw mode")?;
-
-                        // Clear the git output, if there is any. In future maybe organise the
-                        // output / "terminal" as some kind of minibuffer so this is simpler.
-                        todo!("clear the message buffer when writing git command");
-                        //for i in 0..=msg_buffer_height.min(term_height.into()) {
-                        //    print!(
-                        //        "{}{}",
-                        //        cursor::MoveTo(0, term_height - i as u16),
-                        //        terminal::Clear(ClearType::UntilNewLine)
-                        //    );
-                        //}
-
-                        print!(
-                            "{}{}:git ",
-                            cursor::MoveTo(0, term_height - 1),
-                            cursor::Show
-                        );
-                        let _ = stdout().flush();
-                        let input = stdin()
-                            .lock()
-                            .lines()
-                            .next()
-                            .context("no stdin")?
-                            .context("malformed stdin")?;
-
-                        git_output =
-                            Some(git_process(&input.split_whitespace().collect::<Vec<_>>())?);
-
-                        print!("{}", cursor::Hide);
-                        terminal::enable_raw_mode().context("failed to enable raw mode")?;
-                        status.fetch(&repo)?;
-                    }
+                    KeyCode::Char(':') => mini_buffer.git_command(term_height)?,
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
                         crossterm::execute!(
