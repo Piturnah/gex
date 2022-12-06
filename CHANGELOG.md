@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.3...master)
+### Added
+- Colour coding of `--help` flag output
+### Removed
+- Colouring of `+` and `-` in stdout propagation
+### Fixed
+- Sometimes showing empty messages in minibuffer, for example after creating a commit
+
 ## [0.3.3](https://github.com/Piturnah/gex/compare/v0.3.2...v0.3.3) - 2022-08-30
 ### Changed
 - Errors are reported properly instead of panicking

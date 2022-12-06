@@ -13,7 +13,10 @@ use crossterm::{
 };
 use git2::Repository;
 
+use crate::message_buffer::{MessageType, Messages};
+
 mod branch;
+mod message_buffer;
 pub mod parse;
 mod status;
 
@@ -65,6 +68,7 @@ fn run() -> Result<()> {
     let mut status = Status::new(&repo)?;
     let mut branch_list = BranchList::new()?;
     let mut git_output: Option<Output> = None;
+    let mut messages = Messages::new();
 
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
         .context("failed to enter alternate screen")?;
@@ -72,7 +76,6 @@ fn run() -> Result<()> {
     print!("{}", cursor::Hide);
 
     let mut state = State::Status;
-    let mut msg_buffer_height = 0;
 
     loop {
         let (term_width, term_height) =
@@ -123,67 +126,27 @@ fn run() -> Result<()> {
             let _ = stdout().flush();
         }
 
-        if let Some(output) = git_output {
-            terminal::disable_raw_mode().context("failed to exit raw mode")?;
-
-            if output.status.success() {
-                // NOTE: I am still unsure if we want to propagate stdout on success. I fear
-                // that it may clutter the UI and a successful change should be communicated
-                // through seeing the results in gex anyway.
-                let git_msg = std::str::from_utf8(&output.stdout)
-                    .context("malformed stdout from git")?
-                    .trim()
-                    .replace(
-                        '+',
-                        &format!(
-                            "{}+{}",
-                            SetForegroundColor(Color::DarkGreen),
-                            SetForegroundColor(Color::Reset)
-                        ),
-                    )
-                    .replace(
-                        '-',
-                        &format!(
-                            "{}-{}",
-                            SetForegroundColor(Color::DarkRed),
-                            SetForegroundColor(Color::Reset)
-                        ),
-                    );
-                if !git_msg.is_empty() {
-                    msg_buffer_height = git_msg.lines().count() + 1;
-                    print!(
-                        "{}{:─<term_width$}\n{}",
-                        cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
-                        "",
-                        git_msg,
-                        term_width = term_width as usize,
-                    );
-                }
-            } else {
-                let git_msg = std::str::from_utf8(&output.stderr)
-                    .context("malformed stderr from git")?
-                    .trim();
-                if !git_msg.is_empty() {
-                    msg_buffer_height = git_msg.lines().count() + 1;
-                    print!(
-                        "{}{:─<term_width$}\n{}{}{}",
-                        cursor::MoveTo(0, term_height.saturating_sub(msg_buffer_height as u16)),
-                        "",
-                        SetForegroundColor(Color::Red),
-                        git_msg,
-                        SetForegroundColor(Color::Reset),
-                        term_width = term_width as usize,
-                    );
-                }
+        if let Some(output) = git_output.take() {
+            if !output.stdout.is_empty() {
+                messages.push(
+                    // TODO: we can probably just send the "malformed stdout" as an error here
+                    // rather than crashing the whole execution.
+                    String::from_utf8(output.stdout).context("malformed stdout from git")?,
+                    MessageType::Note,
+                );
             }
-
-            terminal::enable_raw_mode().context("failed to enable raw mode")?;
-            let _ = stdout().flush();
-
-            git_output = None;
-        } else {
-            msg_buffer_height = 0;
+            if !output.stderr.is_empty() {
+                messages.push(
+                    String::from_utf8(output.stderr)
+                        .context("malformed stderr from git")?
+                        .trim()
+                        .to_string(),
+                    MessageType::Error,
+                );
+            }
         }
+
+        messages.render(term_width, term_height)?;
 
         if let Event::Key(event) = event::read().context("failed to read a terminal event")? {
             match state {
@@ -224,13 +187,14 @@ fn run() -> Result<()> {
 
                         // Clear the git output, if there is any. In future maybe organise the
                         // output / "terminal" as some kind of minibuffer so this is simpler.
-                        for i in 0..=msg_buffer_height.min(term_height.into()) {
-                            print!(
-                                "{}{}",
-                                cursor::MoveTo(0, term_height - i as u16),
-                                terminal::Clear(ClearType::UntilNewLine)
-                            );
-                        }
+                        todo!("clear the message buffer when writing git command");
+                        //for i in 0..=msg_buffer_height.min(term_height.into()) {
+                        //    print!(
+                        //        "{}{}",
+                        //        cursor::MoveTo(0, term_height - i as u16),
+                        //        terminal::Clear(ClearType::UntilNewLine)
+                        //    );
+                        //}
 
                         print!(
                             "{}{}:git ",
