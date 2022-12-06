@@ -71,7 +71,7 @@ fn run() -> Result<()> {
     let mut git_output: Option<Output> = None;
     let mut mini_buffer = MiniBuffer::new();
 
-    // Non-English locale settings are currently unsupported. See 
+    // Non-English locale settings are currently unsupported. See
     // https://github.com/Piturnah/gex/issues/13.
     if !env::var("LANG")
         .map(|s| s.starts_with("en"))
