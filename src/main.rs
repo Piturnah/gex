@@ -1,4 +1,5 @@
 use std::{
+    env,
     io::{stdin, stdout, BufRead, Write},
     path::Path,
     process::{self, Command, Output, Stdio},
@@ -13,7 +14,7 @@ use crossterm::{
 };
 use git2::Repository;
 
-use crate::minibuffer::MiniBuffer;
+use crate::minibuffer::{MessageType, MiniBuffer};
 
 mod branch;
 mod minibuffer;
@@ -69,6 +70,20 @@ fn run() -> Result<()> {
     let mut branch_list = BranchList::new()?;
     let mut git_output: Option<Output> = None;
     let mut mini_buffer = MiniBuffer::new();
+
+    // Non-English locale settings are currently unsupported. See 
+    // https://github.com/Piturnah/gex/issues/13.
+    if !env::var("LANG")
+        .map(|s| s.starts_with("en"))
+        .unwrap_or(true)
+    {
+        mini_buffer.push("WARNING: Non-English locale detected. For now, Gex only supports English locale setting.
+Set locale to English, e.g.:
+
+        $ LANG=en_GB gex
+
+See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error);
+    }
 
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
         .context("failed to enter alternate screen")?;
