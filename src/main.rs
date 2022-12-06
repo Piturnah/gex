@@ -13,10 +13,10 @@ use crossterm::{
 };
 use git2::Repository;
 
-use crate::message_buffer::MiniBuffer;
+use crate::minibuffer::MiniBuffer;
 
 mod branch;
-mod message_buffer;
+mod minibuffer;
 pub mod parse;
 mod status;
 
