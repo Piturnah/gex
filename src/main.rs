@@ -367,10 +367,7 @@ fn run() -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    clap::command!()
-        .version(env!("GEX_VERSION"))
-        .color(clap::ColorChoice::Never)
-        .get_matches();
+    clap::command!().version(env!("GEX_VERSION")).get_matches();
 
     run().map_err(|e| {
         // We don't want to do anything if these fail since then we'll lose the original error
