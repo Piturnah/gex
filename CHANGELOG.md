@@ -6,6 +6,7 @@
 - Colour coding of `--help` flag output
 ### Changed
 - Minibuffer now maintains a stack of messages so messages are not lost if more than one is sent per frame
+- Display an error instead of panicking on invalid UTF8 from a git process
 ### Removed
 - Colouring of `+` and `-` in stdout propagation
 ### Fixed

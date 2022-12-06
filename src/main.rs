@@ -68,7 +68,6 @@ fn run() -> Result<()> {
 
     let mut status = Status::new(&repo)?;
     let mut branch_list = BranchList::new()?;
-    let mut git_output: Option<Output> = None;
     let mut mini_buffer = MiniBuffer::new();
 
     // Non-English locale settings are currently unsupported. See
@@ -149,9 +148,6 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
             let _ = stdout().flush();
         }
 
-        if let Some(output) = git_output.take() {
-            mini_buffer.push_command_output(output)?;
-        }
         mini_buffer.render(term_width, term_height)?;
 
         if let Event::Key(event) = event::read().context("failed to read a terminal event")? {
@@ -164,7 +160,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('S') => {
-                        git_output = Some(git_process(&["add", "."])?);
+                        mini_buffer.push_command_output(git_process(&["add", "."])?);
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('u') => {
@@ -172,7 +168,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('U') => {
-                        git_output = Some(git_process(&["reset"])?);
+                        mini_buffer.push_command_output(git_process(&["reset"])?);
                         status.fetch(&repo)?;
                     }
                     KeyCode::Tab => status.expand()?,
@@ -180,7 +176,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         state = State::Commit;
                     }
                     KeyCode::Char('F') => {
-                        git_output = Some(git_process(&["pull"])?);
+                        mini_buffer.push_command_output(git_process(&["pull"])?);
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('b') => {
@@ -206,7 +202,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                     KeyCode::Char('c') => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .context("failed to leave alternate screen")?;
-                        git_output = Some(
+                        mini_buffer.push_command_output(
                             Command::new("git")
                                 .arg("commit")
                                 .stdout(Stdio::inherit())
@@ -221,7 +217,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         state = State::Status;
                     }
                     KeyCode::Char('e') => {
-                        git_output = Some(
+                        mini_buffer.push_command_output(
                             Command::new("git")
                                 .args(["commit", "--amend", "--no-edit"])
                                 .stdout(Stdio::inherit())
@@ -236,7 +232,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                     KeyCode::Char('a') => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .context("failed to leave alternate screen")?;
-                        git_output = Some(
+                        mini_buffer.push_command_output(
                             Command::new("git")
                                 .args(["commit", "--amend"])
                                 .stdout(Stdio::inherit())
@@ -275,12 +271,12 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         }
                     }
                     KeyCode::Char(' ') | KeyCode::Enter => {
-                        git_output = Some(branch_list.checkout()?);
+                        mini_buffer.push_command_output(branch_list.checkout()?);
                         status.fetch(&repo)?;
                         state = State::Status;
                     }
                     KeyCode::Char('b') => {
-                        git_output = Some(BranchList::checkout_new()?);
+                        mini_buffer.push_command_output(BranchList::checkout_new()?);
                         status.fetch(&repo)?;
                         state = State::Status;
                     }

@@ -1,5 +1,5 @@
 //! This module relates to the message buffer that appears on the bottom of the screen after
-//! certain actions are performed.
+//! certain actions are performed and handles the arbitrary git command functionality.
 
 use std::{
     io::{stdin, stdout, BufRead, Write},
@@ -38,25 +38,25 @@ impl MiniBuffer {
         self.messages.push((msg, msg_type));
     }
 
-    pub fn push_command_output(&mut self, output: Output) -> Result<()> {
+    pub fn push_command_output(&mut self, output: Output) {
         if !output.stdout.is_empty() {
-            self.push(
-                // TODO: we can probably just send the "malformed stdout" as an error here
-                // rather than crashing the whole execution.
-                String::from_utf8(output.stdout).context("malformed stdout from git")?,
-                MessageType::Note,
-            );
+            match String::from_utf8(output.stdout) {
+                Ok(s) => self.push(s, MessageType::Note),
+                Err(e) => self.push(
+                    format!("Received invalid UTF8 stdout from git: {e}"),
+                    MessageType::Error,
+                ),
+            }
         }
         if !output.stderr.is_empty() {
             self.push(
                 String::from_utf8(output.stderr)
-                    .context("malformed stderr from git")?
+                    .unwrap_or_else(|e| format!("Received invalid UTF8 stderr from git: {e}"))
                     .trim()
                     .to_string(),
                 MessageType::Error,
             );
         }
-        Ok(())
     }
 
     /// Call to enter Command mode. It will be exited automatically in the render call after the
@@ -86,7 +86,7 @@ impl MiniBuffer {
             .context("no stdin")?
             .context("malformed stdin")?;
 
-        self.push_command_output(git_process(&input.split_whitespace().collect::<Vec<_>>())?)?;
+        self.push_command_output(git_process(&input.split_whitespace().collect::<Vec<_>>())?);
 
         print!("{}", cursor::Hide);
         terminal::enable_raw_mode().context("failed to enable raw mode")
