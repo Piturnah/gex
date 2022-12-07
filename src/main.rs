@@ -53,8 +53,8 @@ fn run() -> Result<()> {
             .lock()
             .lines()
             .next()
-            .expect("couldn't read stdin")
-            .expect("malformed stdin");
+            .context("couldn't read stdin")?
+            .context("malformed stdin")?;
         if input.to_lowercase() != "y" {
             process::exit(0);
         }
