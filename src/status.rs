@@ -8,7 +8,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use crossterm::style::{self, Attribute, Color};
-use git2::Repository;
+use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
 
 use crate::{git_process, parse};
@@ -301,12 +301,31 @@ impl Status {
         // TODO: When head().is_branch() is false, we should do something different. For example,
         // use `branch: Option<String>` in `Status` and display something different when head
         // detached or on tag, etc.
-        let branch = repo
-            .head()
-            .context("failed to get HEAD")?
-            .shorthand()
-            .context("no name found for current HEAD")?
-            .to_string();
+        let branch = match repo.head() {
+            Ok(head) => head
+                .shorthand()
+                .context("no name found for current HEAD")?
+                .to_string(),
+            Err(e) => {
+                // git2 doesn't provide any API to get the name of an unborn branch, so we have to
+                // read it directly :(
+                if e.code() == UnbornBranch {
+                    let mut head_path = repo.path().to_path_buf();
+                    head_path.push("HEAD");
+                    fs::read_to_string(&head_path)
+                        .with_context(|| format!("couldn't read file: {head_path:?}"))?
+                        .lines()
+                        .next()
+                        .with_context(|| format!("no ref found in {head_path:?}"))?
+                        .trim()
+                        .strip_prefix("ref: refs/heads/")
+                        .with_context(|| format!("unexpected ref path found in {head_path:?}"))?
+                        .to_string()
+                } else {
+                    return Err(anyhow::Error::new(e)).context("failed to get name of branch");
+                }
+            }
+        };
 
         let mut untracked = Vec::new();
         let mut staged = Vec::new();
