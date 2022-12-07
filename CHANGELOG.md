@@ -3,6 +3,9 @@
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.3...master)
 ### Added
 - Warning when opening Gex with locale other than English ([#13](https://github.com/Piturnah/gex/issues/13))
+- New navigation controls
+  - <kbd>g</kbd> / <kbd>K</kbd> to jump to first element of list
+  - <kbd>G</kbd> / <kbd>J</kbd> to jump to last element of list
 - Colour coding of `--help` flag output
 ### Changed
 - Minibuffer now maintains a stack of messages so messages are not lost if more than one is sent per frame

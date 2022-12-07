@@ -55,11 +55,13 @@ $ gex
 
 ### Navigation
 
-| Key                            | Action      |
-| ------------------------------ | ---------   |
-| <kbd>j</kbd> / <kbd>Down</kbd> | Move down   |
-| <kbd>k</kbd> / <kbd>Up</kbd>   | Move up     |
-| <kbd>Tab</kbd>                 | Expand item |
+| Key                            | Action       |
+| ------------------------------ | ---------    |
+| <kbd>j</kbd> / <kbd>Down</kbd> | Move down    |
+| <kbd>k</kbd> / <kbd>Up</kbd>   | Move up      |
+| <kbd>Tab</kbd>                 | Expand item  |
+| <kbd>g</kbd> / <kbd>K</kbd>    | Go to top    |
+| <kbd>G</kbd> / <kbd>J</kbd>    | Go to bottom |
 
 ### Git actions
 

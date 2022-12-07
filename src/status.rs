@@ -168,6 +168,16 @@ impl FileDiff {
         Ok(())
     }
 
+    /// Move the cursor to the topmost element of this FileDiff.
+    fn cursor_first(&mut self) {
+        self.cursor = 0;
+    }
+
+    /// Move the cursor to the last element of this FileDiff, if it is expanded.
+    fn cursor_last(&mut self) {
+        self.cursor = self.len() - 1;
+    }
+
     fn len(&self) -> usize {
         match self.expanded {
             true => self.diff.len() + 1,
@@ -589,6 +599,41 @@ impl Status {
             }
         }
 
+        Ok(())
+    }
+
+    /// Move the cursor to the first element.
+    pub fn cursor_first(&mut self) -> Result<()> {
+        self.diffs
+            .get_mut(self.cursor)
+            .context("cursor is at invalid position")?
+            .cursor_first();
+
+        self.cursor = 0;
+        if !self.diffs.is_empty() {
+            self.diffs
+                .get_mut(self.cursor)
+                .expect("0th element must exist")
+                .cursor_first();
+        }
+        Ok(())
+    }
+
+    /// Move the cursor to the last element.
+    pub fn cursor_last(&mut self) -> Result<()> {
+        let mut file = self
+            .diffs
+            .get_mut(self.cursor)
+            .context("cursor is at invalid position")?;
+        file.cursor = file.len();
+
+        if !self.diffs.is_empty() {
+            self.cursor = self.diffs.len() - 1;
+            self.diffs
+                .get_mut(self.cursor)
+                .expect("cursor at `len() - 1`th pos of non-empty diffs")
+                .cursor_last();
+        }
         Ok(())
     }
 }

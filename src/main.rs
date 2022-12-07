@@ -1,5 +1,5 @@
 use std::{
-    env,
+    cmp, env,
     io::{stdin, stdout, BufRead, Write},
     path::Path,
     process::{self, Command, Output, Stdio},
@@ -155,6 +155,8 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                 State::Status => match event.code {
                     KeyCode::Char('j') | KeyCode::Down => status.down()?,
                     KeyCode::Char('k') | KeyCode::Up => status.up()?,
+                    KeyCode::Char('G') | KeyCode::Char('J') => status.cursor_last()?,
+                    KeyCode::Char('g') | KeyCode::Char('K') => status.cursor_first()?,
                     KeyCode::Char('s') => {
                         status.stage()?;
                         status.fetch(&repo)?;
@@ -265,10 +267,12 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         branch_list.cursor = branch_list.cursor.saturating_sub(1);
                     }
                     KeyCode::Char('j') | KeyCode::Down => {
-                        branch_list.cursor += 1;
-                        if branch_list.cursor >= branch_list.branches.len() {
-                            branch_list.cursor = branch_list.branches.len() - 1;
-                        }
+                        branch_list.cursor =
+                            cmp::min(branch_list.cursor + 1, branch_list.branches.len() - 1)
+                    }
+                    KeyCode::Char('g') | KeyCode::Char('K') => branch_list.cursor = 0,
+                    KeyCode::Char('G') | KeyCode::Char('J') => {
+                        branch_list.cursor = branch_list.branches.len() - 1
                     }
                     KeyCode::Char(' ') | KeyCode::Enter => {
                         mini_buffer.push_command_output(branch_list.checkout()?);
