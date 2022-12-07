@@ -322,7 +322,8 @@ impl Status {
                         .with_context(|| format!("unexpected ref path found in {head_path:?}"))?
                         .to_string()
                 } else {
-                    return Err(anyhow::Error::new(e)).context("failed to get name of branch");
+                    return Err(anyhow::Error::new(e))
+                        .context("failed to get name of current branch");
                 }
             }
         };
