@@ -336,17 +336,17 @@ impl Status {
         while let Some(line) = lines.next() {
             if line == "Untracked files:" {
                 lines.next().unwrap(); // Skip message from git
-                'untrackeds: for line in lines.by_ref() {
+                for line in lines.by_ref() {
                     if line.is_empty() {
-                        break 'untrackeds;
+                        break;
                     }
                     untracked.push(FileDiff::new(line.trim_start(), DiffType::Untracked));
                 }
             } else if line == "Changes to be committed:" {
                 lines.next().unwrap(); // Skip message from git
-                'staged: for line in lines.by_ref() {
+                for line in lines.by_ref() {
                     if line.is_empty() {
-                        break 'staged;
+                        break;
                     }
 
                     let parse_result: IResult<&str, &str> = take_until("  ")(line.trim_start());
@@ -369,9 +369,9 @@ impl Status {
             } else if line == "Changes not staged for commit:" {
                 lines.next().unwrap(); // Skip message from git
                 lines.next().unwrap();
-                'unstaged: for line in lines.by_ref() {
+                for line in lines.by_ref() {
                     if line.is_empty() {
-                        break 'unstaged;
+                        break;
                     }
 
                     let parse_result: IResult<&str, &str> = take_until("  ")(line.trim_start());
