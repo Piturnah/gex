@@ -6,7 +6,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Error, Result};
 use crossterm::style::{self, Attribute, Color};
 use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
@@ -332,8 +332,7 @@ impl Status {
                         .with_context(|| format!("unexpected ref path found in {head_path:?}"))?
                         .to_string()
                 } else {
-                    return Err(anyhow::Error::new(e))
-                        .context("failed to get name of current branch");
+                    return Err(Error::new(e)).context("failed to get name of current branch");
                 }
             }
         };
@@ -518,9 +517,13 @@ impl Status {
 
                 std::thread::spawn(move || {
                     for buf in bufs {
-                        stdin.write_all(buf).expect("failed to patch hunk");
+                        stdin.write_all(buf).context("failed to patch hunk")?;
                     }
-                });
+                    Ok::<_, Error>(())
+                })
+                .join()
+                .unwrap()
+                .context("failed to patch hunk")?;
 
                 let _ = patch.wait();
             }

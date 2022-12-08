@@ -4,6 +4,7 @@
 ### Fixed
 - Crashing on jumping to top/bottom of diffs when there are no diffs
 - Not refreshing after executing a command with <kbd>:</kbd>
+- Error reporting for failed hunk patch
 
 ## [0.3.4](https://github.com/Piturnah/gex/compare/v0.3.3...v0.3.4) - 2022-12-07
 ### Added
