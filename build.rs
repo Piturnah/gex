@@ -4,7 +4,7 @@
 use std::process::Command;
 
 fn main() {
-    if env!("CARGO_PKG_VERSION").strip_suffix("-dev").is_some() {
+    if env!("CARGO_PKG_VERSION").ends_with("-dev") {
         let hash = Command::new("git")
             .args(["log", "HEAD", "--pretty=format:%H", "-n", "1"])
             .output()
