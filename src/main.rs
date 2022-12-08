@@ -186,7 +186,10 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         state = State::Branch;
                     }
                     KeyCode::Char('r') => status.fetch(&repo)?,
-                    KeyCode::Char(':') => mini_buffer.git_command(term_height)?,
+                    KeyCode::Char(':') => {
+                        mini_buffer.git_command(term_height)?;
+                        status.fetch(&repo)?
+                    }
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
                         crossterm::execute!(
