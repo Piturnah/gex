@@ -23,6 +23,12 @@ Primarily, this is a personal project since I recently switched to Neovim from E
 
 \* gex supports executing arbitrary git commands with <kbd>:</kbd> for when something is not yet available
 
+## Non-Aims
+
+- Magit port
+
+While it serves as a major inspiration, I am not trying to 1:1 port the behaviour and functionality of Magit.
+
 ## Installation
 
 ### Crates.io
