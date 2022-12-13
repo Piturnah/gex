@@ -108,6 +108,6 @@ at your option.
 
 ## Contributing
 
-If you want to contribute to gex, thank you so much! If you find a bug or want a new feature, please open an [issue](https://github.com/Piturnah/gex/issues) or submit a PR! I am happy to review and merge PRs.
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
