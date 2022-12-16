@@ -1,5 +1,5 @@
 # Used https://github.com/taiki-e/cargo-hack/blob/202e6e59d491c9202ce148c9ef423853267226db/.github/workflows/release.yml#L47-L84 as example
-name: Upload binaries
+name: CD
 
 on:
   release:
