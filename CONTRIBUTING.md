@@ -47,6 +47,8 @@ Opening an [issue](https://github.com/Piturnah/gex/issues) is a great way to sta
 
 A welcome way to help is by submitting a [Pull Request](https://github.com/Piturnah/gex/pulls) into the repository. I am happy to review PRs and will do my best to work with you to get it merged. Simple PRs are also appreciated, such as things like fixiing tpyos. I encourage you to submit a PR if possible as it greatly speeds up the process of making the change you want to see.
 
+If you want to contribute code but don't already have a feature or bug fix in mind, check out the [issue tracker](https://github.com/Piturnah/gex/issues)! Optionally leave a comment saying you'd like to give a particular issue a go at resolving.
+
 To avoid style and linter nitpicks, before submitting your PR please make sure you have run the following commands:
 
 ```console
