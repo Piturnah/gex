@@ -4,6 +4,7 @@
 use std::{
     io::{stdin, stdout, BufRead, Write},
     process::Output,
+    str,
 };
 
 use anyhow::{Context, Result};
@@ -40,8 +41,8 @@ impl MiniBuffer {
 
     pub fn push_command_output(&mut self, output: Output) {
         if !output.stdout.is_empty() {
-            match String::from_utf8(output.stdout) {
-                Ok(s) => self.push(s, MessageType::Note),
+            match str::from_utf8(&output.stdout) {
+                Ok(s) => self.push(s.trim().to_string(), MessageType::Note),
                 Err(e) => self.push(
                     format!("Received invalid UTF8 stdout from git: {e}"),
                     MessageType::Error,
@@ -50,10 +51,9 @@ impl MiniBuffer {
         }
         if !output.stderr.is_empty() {
             self.push(
-                String::from_utf8(output.stderr)
-                    .unwrap_or_else(|e| format!("Received invalid UTF8 stderr from git: {e}"))
-                    .trim()
-                    .to_string(),
+                str::from_utf8(&output.stderr)
+                    .map(|msg| msg.trim().to_string())
+                    .unwrap_or_else(|e| format!("Received invalid UTF8 stderr from git: {e}")),
                 MessageType::Error,
             );
         }

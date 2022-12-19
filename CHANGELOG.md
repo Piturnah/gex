@@ -2,6 +2,7 @@
 
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.4...master)
 ### Fixed
+- Stdout propagation from command execution causing top of display to go off-screen
 - Crashing on jumping to top/bottom of diffs when there are no diffs
 - Not refreshing after executing a command with <kbd>:</kbd>
 - Error reporting for failed hunk patch
