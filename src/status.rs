@@ -39,10 +39,7 @@ impl fmt::Display for Hunk {
         let mut outbuf = format!(
             "\r\n{}{}{}",
             style::SetForegroundColor(Color::Blue),
-            match self.expanded {
-                true => "⌄",
-                false => "›",
-            },
+            if self.expanded { "⌄" } else { "›" },
             self.diffs[0].replace(" @@", &format!(" @@{}", Attribute::Reset))
         );
 
@@ -97,10 +94,7 @@ impl fmt::Display for FileDiff {
         write!(
             f,
             "\r{}{}{}",
-            match self.expanded {
-                true => "⌄",
-                false => "›",
-            },
+            if self.expanded { "⌄" } else { "›" },
             match self.kind {
                 DiffType::Renamed => "[RENAME] ",
                 DiffType::Deleted => "[DELETE] ",
@@ -179,9 +173,10 @@ impl FileDiff {
     }
 
     fn len(&self) -> usize {
-        match self.expanded {
-            true => self.diff.len() + 1,
-            false => 1,
+        if self.expanded {
+            self.diff.len() + 1
+        } else {
+            1
         }
     }
 }
