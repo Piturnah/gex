@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.4...master)
+## [0.3.5](https://github.com/Piturnah/gex/compare/v0.3.4...v0.3.5)
 ### Fixed
 - Stdout propagation from command execution causing top of display to go off-screen
 - Crashing on jumping to top/bottom of diffs when there are no diffs
