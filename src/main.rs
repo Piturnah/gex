@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use clap::Arg;
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode},
@@ -42,9 +43,9 @@ pub fn git_process(args: &[&str]) -> Result<Output> {
     })
 }
 
-fn run() -> Result<()> {
+fn run(path: &Path) -> Result<()> {
     // Attempt to find a git repository at or above current path
-    let repo = if let Ok(repo) = Repository::discover(Path::new(".")) {
+    let repo = if let Ok(repo) = Repository::discover(path) {
         repo
     } else {
         print!("Not a git repository. Initialise one? [y/N]");
@@ -59,7 +60,7 @@ fn run() -> Result<()> {
             process::exit(0);
         }
 
-        Repository::init(Path::new(".")).context("failed to initialise git repository")?
+        Repository::init(path).context("failed to initialise git repository")?
     };
 
     // Set working directory in case the repository is not the current directory
@@ -307,9 +308,20 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
 }
 
 fn main() -> Result<()> {
-    clap::command!().version(env!("GEX_VERSION")).get_matches();
+    let matches = clap::command!()
+        .version(env!("GEX_VERSION"))
+        .arg(
+            Arg::new("path")
+                .default_value(".")
+                .value_name("PATH")
+                .help("The path to the repository"),
+        )
+        .get_matches();
+    let path = matches
+        .get_one::<String>("path")
+        .expect("default value provided");
 
-    run().map_err(|e| {
+    run(Path::new(path)).map_err(|e| {
         // We don't want to do anything if these fail since then we'll lose the original error
         // message we are trying to propagate
         let _ = terminal::disable_raw_mode();

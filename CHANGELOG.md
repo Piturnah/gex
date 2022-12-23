@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.5...master)
+### Added
+- Optional argument for the repository path
+
 ## [0.3.5](https://github.com/Piturnah/gex/compare/v0.3.4...v0.3.5) - 2022-12-21
 ### Fixed
 - Stdout propagation from command execution causing top of display to go off-screen

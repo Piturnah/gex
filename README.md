@@ -53,7 +53,7 @@ $ nix-env -iA nixpkgs.gex
 
 ## Usage
 
-To enter gex, simply type `gex` in console.
+To enter gex simply type `gex` in console, optionally providing a path.
 
 ```console
 $ gex
