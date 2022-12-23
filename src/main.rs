@@ -18,7 +18,7 @@ use crate::minibuffer::{MessageType, MiniBuffer};
 
 mod branch;
 mod minibuffer;
-pub mod parse;
+mod parse;
 mod status;
 
 use branch::BranchList;
@@ -91,7 +91,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
 
     let mut state = State::Status;
 
-    // Structure of the mainloop
+    // Structure of the event loop
     //
     // 1. Clear the terminal
     // 2. Render status or branch list
