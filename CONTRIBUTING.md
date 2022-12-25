@@ -55,3 +55,5 @@ To avoid style and linter nitpicks, before submitting your PR please make sure y
 $ cargo fmt
 $ cargo clippy
 ```
+
+If clippy fails on a false positive, or a true positive but you think the lint is unreasonable anyway in this case, then feel free to add the lint to the allow list either locally or for the whole crate. I may ask you to justify this when I review your PR if it's unclear.
