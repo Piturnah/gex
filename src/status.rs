@@ -198,19 +198,6 @@ enum Stage {
     Reset,
 }
 
-impl fmt::Display for Stage {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "{}",
-            match self {
-                Stage::Add => "add",
-                Stage::Reset => "reset",
-            }
-        )
-    }
-}
-
 #[derive(Debug, Default)]
 pub struct Status {
     pub branch: String,
