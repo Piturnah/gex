@@ -39,9 +39,9 @@ impl fmt::Display for BranchList {
                 let mut branch = branch.to_string();
                 branch.insert_str(2, &format!("{}", Attribute::Reverse));
                 write!(&mut branch, "{}", Attribute::Reset)?;
-                writeln!(f, "\r{}", branch,)?;
+                writeln!(f, "\r{branch}")?;
             } else {
-                writeln!(f, "\r{}", branch)?;
+                writeln!(f, "\r{branch}")?;
             }
             if branch.starts_with('*') {
                 write!(f, "{}", SetForegroundColor(Color::Reset))?;
@@ -85,7 +85,7 @@ impl BranchList {
             terminal::Clear(ClearType::All),
             cursor::Show
         );
-        let _ = stdout().flush();
+        drop(stdout().flush());
 
         let input = stdin()
             .lock()

@@ -57,7 +57,7 @@ impl fmt::Display for Hunk {
                 )?;
             }
         }
-        write!(f, "{}", outbuf)
+        write!(f, "{outbuf}")
     }
 }
 
@@ -119,9 +119,9 @@ impl fmt::Display for FileDiff {
             } else {
                 for (i, hunk) in self.diff.iter().enumerate() {
                     if i + 1 == self.cursor {
-                        write!(f, "{}{}{}", Attribute::Reset, Attribute::Reverse, hunk)?;
+                        write!(f, "{}{}{hunk}", Attribute::Reset, Attribute::Reverse)?;
                     } else {
-                        write!(f, "{}{}", Attribute::Reset, hunk)?;
+                        write!(f, "{}{hunk}", Attribute::Reset)?;
                     }
                 }
             }
@@ -162,12 +162,12 @@ impl FileDiff {
         Ok(())
     }
 
-    /// Move the cursor to the topmost element of this FileDiff.
+    /// Move the cursor to the topmost element of this `FileDiff`.
     fn cursor_first(&mut self) {
         self.cursor = 0;
     }
 
-    /// Move the cursor to the last element of this FileDiff, if it is expanded.
+    /// Move the cursor to the last element of this `FileDiff`, if it is expanded.
     fn cursor_last(&mut self) {
         self.cursor = self.len() - 1;
     }
@@ -242,7 +242,7 @@ impl fmt::Display for Status {
                 Attribute::Dim,
                 head.next().unwrap(), // !self.head.is_empty()
                 Attribute::Reset,
-                head.map(|w| format!(" {}", w)).collect::<String>()
+                head.map(|w| format!(" {w}")).collect::<String>()
             )?;
         }
 
@@ -253,7 +253,7 @@ impl fmt::Display for Status {
                 style::SetForegroundColor(Color::Yellow),
                 style::SetForegroundColor(Color::Reset)
             )?;
-            let _ = stdout().flush();
+            drop(stdout().flush());
         }
 
         for (index, file) in self.diffs.iter().enumerate() {
@@ -283,7 +283,7 @@ impl fmt::Display for Status {
             if file.cursor == 0 && self.cursor == index {
                 write!(f, "{}", Attribute::Reverse)?;
             }
-            writeln!(f, "\r    {}{}", file, Attribute::Reset)?;
+            writeln!(f, "\r    {file}{}", Attribute::Reset)?;
         }
 
         Ok(())
@@ -366,7 +366,7 @@ impl Status {
                             "modified:" => DiffType::Modified,
                             "renamed:" => DiffType::Renamed,
                             "deleted:" => DiffType::Deleted,
-                            _ => panic!("Unknown prefix: `{}`", prefix),
+                            _ => panic!("Unknown prefix: `{prefix}`"),
                         },
                     ));
                 }
@@ -391,7 +391,7 @@ impl Status {
                             "modified:" => DiffType::Modified,
                             "renamed:" => DiffType::Renamed,
                             "deleted:" => DiffType::Deleted,
-                            _ => panic!("Unknown prefix: `{}`", prefix),
+                            _ => panic!("Unknown prefix: `{prefix}`"),
                         },
                     ));
                 }
@@ -403,7 +403,7 @@ impl Status {
 
         let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
         let diffs = parse::parse_diff(diff)?;
-        for mut file in unstaged.iter_mut() {
+        for mut file in &mut unstaged {
             if let Some(diff) =
                 diffs
                     .iter()
@@ -413,23 +413,23 @@ impl Status {
                             .map(|hunk_lines| {
                                 Hunk::new(
                                     hunk_lines
-                                        .to_owned()
+                                        .clone()
                                         .iter()
-                                        .map(|l| l.to_string())
+                                        .map(|l| (*l).to_string())
                                         .collect::<Vec<_>>(),
                                 )
                             })
                             .collect::<Vec<_>>()
                     })
             {
-                file.diff = diff
+                file.diff = diff;
             }
         }
 
         let staged_diff = std::str::from_utf8(&staged_diff.stdout)
             .context("malformed stdout from `git diff --cached`")?;
         let diffs = parse::parse_diff(staged_diff)?;
-        for mut file in staged.iter_mut() {
+        for mut file in &mut staged {
             if let Some(diff) =
                 diffs
                     .iter()
@@ -439,16 +439,16 @@ impl Status {
                             .map(|hunk_lines| {
                                 Hunk::new(
                                     hunk_lines
-                                        .to_owned()
+                                        .clone()
                                         .iter()
-                                        .map(|l| l.to_string())
+                                        .map(|l| (*l).to_string())
                                         .collect::<Vec<_>>(),
                                 )
                             })
                             .collect::<Vec<_>>()
                     })
             {
-                file.diff = diff
+                file.diff = diff;
             }
         }
 
@@ -520,7 +520,7 @@ impl Status {
                 .unwrap()
                 .context("failed to patch hunk")?;
 
-                let _ = patch.wait();
+                drop(patch.wait());
             }
         }
         Ok(())

@@ -35,7 +35,7 @@ fn get_hunks<'a>(diff: &[&'a str]) -> Vec<Vec<&'a str>> {
         if line.starts_with("@@") {
             hunks.push(vec![*line]);
         } else if let Some(last_diff) = hunks.last_mut() {
-            last_diff.push(*line)
+            last_diff.push(*line);
         }
     }
     hunks

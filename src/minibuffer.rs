@@ -39,7 +39,7 @@ impl MiniBuffer {
         self.messages.push((msg, msg_type));
     }
 
-    pub fn push_command_output(&mut self, output: Output) {
+    pub fn push_command_output(&mut self, output: &Output) {
         if !output.stdout.is_empty() {
             match str::from_utf8(&output.stdout) {
                 Ok(s) => self.push(s.trim().to_string(), MessageType::Note),
@@ -51,9 +51,10 @@ impl MiniBuffer {
         }
         if !output.stderr.is_empty() {
             self.push(
-                str::from_utf8(&output.stderr)
-                    .map(|msg| msg.trim().to_string())
-                    .unwrap_or_else(|e| format!("Received invalid UTF8 stderr from git: {e}")),
+                str::from_utf8(&output.stderr).map_or_else(
+                    |e| format!("Received invalid UTF8 stderr from git: {e}"),
+                    |msg| msg.trim().to_string(),
+                ),
                 MessageType::Error,
             );
         }
@@ -78,7 +79,7 @@ impl MiniBuffer {
             cursor::MoveTo(0, term_height - 1),
             cursor::Show
         );
-        let _ = stdout().flush();
+        drop(stdout().flush());
         let input = stdin()
             .lock()
             .lines()
@@ -86,7 +87,7 @@ impl MiniBuffer {
             .context("no stdin")?
             .context("malformed stdin")?;
 
-        self.push_command_output(git_process(&input.split_whitespace().collect::<Vec<_>>())?);
+        self.push_command_output(&git_process(&input.split_whitespace().collect::<Vec<_>>())?);
 
         print!("{}", cursor::Hide);
         terminal::enable_raw_mode().context("failed to enable raw mode")
@@ -117,7 +118,7 @@ impl MiniBuffer {
                 ),
             }
             terminal::enable_raw_mode().context("failed to enable raw mode")?;
-            let _ = stdout().flush();
+            drop(stdout().flush());
         } else {
             self.current_height = 0;
         }

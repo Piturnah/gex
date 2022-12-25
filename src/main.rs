@@ -1,3 +1,12 @@
+#![warn(clippy::pedantic)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::too_many_lines,
+    clippy::missing_errors_doc,
+    clippy::redundant_closure_for_method_calls,
+    clippy::module_name_repetitions
+)]
+
 use std::{
     cmp, env,
     io::{stdin, stdout, BufRead, Write},
@@ -49,7 +58,7 @@ fn run(path: &Path) -> Result<()> {
         repo
     } else {
         print!("Not a git repository. Initialise one? [y/N]");
-        let _ = stdout().flush();
+        drop(stdout().flush());
         let input = stdin()
             .lock()
             .lines()
@@ -120,7 +129,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                     terminal::Clear(ClearType::All),
                     branch_list
                 );
-                let _ = stdout().flush();
+                drop(stdout().flush());
             }
         }
 
@@ -146,7 +155,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                 term_width = term_width as usize,
             );
 
-            let _ = stdout().flush();
+            drop(stdout().flush());
         }
 
         mini_buffer.render(term_width, term_height)?;
@@ -156,14 +165,14 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                 State::Status => match event.code {
                     KeyCode::Char('j') | KeyCode::Down => status.down()?,
                     KeyCode::Char('k') | KeyCode::Up => status.up()?,
-                    KeyCode::Char('G') | KeyCode::Char('J') => status.cursor_last()?,
-                    KeyCode::Char('g') | KeyCode::Char('K') => status.cursor_first()?,
+                    KeyCode::Char('G' | 'J') => status.cursor_last()?,
+                    KeyCode::Char('g' | 'K') => status.cursor_first()?,
                     KeyCode::Char('s') => {
                         status.stage()?;
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('S') => {
-                        mini_buffer.push_command_output(git_process(&["add", "."])?);
+                        mini_buffer.push_command_output(&git_process(&["add", "."])?);
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('u') => {
@@ -171,7 +180,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('U') => {
-                        mini_buffer.push_command_output(git_process(&["reset"])?);
+                        mini_buffer.push_command_output(&git_process(&["reset"])?);
                         status.fetch(&repo)?;
                     }
                     KeyCode::Tab => status.expand()?,
@@ -179,7 +188,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         state = State::Commit;
                     }
                     KeyCode::Char('F') => {
-                        mini_buffer.push_command_output(git_process(&["pull"])?);
+                        mini_buffer.push_command_output(&git_process(&["pull"])?);
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('b') => {
@@ -189,7 +198,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                     KeyCode::Char('r') => status.fetch(&repo)?,
                     KeyCode::Char(':') => {
                         mini_buffer.git_command(term_height)?;
-                        status.fetch(&repo)?
+                        status.fetch(&repo)?;
                     }
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
@@ -209,7 +218,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .context("failed to leave alternate screen")?;
                         mini_buffer.push_command_output(
-                            Command::new("git")
+                            &Command::new("git")
                                 .arg("commit")
                                 .stdout(Stdio::inherit())
                                 .stdin(Stdio::inherit())
@@ -224,7 +233,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                     }
                     KeyCode::Char('e') => {
                         mini_buffer.push_command_output(
-                            Command::new("git")
+                            &Command::new("git")
                                 .args(["commit", "--amend", "--no-edit"])
                                 .stdout(Stdio::inherit())
                                 .stdin(Stdio::inherit())
@@ -239,7 +248,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .context("failed to leave alternate screen")?;
                         mini_buffer.push_command_output(
-                            Command::new("git")
+                            &Command::new("git")
                                 .args(["commit", "--amend"])
                                 .stdout(Stdio::inherit())
                                 .stdin(Stdio::inherit())
@@ -272,19 +281,19 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                     }
                     KeyCode::Char('j') | KeyCode::Down => {
                         branch_list.cursor =
-                            cmp::min(branch_list.cursor + 1, branch_list.branches.len() - 1)
+                            cmp::min(branch_list.cursor + 1, branch_list.branches.len() - 1);
                     }
-                    KeyCode::Char('g') | KeyCode::Char('K') => branch_list.cursor = 0,
-                    KeyCode::Char('G') | KeyCode::Char('J') => {
-                        branch_list.cursor = branch_list.branches.len() - 1
+                    KeyCode::Char('g' | 'K') => branch_list.cursor = 0,
+                    KeyCode::Char('G' | 'J') => {
+                        branch_list.cursor = branch_list.branches.len() - 1;
                     }
                     KeyCode::Char(' ') | KeyCode::Enter => {
-                        mini_buffer.push_command_output(branch_list.checkout()?);
+                        mini_buffer.push_command_output(&branch_list.checkout()?);
                         status.fetch(&repo)?;
                         state = State::Status;
                     }
                     KeyCode::Char('b') => {
-                        mini_buffer.push_command_output(BranchList::checkout_new()?);
+                        mini_buffer.push_command_output(&BranchList::checkout_new()?);
                         status.fetch(&repo)?;
                         state = State::Status;
                     }
@@ -324,13 +333,13 @@ fn main() -> Result<()> {
     run(Path::new(path)).map_err(|e| {
         // We don't want to do anything if these fail since then we'll lose the original error
         // message we are trying to propagate
-        let _ = terminal::disable_raw_mode();
-        let _ = crossterm::execute!(
+        drop(terminal::disable_raw_mode());
+        drop(crossterm::execute!(
             stdout(),
             terminal::LeaveAlternateScreen,
             cursor::Show,
             cursor::MoveToColumn(0)
-        );
+        ));
         e
     })
 }
