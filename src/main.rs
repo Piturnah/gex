@@ -139,7 +139,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                 "{}{:═^term_width$}{}{}{}",
                 cursor::MoveTo(0, term_height - 1 - COMMIT_CMDS.len() as u16),
                 "Commit Options",
-                SetForegroundColor(Color::Red),
+                terminal::Clear(ClearType::FromCursorDown),
                 COMMIT_CMDS
                     .into_iter()
                     .map(|(k, v)| format!(
