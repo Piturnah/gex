@@ -4,7 +4,7 @@
 ### Added
 - Optional argument for the repository path
 ### Fixed
-- Not clearing text underneath commit menu ([#11])(https://github.com/Piturnah/gex/issues/11)
+- Not clearing text underneath commit menu ([#11](https://github.com/Piturnah/gex/issues/11))
 
 ## [0.3.5](https://github.com/Piturnah/gex/compare/v0.3.4...v0.3.5) - 2022-12-21
 ### Fixed
