@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.5...master)
+## [0.3.6](https://github.com/Piturnah/gex/compare/v0.3.5...v0.3.6) - 2022-12-28
 ### Added
 - Optional argument for the repository path
 ### Fixed
