@@ -353,7 +353,7 @@ impl Status {
                             "modified:" => DiffType::Modified,
                             "renamed:" => DiffType::Renamed,
                             "deleted:" => DiffType::Deleted,
-                            _ => panic!("Unknown prefix: `{prefix}`"),
+                            _ => return Err(Error::msg("Unknown prefix: `{prefix}`")),
                         },
                     ));
                 }
@@ -378,7 +378,7 @@ impl Status {
                             "modified:" => DiffType::Modified,
                             "renamed:" => DiffType::Renamed,
                             "deleted:" => DiffType::Deleted,
-                            _ => panic!("Unknown prefix: `{prefix}`"),
+                            _ => return Err(Error::msg("Unknown prefix: `{prefix}`")),
                         },
                     ));
                 }
