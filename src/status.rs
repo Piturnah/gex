@@ -353,7 +353,11 @@ impl Status {
                             "modified:" => DiffType::Modified,
                             "renamed:" => DiffType::Renamed,
                             "deleted:" => DiffType::Deleted,
-                            _ => return Err(anyhow!("unknown file prefix in `git status` output: `{prefix}`")),
+                            _ => {
+                                return Err(anyhow!(
+                                    "unknown file prefix in `git status` output: `{prefix}`"
+                                ))
+                            }
                         },
                     ));
                 }
@@ -378,7 +382,11 @@ impl Status {
                             "modified:" => DiffType::Modified,
                             "renamed:" => DiffType::Renamed,
                             "deleted:" => DiffType::Deleted,
-                            _ => return Err(anyhow!("unknown file prefix in `git status` output: `{prefix}`")),
+                            _ => {
+                                return Err(anyhow!(
+                                    "unknown file prefix in `git status` output: `{prefix}`"
+                                ))
+                            }
                         },
                     ));
                 }
