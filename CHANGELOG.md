@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.6...master)
+### Fixed
+- Error reporting for unrecognised file prefixes from git ([#18](https://github.com/Piturnah/gex/pull/18))
+
 ## [0.3.6](https://github.com/Piturnah/gex/compare/v0.3.5...v0.3.6) - 2022-12-28
 ### Added
 - Optional argument for the repository path
