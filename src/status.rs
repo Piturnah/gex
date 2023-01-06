@@ -6,7 +6,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use anyhow::{Context, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use crossterm::style::{self, Attribute, Color};
 use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
@@ -353,7 +353,11 @@ impl Status {
                             "modified:" => DiffType::Modified,
                             "renamed:" => DiffType::Renamed,
                             "deleted:" => DiffType::Deleted,
-                            _ => panic!("Unknown prefix: `{prefix}`"),
+                            _ => {
+                                return Err(anyhow!(
+                                    "unknown file prefix in `git status` output: `{prefix}`"
+                                ))
+                            }
                         },
                     ));
                 }
@@ -378,7 +382,11 @@ impl Status {
                             "modified:" => DiffType::Modified,
                             "renamed:" => DiffType::Renamed,
                             "deleted:" => DiffType::Deleted,
-                            _ => panic!("Unknown prefix: `{prefix}`"),
+                            _ => {
+                                return Err(anyhow!(
+                                    "unknown file prefix in `git status` output: `{prefix}`"
+                                ))
+                            }
                         },
                     ));
                 }
