@@ -66,13 +66,11 @@ impl MiniBuffer {
         terminal::disable_raw_mode().context("failed to disable raw mode")?;
 
         // Clear the git output, if there is any.
-        for i in 0..=self.current_height.min(term_height.into()) {
-            print!(
-                "{}{}",
-                cursor::MoveTo(0, term_height - i as u16),
-                terminal::Clear(ClearType::UntilNewLine)
-            );
-        }
+        print!(
+            "{}{}",
+            cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
+            terminal::Clear(ClearType::FromCursorDown)
+        );
 
         print!(
             "{}{}:git ",
