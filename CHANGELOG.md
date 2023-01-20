@@ -2,8 +2,10 @@
 
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.6...master)
 ### Added
-- Esc to exit writing git command
-- Navigate currently typing git command with left and right arrow keys
+- Improvements to arbitary git command execution
+  - Reuse commands from history with up and down arrow keys ([#19](https://github.com/Piturnah/gex/issues/19))
+  - Esc to exit writing git command
+  - Navigate currently typing git command with left and right arrow keys
 ### Fixed
 - Error reporting for unrecognised file prefixes from git ([#18](https://github.com/Piturnah/gex/pull/18))
 

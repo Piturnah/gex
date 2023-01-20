@@ -23,6 +23,8 @@ pub struct MiniBuffer {
     messages: Vec<(String, MessageType)>,
     /// The current height of the buffer, including the border.
     current_height: usize,
+    /// History of commands sent via `:`.
+    command_history: Vec<String>,
 }
 
 pub enum MessageType {
@@ -74,6 +76,7 @@ impl MiniBuffer {
 
         let mut command = String::with_capacity(term_width as usize - 5);
         let mut cursor = 0;
+        let mut history_cursor = 0;
         loop {
             print!(
                 "{}{}:git {command}{}",
@@ -104,6 +107,26 @@ impl MiniBuffer {
                             cursor += 1;
                         }
                     }
+                    KeyCode::Up => {
+                        if history_cursor < self.command_history.len() {
+                            history_cursor += 1;
+                            command = self.command_history
+                                [self.command_history.len() - history_cursor]
+                                .clone();
+                            cursor = command.len() as u16;
+                        }
+                    }
+                    KeyCode::Down => {
+                        history_cursor = history_cursor.saturating_sub(1);
+                        if history_cursor == 0 {
+                            command.clear();
+                        } else {
+                            command = self.command_history
+                                [self.command_history.len() - history_cursor]
+                                .clone();
+                        }
+                        cursor = command.len() as u16;
+                    }
                     KeyCode::Esc => {
                         print!("{}", cursor::Hide);
                         return Ok(());
@@ -119,6 +142,8 @@ impl MiniBuffer {
             &command.split_whitespace().collect::<Vec<_>>(),
         )?);
         terminal::enable_raw_mode().context("failed to enable raw mode")?;
+
+        self.command_history.push(command);
 
         print!("{}", cursor::Hide);
         Ok(())
