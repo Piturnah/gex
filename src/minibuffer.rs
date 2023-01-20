@@ -2,7 +2,7 @@
 //! certain actions are performed and handles the arbitrary git command functionality.
 
 use std::{
-    io::{stdin, stdout, BufRead, Write},
+    io::{stdout, Write},
     process::Output,
     str,
 };
@@ -10,6 +10,7 @@ use std::{
 use anyhow::{Context, Result};
 use crossterm::{
     cursor,
+    event::{self, Event, KeyCode},
     style::{Color, SetForegroundColor},
     terminal::{self, ClearType},
 };
@@ -62,33 +63,65 @@ impl MiniBuffer {
 
     /// Call to enter Command mode. It will be exited automatically in the render call after the
     /// command is sent.
-    pub fn git_command(&mut self, term_height: u16) -> Result<()> {
-        terminal::disable_raw_mode().context("failed to disable raw mode")?;
-
+    pub fn git_command(&mut self, term_width: u16, term_height: u16) -> Result<()> {
         // Clear the git output, if there is any.
         print!(
-            "{}{}",
+            "{}{}{}",
             cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
-            terminal::Clear(ClearType::FromCursorDown)
+            terminal::Clear(ClearType::FromCursorDown),
+            cursor::Show,
         );
 
-        print!(
-            "{}{}:git ",
-            cursor::MoveTo(0, term_height - 1),
-            cursor::Show
-        );
-        drop(stdout().flush());
-        let input = stdin()
-            .lock()
-            .lines()
-            .next()
-            .context("no stdin")?
-            .context("malformed stdin")?;
+        let mut command = String::with_capacity(term_width as usize - 5);
+        let mut cursor = 0;
+        loop {
+            print!(
+                "{}{}:git {command}{}",
+                cursor::MoveTo(0, term_height - 1),
+                terminal::Clear(ClearType::CurrentLine),
+                cursor::MoveToColumn(cursor + 5),
+            );
+            drop(stdout().flush());
 
-        self.push_command_output(&git_process(&input.split_whitespace().collect::<Vec<_>>())?);
+            if let Event::Key(key_event) =
+                event::read().context("failed to read a terminal event")?
+            {
+                match key_event.code {
+                    KeyCode::Enter => break,
+                    KeyCode::Char(c) => {
+                        command.insert(cursor.into(), c);
+                        cursor += 1;
+                    }
+                    KeyCode::Backspace => {
+                        if cursor > 0 {
+                            cursor -= 1;
+                            command.remove(cursor.into());
+                        }
+                    }
+                    KeyCode::Left => cursor = cursor.saturating_sub(1),
+                    KeyCode::Right => {
+                        if (cursor as usize) < command.len() {
+                            cursor += 1;
+                        }
+                    }
+                    KeyCode::Esc => {
+                        print!("{}", cursor::Hide);
+                        return Ok(());
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        crossterm::execute!(stdout(), cursor::MoveToColumn(0))?;
+        terminal::disable_raw_mode().context("failed to disable raw mode")?;
+        self.push_command_output(&git_process(
+            &command.split_whitespace().collect::<Vec<_>>(),
+        )?);
+        terminal::enable_raw_mode().context("failed to enable raw mode")?;
 
         print!("{}", cursor::Hide);
-        terminal::enable_raw_mode().context("failed to enable raw mode")
+        Ok(())
     }
 
     /// Render the most recent unsent message.

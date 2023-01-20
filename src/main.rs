@@ -197,7 +197,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                     }
                     KeyCode::Char('r') => status.fetch(&repo)?,
                     KeyCode::Char(':') => {
-                        mini_buffer.git_command(term_height)?;
+                        mini_buffer.git_command(term_width, term_height)?;
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('q') => {
