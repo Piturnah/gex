@@ -110,9 +110,8 @@ impl MiniBuffer {
                     KeyCode::Up => {
                         if history_cursor < self.command_history.len() {
                             history_cursor += 1;
-                            command = self.command_history
-                                [self.command_history.len() - history_cursor]
-                                .clone();
+                            self.command_history[self.command_history.len() - history_cursor]
+                                .clone_into(&mut command);
                             cursor = command.len() as u16;
                         }
                     }
@@ -121,9 +120,8 @@ impl MiniBuffer {
                         if history_cursor == 0 {
                             command.clear();
                         } else {
-                            command = self.command_history
-                                [self.command_history.len() - history_cursor]
-                                .clone();
+                            self.command_history[self.command_history.len() - history_cursor]
+                                .clone_into(&mut command);
                         }
                         cursor = command.len() as u16;
                     }
