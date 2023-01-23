@@ -79,10 +79,12 @@ impl MiniBuffer {
         let mut history_cursor = 0;
         loop {
             print!(
-                "{}{}:git {command}{}",
-                cursor::MoveTo(0, term_height - 1),
+                "{}{:\u{2574}<term_width$}\r\n{}:git {command}{}",
+                cursor::MoveTo(0, term_height - 2),
+                "",
                 terminal::Clear(ClearType::CurrentLine),
                 cursor::MoveToColumn(cursor + 5),
+                term_width = term_width as usize
             );
             drop(stdout().flush());
 

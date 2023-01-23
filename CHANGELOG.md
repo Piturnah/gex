@@ -4,6 +4,7 @@
 ### Added
 - Improvements to arbitary git command execution
   - Reuse commands from history with up and down arrow keys ([#19](https://github.com/Piturnah/gex/issues/19))
+  - Border above the input line while typing a command
   - Esc to exit writing git command
   - Navigate currently typing git command with left and right arrow keys
 ### Fixed
