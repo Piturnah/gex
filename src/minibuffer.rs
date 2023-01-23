@@ -79,12 +79,11 @@ impl MiniBuffer {
         let mut history_cursor = 0;
         loop {
             print!(
-                "{}{:\u{2574}<term_width$}\r\n{}:git {command}{}",
+                "{}{}\r\n{}:git {command}{}",
                 cursor::MoveTo(0, term_height - 2),
-                "",
+                "\u{2574}".repeat(term_width.into()),
                 terminal::Clear(ClearType::CurrentLine),
                 cursor::MoveToColumn(cursor + 5),
-                term_width = term_width as usize
             );
             drop(stdout().flush());
 
@@ -157,20 +156,16 @@ impl MiniBuffer {
             self.current_height = msg.lines().count() + 1;
             match msg_type {
                 MessageType::Note => print!(
-                    "{}{:─<term_width$}\n{}",
+                    "{}{}\n{msg}",
                     cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
-                    "",
-                    msg,
-                    term_width = term_width as usize,
+                    "─".repeat(term_width.into()),
                 ),
                 MessageType::Error => print!(
-                    "{}{:─<term_width$}\n{}{}{}",
+                    "{}{}\n{}{msg}{}",
                     cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
-                    "",
+                    "─".repeat(term_width.into()),
                     SetForegroundColor(Color::Red),
-                    msg,
                     SetForegroundColor(Color::Reset),
-                    term_width = term_width as usize,
                 ),
             }
             terminal::enable_raw_mode().context("failed to enable raw mode")?;
