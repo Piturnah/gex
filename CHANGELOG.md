@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.6...master)
+## [0.3.7](https://github.com/Piturnah/gex/compare/v0.3.6...v0.3.7) - 2023-01-25
 ### Added
 - Improvements to arbitary git command execution
   - Reuse commands from history with up and down arrow keys ([#19](https://github.com/Piturnah/gex/issues/19))
