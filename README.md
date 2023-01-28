@@ -41,15 +41,11 @@ While it serves as a major inspiration, I am not trying to 1:1 port the behaviou
 $ cargo install gex
 ```
 
-### Nix
+### Other
 
-> Maintained by [@Br1ght0ne](https://github.com/Br1ght0ne)
+Gex packages are also maintained by the community in a handful of repositories.
 
-[![nixpkgs](https://repology.org/badge/version-for-repo/nix_unstable/gex.svg)](https://repology.org/project/gex/versions)
-
-```console
-$ nix-env -iA nixpkgs.gex
-```
+[![Packaging status](https://repology.org/badge/vertical-allrepos/gex.svg)](https://repology.org/project/gex/versions)
 
 ## Usage
 
