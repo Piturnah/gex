@@ -107,6 +107,14 @@ impl MiniBuffer {
                             command.remove(cursor.into());
                         }
                     }
+                    KeyCode::Delete => {
+                        if (cursor as usize) < command.len() || cursor == 0 && command.len() == 1 {
+                            command.remove(cursor.into());
+                        } else if !command.is_empty() {
+                            command.pop();
+                            cursor -= 1;
+                        }
+                    }
                     KeyCode::Left => cursor = cursor.saturating_sub(1),
                     KeyCode::Right => {
                         if (cursor as usize) < command.len() {
