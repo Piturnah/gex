@@ -9,7 +9,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use crossterm::{
-    cursor,
+    cursor::{self, SetCursorStyle},
     event::{self, Event, KeyCode},
     style::{Color, SetForegroundColor},
     terminal::{self, ClearType},
@@ -79,11 +79,16 @@ impl MiniBuffer {
         let mut history_cursor = 0;
         loop {
             print!(
-                "{}{}\r\n{}:git {command}{}",
+                "{}{}\r\n{}:git {command}{}{}",
                 cursor::MoveTo(0, term_height - 2),
                 "\u{2574}".repeat(term_width.into()),
                 terminal::Clear(ClearType::CurrentLine),
                 cursor::MoveToColumn(cursor + 5),
+                if command.len() == cursor.into() {
+                    SetCursorStyle::DefaultUserShape
+                } else {
+                    SetCursorStyle::SteadyBar
+                }
             );
             drop(stdout().flush());
 

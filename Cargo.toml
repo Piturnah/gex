@@ -14,7 +14,7 @@ repository = "https://github.com/Piturnah/gex"
 strip = true
 
 [dependencies]
-crossterm = "0.25.0"
+crossterm = "0.26.0"
 nom = "7.1.1"
 clap = { version = "3.2", features = ["cargo"] }
 anyhow = "1.0.68"
