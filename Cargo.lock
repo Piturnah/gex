@@ -108,7 +108,7 @@ dependencies = [
 
 [[package]]
 name = "gex"
-version = "0.3.7"
+version = "0.3.8-dev"
 dependencies = [
  "anyhow",
  "clap",

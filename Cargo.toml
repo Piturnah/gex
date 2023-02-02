@@ -1,6 +1,6 @@
 [package]
 name = "gex"
-version = "0.3.7"
+version = "0.3.8-dev"
 edition = "2021"
 categories = ["command-line-utilities", "development-tools"]
 description = "Git workflow improvement CLI tool inspired by Magit"
