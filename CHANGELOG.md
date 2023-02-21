@@ -5,6 +5,7 @@
 - Support for <kbd>Del</kbd> in minibuffer
 ### Changed
 - Cursor switches to bar when navigating left and right in minibuffer
+- Updated `clap` to v0.4
 
 ## [0.3.7](https://github.com/Piturnah/gex/compare/v0.3.6...v0.3.7) - 2023-01-25
 ### Added
