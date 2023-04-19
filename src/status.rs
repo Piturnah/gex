@@ -143,13 +143,8 @@ impl FileDiff {
 
     /// Fails on the case that we are already on the first hunk
     fn up(&mut self) -> Result<(), ()> {
-        match self.cursor.checked_sub(1) {
-            Some(val) => {
-                self.cursor = val;
-                Ok(())
-            }
-            None => Err(()),
-        }
+        self.cursor = self.cursor.checked_sub(1).ok_or(())?;
+        Ok(())
     }
 
     /// Fails on the case that we are already on the final hunk
