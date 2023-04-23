@@ -1,11 +1,11 @@
 # Changelog
 
-## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.7...master)
+## [0.3.8](https://github.com/Piturnah/gex/compare/v0.3.7...v0.3.8) - 2023-04-23
 ### Added
 - Support for <kbd>Del</kbd> in minibuffer
 ### Changed
 - Cursor switches to bar when navigating left and right in minibuffer
-- Updated `clap` to v0.4
+- Formatting of `--help` information (Clap v4)
 
 ## [0.3.7](https://github.com/Piturnah/gex/compare/v0.3.6...v0.3.7) - 2023-01-25
 ### Added
