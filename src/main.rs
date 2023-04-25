@@ -4,7 +4,8 @@
     clippy::too_many_lines,
     clippy::missing_errors_doc,
     clippy::redundant_closure_for_method_calls,
-    clippy::module_name_repetitions
+    clippy::module_name_repetitions,
+    clippy::let_underscore_untyped
 )]
 
 use std::{
