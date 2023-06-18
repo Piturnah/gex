@@ -18,7 +18,7 @@ crossterm = "0.26.0"
 nom = "7.1.1"
 clap = { version = "4.0", features = ["cargo"] }
 anyhow = "1.0.68"
-git2 = "0.15"
+git2 = "0.17.1"
 
 #       Tokee
 #      (Gecko gekko)                _____________
