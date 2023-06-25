@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased](https://github.com/Piturnah/gex/compare/v0.3.8...master)
+### Added
+- Counts indicating the number of staged/unstaged changes
+
 ## [0.3.8](https://github.com/Piturnah/gex/compare/v0.3.7...v0.3.8) - 2023-04-23
 ### Added
 - Support for <kbd>Del</kbd> in minibuffer

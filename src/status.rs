@@ -240,25 +240,34 @@ impl fmt::Display for Status {
 
         for (index, file) in self.diffs.iter().enumerate() {
             if index == 0 && self.count_untracked != 0 {
-                write!(
+                writeln!(
                     f,
-                    "\r\n{}Untracked files:{}\n",
+                    "\r\n{}Untracked files{} {}({}){}",
                     style::SetForegroundColor(Color::Yellow),
-                    style::ResetColor
+                    style::ResetColor,
+                    style::Attribute::Dim,
+                    self.count_untracked,
+                    style::Attribute::Reset,
                 )?;
             } else if index == self.count_untracked && self.count_unstaged != 0 {
-                write!(
+                writeln!(
                     f,
-                    "\r\n{}Unstaged changes:{}\n",
+                    "\r\n{}Unstaged changes{} {}({}){}",
                     style::SetForegroundColor(Color::Yellow),
-                    style::ResetColor
+                    style::ResetColor,
+                    style::Attribute::Dim,
+                    self.count_unstaged,
+                    style::Attribute::Reset,
                 )?;
             } else if index == self.count_untracked + self.count_unstaged {
-                write!(
+                writeln!(
                     f,
-                    "\r\n{}Staged changes:{}\n",
+                    "\r\n{}Staged changes{} {}({}){}",
                     style::SetForegroundColor(Color::Yellow),
-                    style::ResetColor
+                    style::ResetColor,
+                    style::Attribute::Dim,
+                    self.count_staged,
+                    style::Attribute::Reset,
                 )?;
             }
 
