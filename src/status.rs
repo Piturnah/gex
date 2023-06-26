@@ -31,24 +31,30 @@ enum DiffType {
     Deleted,
 }
 
-#[derive(Debug)]
-struct Hunk {
-    diffs: Vec<String>,
+#[derive(Debug, Clone)]
+pub struct Hunk {
+    diff: String,
     expanded: bool,
 }
 
 impl fmt::Display for Hunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         use fmt::Write;
+
+        let mut lines = self.diff.lines();
+
         let mut outbuf = format!(
             "\r\n{}{}{}",
             style::SetForegroundColor(Color::Blue),
             if self.expanded { "⌄" } else { "›" },
-            self.diffs[0].replace(" @@", &format!(" @@{}", Attribute::Reset))
+            lines
+                .next()
+                .expect("diff is never empty")
+                .replace(" @@", &format!(" @@{}", Attribute::Reset))
         );
 
         if self.expanded {
-            for line in self.diffs.iter().skip(1) {
+            for line in lines {
                 write!(
                     &mut outbuf,
                     "\r\n{}{}",
@@ -66,9 +72,9 @@ impl fmt::Display for Hunk {
 }
 
 impl Hunk {
-    fn new(diffs: Vec<String>) -> Self {
+    pub const fn new(diff: String) -> Self {
         Self {
-            diffs,
+            diff,
             expanded: false,
         }
     }
@@ -401,57 +407,24 @@ impl Status {
             }
         }
 
+        // Get the diff information for unstaged changes
         let diff = git_process(&["diff"])?;
-        let staged_diff = git_process(&["diff", "--cached"])?;
-
         let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
         let diffs = parse::parse_diff(diff)?;
         for mut file in &mut unstaged {
-            if let Some(diff) =
-                diffs
-                    .iter()
-                    .find(|(path, _)| ***path == file.path)
-                    .map(|(_, diff)| {
-                        diff.iter()
-                            .map(|hunk_lines| {
-                                Hunk::new(
-                                    hunk_lines
-                                        .clone()
-                                        .iter()
-                                        .map(|l| (*l).to_string())
-                                        .collect::<Vec<_>>(),
-                                )
-                            })
-                            .collect::<Vec<_>>()
-                    })
-            {
-                file.diff = diff;
+            if let Some(diff) = diffs.get(file.path.as_str()) {
+                file.diff = diff.clone();
             }
         }
 
+        // Get the diff information for staged changes
+        let staged_diff = git_process(&["diff", "--cached"])?;
         let staged_diff = std::str::from_utf8(&staged_diff.stdout)
             .context("malformed stdout from `git diff --cached`")?;
         let diffs = parse::parse_diff(staged_diff)?;
         for mut file in &mut staged {
-            if let Some(diff) =
-                diffs
-                    .iter()
-                    .find(|(path, _)| ***path == file.path)
-                    .map(|(_, diff)| {
-                        diff.iter()
-                            .map(|hunk_lines| {
-                                Hunk::new(
-                                    hunk_lines
-                                        .clone()
-                                        .iter()
-                                        .map(|l| (*l).to_string())
-                                        .collect::<Vec<_>>(),
-                                )
-                            })
-                            .collect::<Vec<_>>()
-                    })
-            {
-                file.diff = diff;
+            if let Some(diff) = diffs.get(file.path.as_str()) {
+                file.diff = diff.clone();
             }
         }
 

@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
 use anyhow::{Context, Result};
+use itertools::Itertools;
 use nom::{bytes::complete::tag, character::complete::not_line_ending, IResult};
 
-pub fn parse_diff(input: &str) -> Result<HashMap<&str, Vec<Vec<&str>>>> {
+use crate::status::Hunk;
+
+pub fn parse_diff(input: &str) -> Result<HashMap<&str, Vec<Hunk>>> {
     let mut diffs = HashMap::new();
     for diff in input
         .lines()
@@ -11,7 +14,7 @@ pub fn parse_diff(input: &str) -> Result<HashMap<&str, Vec<Vec<&str>>>> {
         .split(|l| l.starts_with("diff"))
         .skip(1)
     {
-        diffs.insert(get_path(diff)?, get_hunks(diff));
+        diffs.insert(get_path(diff)?, get_hunks(diff)?);
     }
     Ok(diffs)
 }
@@ -26,14 +29,26 @@ fn get_path<'a>(diff: &[&'a str]) -> Result<&'a str> {
     Ok(path)
 }
 
-fn get_hunks<'a>(diff: &[&'a str]) -> Vec<Vec<&'a str>> {
+fn get_hunks(diff: &[&str]) -> Result<Vec<Hunk>> {
     let mut hunks = Vec::new();
-    for line in diff {
-        if line.starts_with("@@") {
-            hunks.push(vec![*line]);
-        } else if let Some(last_diff) = hunks.last_mut() {
-            last_diff.push(*line);
+    let hunk_groups = diff.iter().group_by(|line| line.starts_with("@@"));
+    let mut hunk_groups = hunk_groups.into_iter();
+    loop {
+        let Some((key, mut lines)) = hunk_groups.next() else { break };
+        let hunk_head = *lines.next().context("expected another line in diff")?;
+        if !key {
+            continue;
         }
+        // XXX: `lines` should never have more than one item but we're not actually checking that.
+
+        let (_key, hunk_tail) = hunk_groups
+            .next()
+            .context("strange output from `git diff`")?;
+        hunks.push(Hunk::new(
+            std::iter::once(hunk_head)
+                .chain(hunk_tail.copied())
+                .join("\n"),
+        ));
     }
-    hunks
+    Ok(hunks)
 }
