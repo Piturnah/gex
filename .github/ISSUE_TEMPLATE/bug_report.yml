@@ -35,7 +35,7 @@ body:
       required: false
       
   - type: textarea
-    id: description
+    id: reproduce
     attributes:
       label: Steps To Reproduce
       description: Steps to reproduce the behaviour.
