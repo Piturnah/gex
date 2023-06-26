@@ -19,7 +19,7 @@ use anyhow::{Context, Result};
 use clap::Arg;
 use crossterm::{
     cursor,
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode, KeyEventKind},
     style::{Attribute, Color, SetForegroundColor},
     terminal::{self, ClearType},
 };
@@ -161,7 +161,20 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
 
         mini_buffer.render(term_width, term_height)?;
 
-        if let Event::Key(event) = event::read().context("failed to read a terminal event")? {
+        // Handle input
+        //
+        // Check what event we get. If we got an event other than a key event, we don't need to
+        // handle it so we break. If we got a key event with KeyEventKind::Release, we try again in
+        // the loop to avoid re-rendering. If it's a key event without KeyEventKind::Release,
+        // handle it and break.
+        loop {
+            let Event::Key(event) = event::read().context("failed to read a terminal event")? else {
+                break;
+            };
+            if event.kind == KeyEventKind::Release {
+                continue;
+            }
+
             match state {
                 State::Status => match event.code {
                     KeyCode::Char('j') | KeyCode::Down => status.down()?,
@@ -313,6 +326,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                     _ => {}
                 },
             };
+            break;
         }
     }
 }
