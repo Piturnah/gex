@@ -92,7 +92,7 @@ Set locale to English, e.g.:
 
         $ LANG=en_GB gex
 
-See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error);
+See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
     }
 
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
@@ -182,7 +182,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                     KeyCode::Char('G' | 'J') => status.cursor_last()?,
                     KeyCode::Char('g' | 'K') => status.cursor_first()?,
                     KeyCode::Char('s') => {
-                        status.stage()?;
+                        status.stage(&mut mini_buffer)?;
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('S') => {
@@ -190,7 +190,7 @@ See https://github.com/Piturnah/gex/issues/13.".to_string(), MessageType::Error)
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('u') => {
-                        status.unstage()?;
+                        status.unstage(&mut mini_buffer)?;
                         status.fetch(&repo)?;
                     }
                     KeyCode::Char('U') => {

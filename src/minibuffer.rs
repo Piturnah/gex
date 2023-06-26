@@ -38,28 +38,26 @@ impl MiniBuffer {
     }
 
     /// Push a new message onto the message stack.
-    pub fn push(&mut self, msg: String, msg_type: MessageType) {
-        self.messages.push((msg, msg_type));
+    pub fn push(&mut self, msg: &str, msg_type: MessageType) {
+        if !msg.is_empty() {
+            self.messages.push((msg.trim().to_string(), msg_type));
+        }
     }
 
     pub fn push_command_output(&mut self, output: &Output) {
-        if !output.stdout.is_empty() {
-            match str::from_utf8(&output.stdout) {
-                Ok(s) => self.push(s.trim().to_string(), MessageType::Note),
-                Err(e) => self.push(
-                    format!("Received invalid UTF8 stdout from git: {e}"),
-                    MessageType::Error,
-                ),
-            }
-        }
-        if !output.stderr.is_empty() {
-            self.push(
-                str::from_utf8(&output.stderr).map_or_else(
-                    |e| format!("Received invalid UTF8 stderr from git: {e}"),
-                    |msg| msg.trim().to_string(),
-                ),
+        match str::from_utf8(&output.stdout) {
+            Ok(s) => self.push(s, MessageType::Note),
+            Err(e) => self.push(
+                &format!("Received invalid UTF8 stdout from git: {e}"),
                 MessageType::Error,
-            );
+            ),
+        }
+        match str::from_utf8(&output.stderr) {
+            Ok(s) => self.push(s, MessageType::Error),
+            Err(e) => self.push(
+                &format!("Received invalid UTF8 stderr from git: {e}"),
+                MessageType::Error,
+            ),
         }
     }
 

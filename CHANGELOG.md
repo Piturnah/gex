@@ -5,6 +5,7 @@
 - Counts indicating the number of staged/unstaged changes
 ### Fixed
 - Receiving double inputs on certain terminals such as Windows Terminal
+- LF/CRLF warning breaks UI on hunk staging ([#26](https://github.com/Piturnah/gex/issues/26))
 
 ## [0.3.8](https://github.com/Piturnah/gex/compare/v0.3.7...v0.3.8) - 2023-04-23
 ### Added

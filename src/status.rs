@@ -2,7 +2,7 @@
 
 use std::{
     fmt, fs,
-    io::{stdout, Write},
+    io::{stdout, Read, Write},
     process::{Command, Stdio},
 };
 
@@ -11,7 +11,11 @@ use crossterm::style::{self, Attribute, Color};
 use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
 
-use crate::{git_process, parse};
+use crate::{
+    git_process,
+    minibuffer::{MessageType, MiniBuffer},
+    parse,
+};
 
 pub trait Expand {
     fn toggle_expand(&mut self);
@@ -472,7 +476,7 @@ impl Status {
         Ok(())
     }
 
-    fn stage_or_unstage(&mut self, command: Stage) -> Result<()> {
+    fn stage_or_unstage(&mut self, command: Stage, mini_buffer: &mut MiniBuffer) -> Result<()> {
         if self.diffs.is_empty() {
             return Ok(());
         }
@@ -500,7 +504,8 @@ impl Status {
                         Stage::Reset => ["reset", "-p", &file.path],
                     })
                     .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::piped())
                     .spawn()
                     .context("failed to spawn interactive git process")?;
 
@@ -519,18 +524,25 @@ impl Status {
                 .unwrap()
                 .context("failed to patch hunk")?;
 
-                drop(patch.wait());
+                let mut stderr_buf = String::new();
+                patch
+                    .stderr
+                    // If I understand correctly, reading to EOF should have the added effect
+                    // waiting on the child process to finish.
+                    .map(|mut stderr| stderr.read_to_string(&mut stderr_buf))
+                    .context("failed to read stderr of child process")??;
+                mini_buffer.push(&stderr_buf, MessageType::Error);
             }
         }
         Ok(())
     }
 
-    pub fn stage(&mut self) -> Result<()> {
-        self.stage_or_unstage(Stage::Add)
+    pub fn stage(&mut self, mini_buffer: &mut MiniBuffer) -> Result<()> {
+        self.stage_or_unstage(Stage::Add, mini_buffer)
     }
 
-    pub fn unstage(&mut self) -> Result<()> {
-        self.stage_or_unstage(Stage::Reset)
+    pub fn unstage(&mut self, mini_buffer: &mut MiniBuffer) -> Result<()> {
+        self.stage_or_unstage(Stage::Reset, mini_buffer)
     }
 
     /// Toggles expand on the selected diff item.
