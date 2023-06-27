@@ -408,7 +408,7 @@ impl Status {
         }
 
         // Get the diff information for unstaged changes
-        let diff = git_process(&["diff"])?;
+        let diff = git_process(&["diff", "--no-ext-diff"])?;
         let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
         let diffs = parse::parse_diff(diff)?;
         for mut file in &mut unstaged {
@@ -418,7 +418,7 @@ impl Status {
         }
 
         // Get the diff information for staged changes
-        let staged_diff = git_process(&["diff", "--cached"])?;
+        let staged_diff = git_process(&["diff", "--cached", "--no-ext-diff"])?;
         let staged_diff = std::str::from_utf8(&staged_diff.stdout)
             .context("malformed stdout from `git diff --cached`")?;
         let diffs = parse::parse_diff(staged_diff)?;
