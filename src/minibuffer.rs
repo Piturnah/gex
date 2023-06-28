@@ -122,6 +122,8 @@ impl MiniBuffer {
                         }
                         cursor = command.len() as u16;
                     }
+                    (KeyCode::Home, _) => cursor = 0,
+                    (KeyCode::End, _) => cursor = command.len() as u16,
                     (KeyCode::Char('b'), KeyModifiers::ALT) => {
                         while cursor > 0 {
                             cursor = cursor.saturating_sub(1);
