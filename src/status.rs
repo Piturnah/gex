@@ -42,15 +42,14 @@ impl fmt::Display for Hunk {
         use fmt::Write;
 
         let mut lines = self.diff.lines();
-
+        let Some(head) = lines.next() else {
+            return Ok(());
+        };
         let mut outbuf = format!(
             "\r\n{}{}{}",
             style::SetForegroundColor(Color::Blue),
             if self.expanded { "⌄" } else { "›" },
-            lines
-                .next()
-                .expect("diff is never empty")
-                .replace(" @@", &format!(" @@{}", Attribute::Reset))
+            head.replace(" @@", &format!(" @@{}", Attribute::Reset))
         );
 
         if self.expanded {
@@ -94,7 +93,7 @@ impl Expand for Hunk {
 pub struct FileDiff {
     path: String,
     expanded: bool,
-    diff: Vec<Hunk>,
+    hunks: Vec<Hunk>,
     cursor: usize,
     kind: DiffType,
 }
@@ -113,21 +112,20 @@ impl fmt::Display for FileDiff {
             self.path,
         )?;
         if self.expanded {
-            if self.diff.is_empty() {
+            if self.hunks.is_empty() {
                 if let Ok(file_content) = fs::read_to_string(&self.path) {
                     let file_content: String =
                         file_content.lines().collect::<Vec<&str>>().join("\r\n+");
 
                     write!(
                         f,
-                        "\r\n{}{}+{}",
+                        "\r\n{}{}+{file_content}",
                         Attribute::Reset,
                         style::SetForegroundColor(Color::DarkGreen),
-                        file_content
                     )?;
                 }
             } else {
-                for (i, hunk) in self.diff.iter().enumerate() {
+                for (i, hunk) in self.hunks.iter().enumerate() {
                     if i + 1 == self.cursor {
                         write!(f, "{}{}{hunk}", Attribute::Reset, Attribute::Reverse)?;
                     } else {
@@ -145,7 +143,7 @@ impl FileDiff {
         Self {
             path: path.to_string(),
             expanded: false,
-            diff: Vec::new(),
+            hunks: Vec::new(),
             cursor: 0,
             kind,
         }
@@ -179,7 +177,7 @@ impl FileDiff {
 
     fn len(&self) -> usize {
         if self.expanded {
-            self.diff.len() + 1
+            self.hunks.len() + 1
         } else {
             1
         }
@@ -207,7 +205,7 @@ enum Stage {
 pub struct Status {
     pub branch: String,
     pub head: String,
-    pub diffs: Vec<FileDiff>,
+    pub file_diffs: Vec<FileDiff>,
     pub count_untracked: usize,
     pub count_unstaged: usize,
     pub count_staged: usize,
@@ -238,7 +236,7 @@ impl fmt::Display for Status {
             )?;
         }
 
-        if self.diffs.is_empty() {
+        if self.file_diffs.is_empty() {
             write!(
                 f,
                 "\r\n{}nothing to commit, working tree clean{}",
@@ -248,7 +246,7 @@ impl fmt::Display for Status {
             drop(stdout().flush());
         }
 
-        for (index, file) in self.diffs.iter().enumerate() {
+        for (index, file) in self.file_diffs.iter().enumerate() {
             if index == 0 && self.count_untracked != 0 {
                 writeln!(
                     f,
@@ -340,7 +338,8 @@ impl Status {
         let mut lines = input.lines();
         while let Some(line) = lines.next() {
             if line == "Untracked files:" {
-                lines.next().unwrap(); // Skip message from git
+                // (use "git add <file>..." to include in what will be committed)
+                lines.next().context("strange `git status` output")?;
                 for line in lines.by_ref() {
                     if line.is_empty() {
                         break;
@@ -348,7 +347,8 @@ impl Status {
                     untracked.push(FileDiff::new(line.trim_start(), DiffType::Untracked));
                 }
             } else if line == "Changes to be committed:" {
-                lines.next().unwrap(); // Skip message from git
+                // (use "git restore --staged <file>..." to unstage)
+                lines.next().context("strange `git status` output")?;
                 for line in lines.by_ref() {
                     if line.is_empty() {
                         break;
@@ -357,7 +357,7 @@ impl Status {
                     let parse_result: IResult<&str, &str> = take_until("  ")(line.trim_start());
                     let (line, prefix) = parse_result
                         .map_err(|e| e.to_owned())
-                        .context("strange `git diff` output")?;
+                        .context("strange `git status` output")?;
 
                     staged.push(FileDiff::new(
                         line.trim_start(),
@@ -376,8 +376,10 @@ impl Status {
                     ));
                 }
             } else if line == "Changes not staged for commit:" {
-                lines.next().unwrap(); // Skip message from git
-                lines.next().unwrap();
+                // (use "git add <file>..." to update what will be committed)
+                // (use "git restore <file>..." to discard changes in working directory)
+                lines.next().context("strange `git status` output")?;
+                lines.next().context("strange `git status` output")?;
                 for line in lines.by_ref() {
                     if line.is_empty() {
                         break;
@@ -410,10 +412,10 @@ impl Status {
         // Get the diff information for unstaged changes
         let diff = git_process(&["diff", "--no-ext-diff"])?;
         let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
-        let diffs = parse::parse_diff(diff)?;
+        let hunks = parse::parse_diff(diff)?;
         for mut file in &mut unstaged {
-            if let Some(diff) = diffs.get(file.path.as_str()) {
-                file.diff = diff.clone();
+            if let Some(hunk) = hunks.get(file.path.as_str()) {
+                file.hunks = hunk.clone();
             }
         }
 
@@ -421,10 +423,10 @@ impl Status {
         let staged_diff = git_process(&["diff", "--cached", "--no-ext-diff"])?;
         let staged_diff = std::str::from_utf8(&staged_diff.stdout)
             .context("malformed stdout from `git diff --cached`")?;
-        let diffs = parse::parse_diff(staged_diff)?;
+        let hunks = parse::parse_diff(staged_diff)?;
         for mut file in &mut staged {
-            if let Some(diff) = diffs.get(file.path.as_str()) {
-                file.diff = diff.clone();
+            if let Some(hunk) = hunks.get(file.path.as_str()) {
+                file.hunks = hunk.clone();
             }
         }
 
@@ -438,24 +440,24 @@ impl Status {
         self.count_staged = staged.len();
         self.count_unstaged = unstaged.len();
 
-        self.diffs = untracked;
-        self.diffs.append(&mut unstaged);
-        self.diffs.append(&mut staged);
+        self.file_diffs = untracked;
+        self.file_diffs.append(&mut unstaged);
+        self.file_diffs.append(&mut staged);
 
-        if !self.diffs.is_empty() && self.cursor >= self.diffs.len() {
-            self.cursor = self.diffs.len() - 1;
+        if !self.file_diffs.is_empty() && self.cursor >= self.file_diffs.len() {
+            self.cursor = self.file_diffs.len() - 1;
         }
 
         Ok(())
     }
 
     fn stage_or_unstage(&mut self, command: Stage, mini_buffer: &mut MiniBuffer) -> Result<()> {
-        if self.diffs.is_empty() {
+        if self.file_diffs.is_empty() {
             return Ok(());
         }
 
         let file = self
-            .diffs
+            .file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?;
 
@@ -520,19 +522,19 @@ impl Status {
 
     /// Toggles expand on the selected diff item.
     pub fn expand(&mut self) -> Result<()> {
-        if self.diffs.is_empty() {
+        if self.file_diffs.is_empty() {
             return Ok(());
         }
 
         let mut file = self
-            .diffs
+            .file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?;
 
         if file.cursor == 0 {
             file.expanded = !file.expanded;
         } else {
-            file.diff[file.cursor - 1].expanded = !file.diff[file.cursor - 1].expanded;
+            file.hunks[file.cursor - 1].expanded = !file.hunks[file.cursor - 1].expanded;
         }
 
         Ok(())
@@ -540,12 +542,12 @@ impl Status {
 
     /// Move the cursor up one
     pub fn up(&mut self) -> Result<()> {
-        if self.diffs.is_empty() {
+        if self.file_diffs.is_empty() {
             return Ok(());
         }
 
         let file = self
-            .diffs
+            .file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?;
 
@@ -553,7 +555,7 @@ impl Status {
             match self.cursor.checked_sub(1) {
                 Some(v) => {
                     self.cursor = v;
-                    let _ = self.diffs[self.cursor].up();
+                    let _ = self.file_diffs[self.cursor].up();
                 }
                 None => self.cursor = 0,
             }
@@ -564,19 +566,19 @@ impl Status {
 
     /// Move the cursor down one
     pub fn down(&mut self) -> Result<()> {
-        if self.diffs.is_empty() {
+        if self.file_diffs.is_empty() {
             return Ok(());
         }
 
         let file = self
-            .diffs
+            .file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?;
 
         if file.down().is_err() {
             self.cursor += 1;
-            if self.cursor >= self.diffs.len() {
-                self.cursor = self.diffs.len() - 1;
+            if self.cursor >= self.file_diffs.len() {
+                self.cursor = self.file_diffs.len() - 1;
                 self.up()?;
             }
         }
@@ -586,16 +588,16 @@ impl Status {
 
     /// Move the cursor to the first element.
     pub fn cursor_first(&mut self) -> Result<()> {
-        if self.diffs.is_empty() {
+        if self.file_diffs.is_empty() {
             return Ok(());
         }
 
-        self.diffs
+        self.file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?
             .cursor_first();
         self.cursor = 0;
-        self.diffs
+        self.file_diffs
             .get_mut(self.cursor)
             .expect("0th element must exist")
             .cursor_first();
@@ -604,17 +606,17 @@ impl Status {
 
     /// Move the cursor to the last element.
     pub fn cursor_last(&mut self) -> Result<()> {
-        if self.diffs.is_empty() {
+        if self.file_diffs.is_empty() {
             return Ok(());
         }
 
         let mut file = self
-            .diffs
+            .file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?;
         file.cursor = file.len();
-        self.cursor = self.diffs.len() - 1;
-        self.diffs
+        self.cursor = self.file_diffs.len() - 1;
+        self.file_diffs
             .get_mut(self.cursor)
             .expect("cursor at `len() - 1`th pos of non-empty diffs")
             .cursor_last();

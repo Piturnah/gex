@@ -182,29 +182,29 @@ impl MiniBuffer {
 
     /// Render the most recent unsent message.
     pub fn render(&mut self, term_width: u16, term_height: u16) -> Result<()> {
-        if let Some((msg, msg_type)) = self.messages.pop() {
-            // Make sure raw mode is disabled so we can just print the message.
-            terminal::disable_raw_mode().context("failed to exit raw mode")?;
-            self.current_height = msg.lines().count() + 1;
-            match msg_type {
-                MessageType::Note => print!(
-                    "{}{}\n{msg}",
-                    cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
-                    "─".repeat(term_width.into()),
-                ),
-                MessageType::Error => print!(
-                    "{}{}\n{}{msg}{}",
-                    cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
-                    "─".repeat(term_width.into()),
-                    SetForegroundColor(Color::Red),
-                    SetForegroundColor(Color::Reset),
-                ),
-            }
-            terminal::enable_raw_mode().context("failed to enable raw mode")?;
-            drop(stdout().flush());
-        } else {
+        let Some((msg, msg_type)) = self.messages.pop() else {
             self.current_height = 0;
+            return Ok(());
+        };
+        // Make sure raw mode is disabled so we can just print the message.
+        terminal::disable_raw_mode().context("failed to exit raw mode")?;
+        self.current_height = msg.lines().count() + 1;
+        match msg_type {
+            MessageType::Note => print!(
+                "{}{}\n{msg}",
+                cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
+                "─".repeat(term_width.into()),
+            ),
+            MessageType::Error => print!(
+                "{}{}\n{}{msg}{}",
+                cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
+                "─".repeat(term_width.into()),
+                SetForegroundColor(Color::Red),
+                SetForegroundColor(Color::Reset),
+            ),
         }
+        terminal::enable_raw_mode().context("failed to enable raw mode")?;
+        drop(stdout().flush());
         Ok(())
     }
 }

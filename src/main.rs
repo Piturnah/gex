@@ -144,12 +144,10 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                 COMMIT_CMDS
                     .into_iter()
                     .map(|(k, v)| format!(
-                        "\r\n {}{}{}{} => {}",
+                        "\r\n {}{}{k}{} => {v}",
                         SetForegroundColor(Color::Green),
                         Attribute::Bold,
-                        k,
                         Attribute::Reset,
-                        v
                     ))
                     .collect::<String>(),
                 SetForegroundColor(Color::Reset),
