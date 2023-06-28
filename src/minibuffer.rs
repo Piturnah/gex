@@ -10,10 +10,11 @@ use std::{
 use anyhow::{Context, Result};
 use crossterm::{
     cursor::{self, SetCursorStyle},
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode, KeyModifiers},
     style::{Color, SetForegroundColor},
     terminal::{self, ClearType},
 };
+use itertools::Itertools;
 
 use crate::git_process;
 
@@ -93,33 +94,17 @@ impl MiniBuffer {
             if let Event::Key(key_event) =
                 event::read().context("failed to read a terminal event")?
             {
-                match key_event.code {
-                    KeyCode::Enter => break,
-                    KeyCode::Char(c) => {
-                        command.insert(cursor.into(), c);
-                        cursor += 1;
+                match (key_event.code, key_event.modifiers) {
+                    (KeyCode::Enter, _) => break,
+                    (KeyCode::Left, _) | (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
+                        cursor = cursor.saturating_sub(1);
                     }
-                    KeyCode::Backspace => {
-                        if cursor > 0 {
-                            cursor -= 1;
-                            command.remove(cursor.into());
-                        }
-                    }
-                    KeyCode::Delete => {
-                        if (cursor as usize) < command.len() || cursor == 0 && command.len() == 1 {
-                            command.remove(cursor.into());
-                        } else if !command.is_empty() {
-                            command.pop();
-                            cursor -= 1;
-                        }
-                    }
-                    KeyCode::Left => cursor = cursor.saturating_sub(1),
-                    KeyCode::Right => {
+                    (KeyCode::Right, _) | (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
                         if (cursor as usize) < command.len() {
                             cursor += 1;
                         }
                     }
-                    KeyCode::Up => {
+                    (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
                         if history_cursor < self.command_history.len() {
                             history_cursor += 1;
                             self.command_history[self.command_history.len() - history_cursor]
@@ -127,7 +112,7 @@ impl MiniBuffer {
                             cursor = command.len() as u16;
                         }
                     }
-                    KeyCode::Down => {
+                    (KeyCode::Down, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
                         history_cursor = history_cursor.saturating_sub(1);
                         if history_cursor == 0 {
                             command.clear();
@@ -137,7 +122,41 @@ impl MiniBuffer {
                         }
                         cursor = command.len() as u16;
                     }
-                    KeyCode::Esc => {
+                    (KeyCode::Char('b'), KeyModifiers::ALT) => {
+                        while cursor > 0 {
+                            cursor = cursor.saturating_sub(1);
+                            if word_boundary(&command, cursor as usize) {
+                                break;
+                            }
+                        }
+                    }
+                    (KeyCode::Char('f'), KeyModifiers::ALT) => {
+                        while cursor < command.len() as u16 {
+                            cursor += 1;
+                            if word_boundary(&command, cursor as usize) {
+                                break;
+                            }
+                        }
+                    }
+                    (KeyCode::Char(c), _) => {
+                        command.insert(cursor.into(), c);
+                        cursor += 1;
+                    }
+                    (KeyCode::Backspace, _) => {
+                        if cursor > 0 {
+                            cursor -= 1;
+                            command.remove(cursor.into());
+                        }
+                    }
+                    (KeyCode::Delete, _) => {
+                        if (cursor as usize) < command.len() || cursor == 0 && command.len() == 1 {
+                            command.remove(cursor.into());
+                        } else if !command.is_empty() {
+                            command.pop();
+                            cursor -= 1;
+                        }
+                    }
+                    (KeyCode::Esc, _) => {
                         print!("{}", cursor::Hide);
                         return Ok(());
                     }
@@ -186,4 +205,16 @@ impl MiniBuffer {
         }
         Ok(())
     }
+}
+
+/// Checks if idx is on an Emacs-style word boundary in the buffer.
+/// <https://www.gnu.org/software/emacs/manual/html_node/elisp/Syntax-Class-Table.html>
+fn word_boundary(buffer: &str, idx: usize) -> bool {
+    buffer
+        .chars()
+        .tuple_windows()
+        .nth(idx.saturating_sub(1))
+        .map_or(true, |(c1, c2)| {
+            !c1.is_alphanumeric() && c2.is_alphanumeric()
+        })
 }
