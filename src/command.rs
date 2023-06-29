@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use crossterm::{cursor, terminal};
 use git2::Repository;
 
-use crate::{branch::BranchList, minibuffer::MiniBuffer, status::Status, State};
+use crate::{branch::BranchList, minibuffer::MiniBuffer, status::Status, View};
 
 macro_rules! commands {
     ($($cmd:tt => [$($key:literal: $subcmd:tt),+$(,)?]),*$(,)?) => {
@@ -66,7 +66,7 @@ impl GexCommand {
         mini_buffer: &mut MiniBuffer,
         status: &mut Status,
         repo: &Repository,
-        state: &mut State,
+        view: &mut View,
     ) -> Result<()> {
         use SubCommand::*;
         let Some((_, cmd)) = self.subcommands().iter().find(|(c, _)| key == *c) else {
@@ -81,10 +81,10 @@ impl GexCommand {
                         let checkout = BranchList::checkout_new()?;
                         mini_buffer.push_command_output(&checkout);
                         status.fetch(repo)?;
-                        *state = State::Status;
+                        *view = View::Status;
                     }
                     SubCommand::Checkout => {
-                        *state = State::BranchList;
+                        *view = View::BranchList;
                     }
                 }
             }
@@ -133,7 +133,7 @@ impl GexCommand {
                             .context("failed to enter alternate screen")?;
                     }
                 }
-                *state = State::Status;
+                *view = View::Status;
             }
         }
 

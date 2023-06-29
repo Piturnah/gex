@@ -39,7 +39,7 @@ mod status;
 use branch::BranchList;
 use status::Status;
 
-pub enum State {
+pub enum View {
     Status,
     BranchList,
     Command(GexCommand),
@@ -101,7 +101,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
     terminal::enable_raw_mode().context("failed to put terminal in raw mode")?;
     print!("{}", cursor::Hide);
 
-    let mut state = State::Status;
+    let mut view = View::Status;
 
     // Structure of the event loop
     //
@@ -115,15 +115,15 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
         let (term_width, term_height) =
             terminal::size().context("failed to query terminal dimensions")?;
 
-        match state {
-            State::Status | State::Command(_) => {
+        match view {
+            View::Status | View::Command(_) => {
                 print!(
                     "{}{}{status}\r",
                     cursor::MoveToRow(0),
                     terminal::Clear(ClearType::All),
                 );
             }
-            State::BranchList => {
+            View::BranchList => {
                 print!(
                     "{}{}{branch_list}",
                     cursor::MoveToRow(0),
@@ -134,7 +134,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
         }
 
         // Display the available subcommands
-        if let State::Command(cmd) = state {
+        if let View::Command(cmd) = view {
             let subcmds = cmd.subcommands();
             print!(
                 "{}{title:═^term_width$}{}{}{}",
@@ -173,8 +173,8 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                 continue;
             }
 
-            match state {
-                State::Status => match event.code {
+            match view {
+                View::Status => match event.code {
                     KeyCode::Char('j') | KeyCode::Down => status.down()?,
                     KeyCode::Char('k') | KeyCode::Up => status.up()?,
                     KeyCode::Char('G' | 'J') => status.cursor_last()?,
@@ -197,7 +197,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     }
                     KeyCode::Tab => status.expand()?,
                     KeyCode::Char('c') => {
-                        state = State::Command(GexCommand::Commit);
+                        view = View::Command(GexCommand::Commit);
                     }
                     KeyCode::Char('F') => {
                         mini_buffer.push_command_output(&git_process(&["pull"])?);
@@ -205,7 +205,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     }
                     KeyCode::Char('b') => {
                         branch_list.fetch()?;
-                        state = State::Command(GexCommand::Branch);
+                        view = View::Command(GexCommand::Branch);
                     }
                     KeyCode::Char('r') => status.fetch(&repo)?,
                     KeyCode::Char(':') => {
@@ -225,7 +225,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     }
                     _ => {}
                 },
-                State::BranchList => match event.code {
+                View::BranchList => match event.code {
                     KeyCode::Char('k') | KeyCode::Up => {
                         branch_list.cursor = branch_list.cursor.saturating_sub(1);
                     }
@@ -240,9 +240,9 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     KeyCode::Char(' ') | KeyCode::Enter => {
                         mini_buffer.push_command_output(&branch_list.checkout()?);
                         status.fetch(&repo)?;
-                        state = State::Status;
+                        view = View::Status;
                     }
-                    KeyCode::Esc => state = State::Status,
+                    KeyCode::Esc => view = View::Status,
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
                         crossterm::execute!(
@@ -256,8 +256,8 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     }
                     _ => {}
                 },
-                State::Command(cmd) => match event.code {
-                    KeyCode::Esc => state = State::Status,
+                View::Command(cmd) => match event.code {
+                    KeyCode::Esc => view = View::Status,
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to exit raw mode")?;
                         crossterm::execute!(
@@ -270,7 +270,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         process::exit(0);
                     }
                     KeyCode::Char(c) => {
-                        cmd.handle_input(c, &mut mini_buffer, &mut status, &repo, &mut state)?;
+                        cmd.handle_input(c, &mut mini_buffer, &mut status, &repo, &mut view)?;
                     }
                     _ => {}
                 },
