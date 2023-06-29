@@ -55,6 +55,7 @@ macro_rules! commands {
 commands! {
     Branch => ['b': Checkout, 'n': New],
     Commit => ['c': Commit, 'a': Amend, 'e': Extend],
+    Push => ['p': Remote, 'f': Force],
     Stash => ['s': Stash, 'p': Pop],
 }
 
@@ -133,6 +134,22 @@ impl GexCommand {
                             .context("failed to enter alternate screen")?;
                     }
                 }
+                *view = View::Status;
+            }
+            Push(subcmd) => {
+                use push::SubCommand;
+                // For now we are just temporarily disabling the raw mode so that if the user is
+                // aksed for credentials then they can provide them that way.
+                crossterm::execute!(stdout(), cursor::MoveToColumn(0), cursor::Show)?;
+                terminal::disable_raw_mode().context("failed to disable raw mode")?;
+                match subcmd {
+                    SubCommand::Remote => minibuffer.push_command_output(&git_process(&["push"])?),
+                    SubCommand::Force => {
+                        minibuffer.push_command_output(&git_process(&["push", "--force"])?);
+                    }
+                }
+                crossterm::execute!(stdout(), cursor::Hide)?;
+                terminal::enable_raw_mode().context("failed to enable raw mode")?;
                 *view = View::Status;
             }
             Stash(subcmd) => {

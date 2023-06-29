@@ -85,6 +85,7 @@ $ gex
 | ------------ | ----------------- |
 | <kbd>c</kbd> | commit            |
 | <kbd>b</kbd> | branch            |
+| <kbd>p</kbd> | push              |
 | <kbd>z</kbd> | stash             |
 
 ## License

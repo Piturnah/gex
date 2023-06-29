@@ -232,6 +232,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     }
                     KeyCode::Char('c') => state.view = View::Command(GexCommand::Commit),
                     KeyCode::Char('z') => state.view = View::Command(GexCommand::Stash),
+                    KeyCode::Char('p') => state.view = View::Command(GexCommand::Push),
                     KeyCode::Char('F') => {
                         state
                             .minibuffer
