@@ -11,6 +11,7 @@
 use std::{
     cmp, env,
     io::{stdin, stdout, BufRead, Write},
+    panic,
     path::Path,
     process::{self, Command, Output},
 };
@@ -112,6 +113,14 @@ Set locale to English, e.g.:
 
 See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
     }
+
+    // We are about to start messing with the terminal settings. So let's update the panic hook so
+    // that the panic messages will be displayed cleanly.
+    let panic = panic::take_hook();
+    panic::set_hook(Box::new(move |e| {
+        restore_terminal();
+        panic(e);
+    }));
 
     crossterm::execute!(stdout(), terminal::EnterAlternateScreen)
         .context("failed to enter alternate screen")?;
@@ -305,6 +314,17 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
     }
 }
 
+/// Restore the terminal to its original state from before we messed with it.
+fn restore_terminal() {
+    drop(terminal::disable_raw_mode());
+    drop(crossterm::execute!(
+        stdout(),
+        terminal::LeaveAlternateScreen,
+        cursor::Show,
+        cursor::MoveToColumn(0)
+    ));
+}
+
 fn main() -> Result<()> {
     let matches = clap::command!()
         .version(env!("GEX_VERSION"))
@@ -320,15 +340,7 @@ fn main() -> Result<()> {
         .expect("default value provided");
 
     run(Path::new(path)).map_err(|e| {
-        // We don't want to do anything if these fail since then we'll lose the original error
-        // message we are trying to propagate
-        drop(terminal::disable_raw_mode());
-        drop(crossterm::execute!(
-            stdout(),
-            terminal::LeaveAlternateScreen,
-            cursor::Show,
-            cursor::MoveToColumn(0)
-        ));
+        restore_terminal();
         e
     })
 }

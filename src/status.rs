@@ -599,7 +599,7 @@ impl Status {
         self.cursor = 0;
         self.file_diffs
             .get_mut(self.cursor)
-            .expect("0th element must exist")
+            .expect("0th element must exist, !self.file_diffs.is_empty()")
             .cursor_first();
         Ok(())
     }

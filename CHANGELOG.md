@@ -13,6 +13,7 @@
 - Receiving double inputs on certain terminals such as Windows Terminal
 - LF/CRLF warning breaks UI on hunk staging ([#26](https://github.com/Piturnah/gex/issues/26))
 - Bad diff preview when external diff tool is enabled ([#28](https://github.com/Piturnah/gex/pull/28))
+- Terminal left in bad state in case of panic
 
 ## [0.3.8](https://github.com/Piturnah/gex/compare/v0.3.7...v0.3.8) - 2023-04-23
 ### Added
