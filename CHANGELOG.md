@@ -6,6 +6,9 @@
 - Improvements to minibuffer
   - Emacs-style cursor motion
   - Support for <kbd>Home</kbd> and <kbd>End</kbd>
+### Changed
+- Use <kbd>b</kbd> <kbd>b</kbd> to open the branch list
+- Use <kbd>b</kbd> <kbd>n</kbd> to create a new branch
 ### Fixed
 - Receiving double inputs on certain terminals such as Windows Terminal
 - LF/CRLF warning breaks UI on hunk staging ([#26](https://github.com/Piturnah/gex/issues/26))

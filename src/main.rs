@@ -12,7 +12,7 @@ use std::{
     cmp, env,
     io::{stdin, stdout, BufRead, Write},
     path::Path,
-    process::{self, Command, Output, Stdio},
+    process::{self, Command, Output},
 };
 
 use anyhow::{Context, Result};
@@ -25,9 +25,13 @@ use crossterm::{
 };
 use git2::Repository;
 
-use crate::minibuffer::{MessageType, MiniBuffer};
+use crate::{
+    command::GexCommand,
+    minibuffer::{MessageType, MiniBuffer},
+};
 
 mod branch;
+mod command;
 mod minibuffer;
 mod parse;
 mod status;
@@ -35,14 +39,11 @@ mod status;
 use branch::BranchList;
 use status::Status;
 
-#[derive(PartialEq)]
-enum State {
+pub enum State {
     Status,
-    Commit,
-    Branch,
+    BranchList,
+    Command(GexCommand),
 }
-
-const COMMIT_CMDS: [(char, &str); 3] = [('c', "commit"), ('e', "extend"), ('a', "amend")];
 
 pub fn git_process(args: &[&str]) -> Result<Output> {
     Command::new("git").args(args).output().with_context(|| {
@@ -115,34 +116,32 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
             terminal::size().context("failed to query terminal dimensions")?;
 
         match state {
-            State::Status | State::Commit => {
+            State::Status | State::Command(_) => {
                 print!(
-                    "{}{}{}\r",
+                    "{}{}{status}\r",
                     cursor::MoveToRow(0),
                     terminal::Clear(ClearType::All),
-                    status,
                 );
             }
-            State::Branch => {
+            State::BranchList => {
                 print!(
-                    "{}{}{}",
+                    "{}{}{branch_list}",
                     cursor::MoveToRow(0),
                     terminal::Clear(ClearType::All),
-                    branch_list
                 );
                 drop(stdout().flush());
             }
         }
 
-        // Display the available commit commands
-        if state == State::Commit {
+        // Display the available subcommands
+        if let State::Command(cmd) = state {
+            let subcmds = cmd.subcommands();
             print!(
-                "{}{:═^term_width$}{}{}{}",
-                cursor::MoveTo(0, term_height - 1 - COMMIT_CMDS.len() as u16),
-                "Commit Options",
+                "{}{title:═^term_width$}{}{}{}",
+                cursor::MoveTo(0, term_height - 1 - subcmds.len() as u16),
                 terminal::Clear(ClearType::FromCursorDown),
-                COMMIT_CMDS
-                    .into_iter()
+                subcmds
+                    .iter()
                     .map(|(k, v)| format!(
                         "\r\n {}{}{k}{} => {v}",
                         SetForegroundColor(Color::Green),
@@ -152,6 +151,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     .collect::<String>(),
                 SetForegroundColor(Color::Reset),
                 term_width = term_width as usize,
+                title = format!(" {cmd:?} Options "),
             );
 
             drop(stdout().flush());
@@ -197,7 +197,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     }
                     KeyCode::Tab => status.expand()?,
                     KeyCode::Char('c') => {
-                        state = State::Commit;
+                        state = State::Command(GexCommand::Commit);
                     }
                     KeyCode::Char('F') => {
                         mini_buffer.push_command_output(&git_process(&["pull"])?);
@@ -205,7 +205,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     }
                     KeyCode::Char('b') => {
                         branch_list.fetch()?;
-                        state = State::Branch;
+                        state = State::Command(GexCommand::Branch);
                     }
                     KeyCode::Char('r') => status.fetch(&repo)?,
                     KeyCode::Char(':') => {
@@ -225,69 +225,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     }
                     _ => {}
                 },
-                State::Commit => match event.code {
-                    KeyCode::Char('c') => {
-                        crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
-                            .context("failed to leave alternate screen")?;
-                        mini_buffer.push_command_output(
-                            &Command::new("git")
-                                .arg("commit")
-                                .stdout(Stdio::inherit())
-                                .stdin(Stdio::inherit())
-                                .output()
-                                .context("failed to run `git commit`")?,
-                        );
-                        status.fetch(&repo)?;
-                        crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
-                            .context("failed to enter alternate screen")?;
-
-                        state = State::Status;
-                    }
-                    KeyCode::Char('e') => {
-                        mini_buffer.push_command_output(
-                            &Command::new("git")
-                                .args(["commit", "--amend", "--no-edit"])
-                                .stdout(Stdio::inherit())
-                                .stdin(Stdio::inherit())
-                                .output()
-                                .context("failed to run `git commit`")?,
-                        );
-                        status.fetch(&repo)?;
-
-                        state = State::Status;
-                    }
-                    KeyCode::Char('a') => {
-                        crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
-                            .context("failed to leave alternate screen")?;
-                        mini_buffer.push_command_output(
-                            &Command::new("git")
-                                .args(["commit", "--amend"])
-                                .stdout(Stdio::inherit())
-                                .stdin(Stdio::inherit())
-                                .output()
-                                .context("failed to run `git commit`")?,
-                        );
-                        status.fetch(&repo)?;
-                        crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
-                            .context("failed to enter alternate screen")?;
-
-                        state = State::Status;
-                    }
-                    KeyCode::Esc => state = State::Status,
-                    KeyCode::Char('q') => {
-                        terminal::disable_raw_mode().context("failed to exit raw mode")?;
-                        crossterm::execute!(
-                            stdout(),
-                            terminal::LeaveAlternateScreen,
-                            cursor::Show,
-                            cursor::MoveToColumn(0)
-                        )
-                        .context("failed to leave alternate screen")?;
-                        process::exit(0);
-                    }
-                    _ => {}
-                },
-                State::Branch => match event.code {
+                State::BranchList => match event.code {
                     KeyCode::Char('k') | KeyCode::Up => {
                         branch_list.cursor = branch_list.cursor.saturating_sub(1);
                     }
@@ -304,11 +242,6 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         status.fetch(&repo)?;
                         state = State::Status;
                     }
-                    KeyCode::Char('b') => {
-                        mini_buffer.push_command_output(&BranchList::checkout_new()?);
-                        status.fetch(&repo)?;
-                        state = State::Status;
-                    }
                     KeyCode::Esc => state = State::Status,
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
@@ -320,6 +253,24 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         )
                         .context("failed to leave alternate screen")?;
                         process::exit(0);
+                    }
+                    _ => {}
+                },
+                State::Command(cmd) => match event.code {
+                    KeyCode::Esc => state = State::Status,
+                    KeyCode::Char('q') => {
+                        terminal::disable_raw_mode().context("failed to exit raw mode")?;
+                        crossterm::execute!(
+                            stdout(),
+                            terminal::LeaveAlternateScreen,
+                            cursor::Show,
+                            cursor::MoveToColumn(0)
+                        )
+                        .context("failed to leave alternate screen")?;
+                        process::exit(0);
+                    }
+                    KeyCode::Char(c) => {
+                        cmd.handle_input(c, &mut mini_buffer, &mut status, &repo, &mut state)?;
                     }
                     _ => {}
                 },

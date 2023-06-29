@@ -1,6 +1,6 @@
 [package]
 name = "gex"
-version = "0.3.9-dev"
+version = "0.4.0-dev"
 edition = "2021"
 categories = ["command-line-utilities", "development-tools"]
 description = "Git workflow improvement CLI tool inspired by Magit"
@@ -20,6 +20,7 @@ clap = { version = "4.0", features = ["cargo"] }
 anyhow = "1.0.68"
 git2 = "0.17.1"
 itertools = "0.11.0"
+paste = "1.0.12"
 
 #       Tokee
 #      (Gecko gekko)                _____________
