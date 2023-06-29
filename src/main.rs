@@ -226,13 +226,6 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         state.status.fetch(&state.repo)?;
                     }
                     KeyCode::Tab => state.status.expand()?,
-                    KeyCode::Char('b') => {
-                        state.branch_list.fetch()?;
-                        state.view = View::Command(GexCommand::Branch);
-                    }
-                    KeyCode::Char('c') => state.view = View::Command(GexCommand::Commit),
-                    KeyCode::Char('z') => state.view = View::Command(GexCommand::Stash),
-                    KeyCode::Char('p') => state.view = View::Command(GexCommand::Push),
                     KeyCode::Char('F') => {
                         state
                             .minibuffer
@@ -254,6 +247,13 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         )
                         .context("failed to leave alternate screen")?;
                         process::exit(0);
+                    }
+                    KeyCode::Char(c1) => {
+                        if let Some((_, cmd)) =
+                            GexCommand::commands().iter().find(|(c2, _)| c1 == *c2)
+                        {
+                            state.view = View::Command(*cmd);
+                        }
                     }
                     _ => {}
                 },

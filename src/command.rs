@@ -10,17 +10,21 @@ use crossterm::{cursor, terminal};
 use crate::{branch::BranchList, git_process, State, View};
 
 macro_rules! commands {
-    ($($cmd:tt => [$($key:literal: $subcmd:tt),+$(,)?]),*$(,)?) => {
+    ($($key:literal: $cmd:tt => [$($subkey:literal: $subcmd:tt),+$(,)?]),*$(,)?) => {
         paste::paste! {
             #[derive(Clone, Copy, Debug)]
             pub enum GexCommand { $($cmd),* }
             impl GexCommand {
+                pub const fn commands() -> &'static [(char, Self)] {
+                    &[$(($key, Self::$cmd)),*]
+                }
                 pub const fn subcommands(&self) -> &[(char, SubCommand)] {
                     match self {
                         $(Self::$cmd => {
-                            &[
-                                $(($key, SubCommand::$cmd([<$cmd:lower>]::SubCommand::$subcmd))),*
-                            ]
+                            &[$((
+                                $subkey,
+                                SubCommand::$cmd([<$cmd:lower>]::SubCommand::$subcmd)
+                            )),*]
                         }),*
                     }
                 }
@@ -53,10 +57,10 @@ macro_rules! commands {
 }
 
 commands! {
-    Branch => ['b': Checkout, 'n': New],
-    Commit => ['c': Commit, 'a': Amend, 'e': Extend],
-    Push => ['p': Remote, 'f': Force],
-    Stash => ['s': Stash, 'p': Pop],
+    'b': Branch => ['b': Checkout, 'n': New],
+    'c': Commit => ['c': Commit, 'a': Amend, 'e': Extend],
+    'p': Push => ['p': Remote, 'f': Force],
+    'z': Stash => ['s': Stash, 'p': Pop],
 }
 
 impl GexCommand {
@@ -85,6 +89,7 @@ impl GexCommand {
                         *view = View::Status;
                     }
                     SubCommand::Checkout => {
+                        state.branch_list.fetch()?;
                         *view = View::BranchList;
                     }
                 }
