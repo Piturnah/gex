@@ -6,9 +6,8 @@ use std::{
 
 use anyhow::{Context, Result};
 use crossterm::{cursor, terminal};
-use git2::Repository;
 
-use crate::{branch::BranchList, minibuffer::MiniBuffer, status::Status, View};
+use crate::{branch::BranchList, State, View};
 
 macro_rules! commands {
     ($($cmd:tt => [$($key:literal: $subcmd:tt),+$(,)?]),*$(,)?) => {
@@ -60,15 +59,15 @@ commands! {
 
 impl GexCommand {
     #[allow(clippy::enum_glob_use)]
-    pub fn handle_input(
-        self,
-        key: char,
-        mini_buffer: &mut MiniBuffer,
-        status: &mut Status,
-        repo: &Repository,
-        view: &mut View,
-    ) -> Result<()> {
+    pub fn handle_input(self, key: char, state: &mut State) -> Result<()> {
         use SubCommand::*;
+        let State {
+            ref mut minibuffer,
+            ref mut status,
+            ref mut view,
+            repo,
+            ..
+        } = state;
         let Some((_, cmd)) = self.subcommands().iter().find(|(c, _)| key == *c) else {
             return Ok(());
         };
@@ -79,7 +78,7 @@ impl GexCommand {
                 match subcmd {
                     SubCommand::New => {
                         let checkout = BranchList::checkout_new()?;
-                        mini_buffer.push_command_output(&checkout);
+                        minibuffer.push_command_output(&checkout);
                         status.fetch(repo)?;
                         *view = View::Status;
                     }
@@ -94,7 +93,7 @@ impl GexCommand {
                     SubCommand::Commit => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .context("failed to leave alternate screen")?;
-                        mini_buffer.push_command_output(
+                        minibuffer.push_command_output(
                             &Command::new("git")
                                 .arg("commit")
                                 .stdout(Stdio::inherit())
@@ -107,7 +106,7 @@ impl GexCommand {
                             .context("failed to enter alternate screen")?;
                     }
                     SubCommand::Extend => {
-                        mini_buffer.push_command_output(
+                        minibuffer.push_command_output(
                             &Command::new("git")
                                 .args(["commit", "--amend", "--no-edit"])
                                 .stdout(Stdio::inherit())
@@ -120,7 +119,7 @@ impl GexCommand {
                     SubCommand::Amend => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .context("failed to leave alternate screen")?;
-                        mini_buffer.push_command_output(
+                        minibuffer.push_command_output(
                             &Command::new("git")
                                 .args(["commit", "--amend"])
                                 .stdout(Stdio::inherit())

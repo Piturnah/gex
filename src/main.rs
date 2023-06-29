@@ -39,6 +39,14 @@ mod status;
 use branch::BranchList;
 use status::Status;
 
+pub struct State {
+    view: View,
+    minibuffer: MiniBuffer,
+    status: Status,
+    branch_list: BranchList,
+    repo: Repository,
+}
+
 pub enum View {
     Status,
     BranchList,
@@ -78,9 +86,18 @@ fn run(path: &Path) -> Result<()> {
     std::env::set_current_dir(repo.path().parent().context("`.git` cannot be root dir")?)
         .context("failed to set working directory")?;
 
-    let mut status = Status::new(&repo)?;
-    let mut branch_list = BranchList::new()?;
-    let mut mini_buffer = MiniBuffer::new();
+    let status = Status::new(&repo)?;
+    let branch_list = BranchList::new()?;
+    let minibuffer = MiniBuffer::new();
+    let view = View::Status;
+
+    let mut state = State {
+        view,
+        minibuffer,
+        status,
+        branch_list,
+        repo,
+    };
 
     // Non-English locale settings are currently unsupported. See
     // https://github.com/Piturnah/gex/issues/13.
@@ -88,7 +105,7 @@ fn run(path: &Path) -> Result<()> {
         .map(|s| s.starts_with("en"))
         .unwrap_or(true)
     {
-        mini_buffer.push("WARNING: Non-English locale detected. For now, Gex only supports English locale setting.
+        state.minibuffer.push("WARNING: Non-English locale detected. For now, Gex only supports English locale setting.
 Set locale to English, e.g.:
 
         $ LANG=en_GB gex
@@ -100,8 +117,6 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
         .context("failed to enter alternate screen")?;
     terminal::enable_raw_mode().context("failed to put terminal in raw mode")?;
     print!("{}", cursor::Hide);
-
-    let mut view = View::Status;
 
     // Structure of the event loop
     //
@@ -115,12 +130,13 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
         let (term_width, term_height) =
             terminal::size().context("failed to query terminal dimensions")?;
 
-        match view {
+        match state.view {
             View::Status | View::Command(_) => {
                 print!(
                     "{}{}{status}\r",
                     cursor::MoveToRow(0),
                     terminal::Clear(ClearType::All),
+                    status = state.status,
                 );
             }
             View::BranchList => {
@@ -128,13 +144,14 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     "{}{}{branch_list}",
                     cursor::MoveToRow(0),
                     terminal::Clear(ClearType::All),
+                    branch_list = state.branch_list,
                 );
                 drop(stdout().flush());
             }
         }
 
         // Display the available subcommands
-        if let View::Command(cmd) = view {
+        if let View::Command(cmd) = state.view {
             let subcmds = cmd.subcommands();
             print!(
                 "{}{title:═^term_width$}{}{}{}",
@@ -157,7 +174,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
             drop(stdout().flush());
         }
 
-        mini_buffer.render(term_width, term_height)?;
+        state.minibuffer.render(term_width, term_height)?;
 
         // Handle input
         //
@@ -173,44 +190,50 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                 continue;
             }
 
-            match view {
+            match state.view {
                 View::Status => match event.code {
-                    KeyCode::Char('j') | KeyCode::Down => status.down()?,
-                    KeyCode::Char('k') | KeyCode::Up => status.up()?,
-                    KeyCode::Char('G' | 'J') => status.cursor_last()?,
-                    KeyCode::Char('g' | 'K') => status.cursor_first()?,
+                    KeyCode::Char('j') | KeyCode::Down => state.status.down()?,
+                    KeyCode::Char('k') | KeyCode::Up => state.status.up()?,
+                    KeyCode::Char('G' | 'J') => state.status.cursor_last()?,
+                    KeyCode::Char('g' | 'K') => state.status.cursor_first()?,
                     KeyCode::Char('s') => {
-                        status.stage(&mut mini_buffer)?;
-                        status.fetch(&repo)?;
+                        state.status.stage(&mut state.minibuffer)?;
+                        state.status.fetch(&state.repo)?;
                     }
                     KeyCode::Char('S') => {
-                        mini_buffer.push_command_output(&git_process(&["add", "."])?);
-                        status.fetch(&repo)?;
+                        state
+                            .minibuffer
+                            .push_command_output(&git_process(&["add", "."])?);
+                        state.status.fetch(&state.repo)?;
                     }
                     KeyCode::Char('u') => {
-                        status.unstage(&mut mini_buffer)?;
-                        status.fetch(&repo)?;
+                        state.status.unstage(&mut state.minibuffer)?;
+                        state.status.fetch(&state.repo)?;
                     }
                     KeyCode::Char('U') => {
-                        mini_buffer.push_command_output(&git_process(&["reset"])?);
-                        status.fetch(&repo)?;
+                        state
+                            .minibuffer
+                            .push_command_output(&git_process(&["reset"])?);
+                        state.status.fetch(&state.repo)?;
                     }
-                    KeyCode::Tab => status.expand()?,
+                    KeyCode::Tab => state.status.expand()?,
                     KeyCode::Char('c') => {
-                        view = View::Command(GexCommand::Commit);
+                        state.view = View::Command(GexCommand::Commit);
                     }
                     KeyCode::Char('F') => {
-                        mini_buffer.push_command_output(&git_process(&["pull"])?);
-                        status.fetch(&repo)?;
+                        state
+                            .minibuffer
+                            .push_command_output(&git_process(&["pull"])?);
+                        state.status.fetch(&state.repo)?;
                     }
                     KeyCode::Char('b') => {
-                        branch_list.fetch()?;
-                        view = View::Command(GexCommand::Branch);
+                        state.branch_list.fetch()?;
+                        state.view = View::Command(GexCommand::Branch);
                     }
-                    KeyCode::Char('r') => status.fetch(&repo)?,
+                    KeyCode::Char('r') => state.status.fetch(&state.repo)?,
                     KeyCode::Char(':') => {
-                        mini_buffer.git_command(term_width, term_height)?;
-                        status.fetch(&repo)?;
+                        state.minibuffer.git_command(term_width, term_height)?;
+                        state.status.fetch(&state.repo)?;
                     }
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
@@ -227,22 +250,26 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                 },
                 View::BranchList => match event.code {
                     KeyCode::Char('k') | KeyCode::Up => {
-                        branch_list.cursor = branch_list.cursor.saturating_sub(1);
+                        state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
                     }
                     KeyCode::Char('j') | KeyCode::Down => {
-                        branch_list.cursor =
-                            cmp::min(branch_list.cursor + 1, branch_list.branches.len() - 1);
+                        state.branch_list.cursor = cmp::min(
+                            state.branch_list.cursor + 1,
+                            state.branch_list.branches.len() - 1,
+                        );
                     }
-                    KeyCode::Char('g' | 'K') => branch_list.cursor = 0,
+                    KeyCode::Char('g' | 'K') => state.branch_list.cursor = 0,
                     KeyCode::Char('G' | 'J') => {
-                        branch_list.cursor = branch_list.branches.len() - 1;
+                        state.branch_list.cursor = state.branch_list.branches.len() - 1;
                     }
                     KeyCode::Char(' ') | KeyCode::Enter => {
-                        mini_buffer.push_command_output(&branch_list.checkout()?);
-                        status.fetch(&repo)?;
-                        view = View::Status;
+                        state
+                            .minibuffer
+                            .push_command_output(&state.branch_list.checkout()?);
+                        state.status.fetch(&state.repo)?;
+                        state.view = View::Status;
                     }
-                    KeyCode::Esc => view = View::Status,
+                    KeyCode::Esc => state.view = View::Status,
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
                         crossterm::execute!(
@@ -257,7 +284,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     _ => {}
                 },
                 View::Command(cmd) => match event.code {
-                    KeyCode::Esc => view = View::Status,
+                    KeyCode::Esc => state.view = View::Status,
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to exit raw mode")?;
                         crossterm::execute!(
@@ -269,9 +296,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         .context("failed to leave alternate screen")?;
                         process::exit(0);
                     }
-                    KeyCode::Char(c) => {
-                        cmd.handle_input(c, &mut mini_buffer, &mut status, &repo, &mut view)?;
-                    }
+                    KeyCode::Char(c) => cmd.handle_input(c, &mut state)?,
                     _ => {}
                 },
             };
