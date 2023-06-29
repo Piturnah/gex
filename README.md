@@ -58,40 +58,33 @@ $ gex
 ### Navigation
 
 | Key                            | Action       |
-| ------------------------------ | ---------    |
+| ------------------------------ | ------------ |
 | <kbd>j</kbd> / <kbd>Down</kbd> | Move down    |
 | <kbd>k</kbd> / <kbd>Up</kbd>   | Move up      |
 | <kbd>Tab</kbd>                 | Expand item  |
 | <kbd>g</kbd> / <kbd>K</kbd>    | Go to top    |
 | <kbd>G</kbd> / <kbd>J</kbd>    | Go to bottom |
 
-### Git actions
-
-| Key          | Action              |
-| ------------ | ------------------- |
-| <kbd>s</kbd> | stage item          |
-| <kbd>S</kbd> | stage all items     |
-| <kbd>u</kbd> | unstage item        |
-| <kbd>U</kbd> | unstage all items   |
-| <kbd>F</kbd> | pull from remote    |
-| <kbd>:</kbd> | execute git command |
-
 ### Gex actions
+
+| Key            | Action              |
+| ------------   | ------------------- |
+| <kbd>s</kbd>   | stage item          |
+| <kbd>S</kbd>   | stage all items     |
+| <kbd>u</kbd>   | unstage item        |
+| <kbd>U</kbd>   | unstage all items   |
+| <kbd>F</kbd>   | pull from remote    |
+| <kbd>:</kbd>   | execute git command |
+| <kbd>r</kbd>   | refresh             |
+| <kbd>Esc</kbd> | cancel current      |
+| <kbd>q</kbd>   | quit gex            |
+
+### Gex commands
 
 | Key          | Action            |
 | ------------ | ----------------- |
-| <kbd>c</kbd> | commit menu       |
-| <kbd>b</kbd> | enter branch mode |
-| <kbd>r</kbd> | refresh           |
-| <kbd>q</kbd> | quit gex          |
-
-### Branch mode
-
-| Key                                 | Action              |
-| ----------------------------------- | ------------------- |
-| <kbd>b</kbd>                        | checkout new branch |
-| <kbd>Space</kbd> / <kbd>Enter</kbd> | checkout branch     |
-| <kbd>Esc</kbd>                      | exit branch mode    |
+| <kbd>c</kbd> | commit            |
+| <kbd>b</kbd> | branch            |
 
 ## License
 
