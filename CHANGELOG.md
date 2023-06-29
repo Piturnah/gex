@@ -6,6 +6,7 @@
 - Improvements to minibuffer
   - Emacs-style cursor motion
   - Support for <kbd>Home</kbd> and <kbd>End</kbd>
+- Basic stashing functionality with <kbd>z</kbd>
 ### Changed
 - Use <kbd>b</kbd> <kbd>b</kbd> to open the branch list
 - Use <kbd>b</kbd> <kbd>n</kbd> to create a new branch

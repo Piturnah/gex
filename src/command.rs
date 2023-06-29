@@ -7,7 +7,7 @@ use std::{
 use anyhow::{Context, Result};
 use crossterm::{cursor, terminal};
 
-use crate::{branch::BranchList, State, View};
+use crate::{branch::BranchList, git_process, State, View};
 
 macro_rules! commands {
     ($($cmd:tt => [$($key:literal: $subcmd:tt),+$(,)?]),*$(,)?) => {
@@ -55,6 +55,7 @@ macro_rules! commands {
 commands! {
     Branch => ['b': Checkout, 'n': New],
     Commit => ['c': Commit, 'a': Amend, 'e': Extend],
+    Stash => ['s': Stash, 'p': Pop],
 }
 
 impl GexCommand {
@@ -132,6 +133,17 @@ impl GexCommand {
                             .context("failed to enter alternate screen")?;
                     }
                 }
+                *view = View::Status;
+            }
+            Stash(subcmd) => {
+                use stash::SubCommand;
+                match subcmd {
+                    SubCommand::Stash => minibuffer.push_command_output(&git_process(&["stash"])?),
+                    SubCommand::Pop => {
+                        minibuffer.push_command_output(&git_process(&["stash", "pop"])?);
+                    }
+                }
+                status.fetch(repo)?;
                 *view = View::Status;
             }
         }

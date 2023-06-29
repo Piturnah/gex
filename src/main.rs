@@ -226,18 +226,17 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         state.status.fetch(&state.repo)?;
                     }
                     KeyCode::Tab => state.status.expand()?,
-                    KeyCode::Char('c') => {
-                        state.view = View::Command(GexCommand::Commit);
+                    KeyCode::Char('b') => {
+                        state.branch_list.fetch()?;
+                        state.view = View::Command(GexCommand::Branch);
                     }
+                    KeyCode::Char('c') => state.view = View::Command(GexCommand::Commit),
+                    KeyCode::Char('z') => state.view = View::Command(GexCommand::Stash),
                     KeyCode::Char('F') => {
                         state
                             .minibuffer
                             .push_command_output(&git_process(&["pull"])?);
                         state.status.fetch(&state.repo)?;
-                    }
-                    KeyCode::Char('b') => {
-                        state.branch_list.fetch()?;
-                        state.view = View::Command(GexCommand::Branch);
                     }
                     KeyCode::Char('r') => state.status.fetch(&state.repo)?,
                     KeyCode::Char(':') => {
