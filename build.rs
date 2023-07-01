@@ -6,7 +6,7 @@ use std::process::Command;
 fn main() {
     if env!("CARGO_PKG_VERSION").ends_with("-dev") {
         let hash = Command::new("git")
-            .args(["log", "HEAD", "--pretty=format:%H", "-n", "1"])
+            .args(["log", "HEAD", "--pretty=format:%h %ai", "-n", "1"])
             .output()
             .expect("couldn't get commit hash pointed to by HEAD");
 
