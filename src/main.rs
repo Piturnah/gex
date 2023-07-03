@@ -33,6 +33,7 @@ use crate::{
 
 mod branch;
 mod command;
+mod debug;
 mod minibuffer;
 mod parse;
 mod status;
@@ -182,6 +183,9 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
 
             drop(stdout().flush());
         }
+
+        // Draw the current `debug!` window.
+        debug_draw!();
 
         state.minibuffer.render(term_width, term_height)?;
 
