@@ -16,6 +16,7 @@
 - LF/CRLF warning breaks UI on hunk staging ([#26](https://github.com/Piturnah/gex/issues/26))
 - Bad diff preview when external diff tool is enabled ([#28](https://github.com/Piturnah/gex/pull/28))
 - Terminal left in bad state in case of panic
+- Cursor disappears in status view after jumping to top ([#31](https://github.com/Piturnah/gex/issues/31))
 
 ## [0.3.8](https://github.com/Piturnah/gex/compare/v0.3.7...v0.3.8) - 2023-04-23
 ### Added

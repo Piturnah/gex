@@ -96,6 +96,9 @@ pub struct FileDiff {
     hunks: Vec<Hunk>,
     cursor: usize,
     kind: DiffType,
+    // The implementation here involving this `selected` field is awful and hacky and I can't wait
+    // to refactor it out.
+    selected: bool,
 }
 
 impl fmt::Display for FileDiff {
@@ -126,7 +129,7 @@ impl fmt::Display for FileDiff {
                 }
             } else {
                 for (i, hunk) in self.hunks.iter().enumerate() {
-                    if i + 1 == self.cursor {
+                    if self.selected && i + 1 == self.cursor {
                         write!(f, "{}{}{hunk}", Attribute::Reset, Attribute::Reverse)?;
                     } else {
                         write!(f, "{}{hunk}", Attribute::Reset)?;
@@ -146,6 +149,7 @@ impl FileDiff {
             hunks: Vec::new(),
             cursor: 0,
             kind,
+            selected: false,
         }
     }
 
@@ -157,11 +161,10 @@ impl FileDiff {
 
     /// Fails on the case that we are already on the final hunk
     fn down(&mut self) -> Result<(), ()> {
-        self.cursor += 1;
-        if self.cursor >= self.len() {
+        if self.cursor + 1 >= self.len() {
             return Err(());
         }
-
+        self.cursor += 1;
         Ok(())
     }
 
@@ -448,6 +451,10 @@ impl Status {
             self.cursor = self.file_diffs.len() - 1;
         }
 
+        if let Some(file_diff) = self.file_diffs.get_mut(self.cursor) {
+            file_diff.selected = true;
+        }
+
         Ok(())
     }
 
@@ -460,6 +467,7 @@ impl Status {
             .file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?;
+        file.selected = false;
 
         match file.cursor {
             0 => {
@@ -509,6 +517,11 @@ impl Status {
                 mini_buffer.push(&stderr_buf, MessageType::Error);
             }
         }
+
+        self.file_diffs
+            .get_mut(self.cursor)
+            .context("cursor is at invalid position")?
+            .selected = true;
         Ok(())
     }
 
@@ -555,7 +568,15 @@ impl Status {
             match self.cursor.checked_sub(1) {
                 Some(v) => {
                     self.cursor = v;
-                    let _ = self.file_diffs[self.cursor].up();
+                    file.selected = false;
+                    let new_file = self
+                        .file_diffs
+                        .get_mut(self.cursor)
+                        .context("cursor at invalid position")?;
+                    new_file.selected = true;
+                    if new_file.expanded() {
+                        new_file.cursor_last();
+                    }
                 }
                 None => self.cursor = 0,
             }
@@ -570,16 +591,26 @@ impl Status {
             return Ok(());
         }
 
+        let count_file_diffs = self.file_diffs.len();
         let file = self
             .file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?;
 
         if file.down().is_err() {
+            if self.cursor + 1 >= count_file_diffs {
+                return Ok(());
+            }
+
             self.cursor += 1;
-            if self.cursor >= self.file_diffs.len() {
-                self.cursor = self.file_diffs.len() - 1;
-                self.up()?;
+            file.selected = false;
+            let new_file = self
+                .file_diffs
+                .get_mut(self.cursor)
+                .context("cursor at invalid position")?;
+            new_file.selected = true;
+            if new_file.expanded() {
+                new_file.cursor_first();
             }
         }
 
@@ -595,12 +626,14 @@ impl Status {
         self.file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?
-            .cursor_first();
+            .selected = false;
         self.cursor = 0;
-        self.file_diffs
+        let new_file = self
+            .file_diffs
             .get_mut(self.cursor)
-            .expect("0th element must exist, !self.file_diffs.is_empty()")
-            .cursor_first();
+            .expect("0th element must exist, !self.file_diffs.is_empty()");
+        new_file.cursor_first();
+        new_file.selected = true;
         Ok(())
     }
 
@@ -610,16 +643,17 @@ impl Status {
             return Ok(());
         }
 
-        let mut file = self
-            .file_diffs
-            .get_mut(self.cursor)
-            .context("cursor is at invalid position")?;
-        file.cursor = file.len();
-        self.cursor = self.file_diffs.len() - 1;
         self.file_diffs
             .get_mut(self.cursor)
-            .expect("cursor at `len() - 1`th pos of non-empty diffs")
-            .cursor_last();
+            .context("cursor is at invalid position")?
+            .selected = false;
+        self.cursor = self.file_diffs.len() - 1;
+        let new_file = self
+            .file_diffs
+            .get_mut(self.cursor)
+            .expect("cursor at `len() - 1`th pos of non-empty diffs");
+        new_file.cursor_last();
+        new_file.selected = true;
         Ok(())
     }
 }
