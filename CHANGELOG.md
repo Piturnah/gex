@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.0](https://github.com/Piturnah/gex/compare/v0.3.8...v0.4.0)
+## [0.4.0](https://github.com/Piturnah/gex/compare/v0.3.8...v0.4.0) - 2023-07-03
 ### Added
 - Counts indicating the number of staged/unstaged changes
 - Improvements to minibuffer
