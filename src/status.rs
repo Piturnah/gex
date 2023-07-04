@@ -15,6 +15,7 @@ use crate::{
     git_process,
     minibuffer::{MessageType, MiniBuffer},
     parse,
+    render::{self, Renderer},
 };
 
 pub trait Expand {
@@ -46,7 +47,7 @@ impl fmt::Display for Hunk {
             return Ok(());
         };
         let mut outbuf = format!(
-            "\r\n{}{}{}",
+            "{}{}{}",
             style::SetForegroundColor(Color::Blue),
             if self.expanded { "⌄" } else { "›" },
             head.replace(" @@", &format!(" @@{}", Attribute::Reset))
@@ -101,11 +102,12 @@ pub struct FileDiff {
     selected: bool,
 }
 
-impl fmt::Display for FileDiff {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+impl render::Render for FileDiff {
+    fn render(&self, f: &mut Renderer) -> fmt::Result {
+        use fmt::Write;
         write!(
             f,
-            "\r{}{}{}",
+            "\r{}{}{}{}",
             if self.expanded { "⌄" } else { "›" },
             match self.kind {
                 DiffType::Renamed => "[RENAME] ",
@@ -113,26 +115,23 @@ impl fmt::Display for FileDiff {
                 _ => "",
             },
             self.path,
+            Attribute::Reset,
         )?;
         if self.expanded {
             if self.hunks.is_empty() {
                 if let Ok(file_content) = fs::read_to_string(&self.path) {
-                    let file_content: String =
-                        file_content.lines().collect::<Vec<&str>>().join("\r\n+");
-
-                    write!(
-                        f,
-                        "\r\n{}{}+{file_content}",
-                        Attribute::Reset,
-                        style::SetForegroundColor(Color::DarkGreen),
-                    )?;
+                    write!(f, "{}", Attribute::Reset)?;
+                    for l in file_content.lines() {
+                        write!(f, "\r\n{}+{l}", style::SetForegroundColor(Color::DarkGreen))?;
+                    }
                 }
             } else {
                 for (i, hunk) in self.hunks.iter().enumerate() {
                     if self.selected && i + 1 == self.cursor {
-                        write!(f, "{}{}{hunk}", Attribute::Reset, Attribute::Reverse)?;
+                        f.insert_cursor();
+                        write!(f, "{}\r\n{}{hunk}", Attribute::Reset, Attribute::Reverse)?;
                     } else {
-                        write!(f, "{}{hunk}", Attribute::Reset)?;
+                        write!(f, "{}\r\n{hunk}", Attribute::Reset)?;
                     }
                 }
             }
@@ -215,11 +214,12 @@ pub struct Status {
     pub cursor: usize,
 }
 
-impl fmt::Display for Status {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+impl render::Render for Status {
+    fn render(&self, f: &mut Renderer) -> Result<(), fmt::Error> {
+        use fmt::Write;
         // Display the current branch
         writeln!(
-            f,
+            f.buffer,
             "\rOn branch {}{}{}",
             Attribute::Bold,
             self.branch,
@@ -283,9 +283,12 @@ impl fmt::Display for Status {
             }
 
             if file.cursor == 0 && self.cursor == index {
+                f.insert_cursor();
                 write!(f, "{}", Attribute::Reverse)?;
             }
-            writeln!(f, "\r    {file}{}", Attribute::Reset)?;
+            write!(f, "\r    ")?;
+            file.render(f)?;
+            writeln!(f, "{}", Attribute::Reset)?;
         }
 
         Ok(())

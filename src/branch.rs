@@ -11,15 +11,18 @@ use crossterm::{
     terminal::{self, ClearType},
 };
 
-use crate::git_process;
+use crate::{
+    git_process,
+    render::{self, Renderer},
+};
 
 pub struct BranchList {
     pub branches: Vec<String>,
     pub cursor: usize,
 }
 
-impl fmt::Display for BranchList {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+impl render::Render for BranchList {
+    fn render(&self, f: &mut Renderer) -> fmt::Result {
         use fmt::Write;
 
         if self.branches.is_empty() {
@@ -39,6 +42,7 @@ impl fmt::Display for BranchList {
                 let mut branch = branch.to_string();
                 branch.insert_str(2, &format!("{}", Attribute::Reverse));
                 write!(&mut branch, "{}", Attribute::Reset)?;
+                f.insert_cursor();
                 writeln!(f, "\r{branch}")?;
             } else {
                 writeln!(f, "\r{branch}")?;

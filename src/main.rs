@@ -29,6 +29,7 @@ use git2::Repository;
 use crate::{
     command::GexCommand,
     minibuffer::{MessageType, MiniBuffer},
+    render::Render,
 };
 
 mod branch;
@@ -36,9 +37,11 @@ mod command;
 mod debug;
 mod minibuffer;
 mod parse;
+mod render;
 mod status;
 
 use branch::BranchList;
+use render::Renderer;
 use status::Status;
 
 pub struct State {
@@ -47,6 +50,7 @@ pub struct State {
     status: Status,
     branch_list: BranchList,
     repo: Repository,
+    renderer: Renderer,
 }
 
 pub enum View {
@@ -92,6 +96,7 @@ fn run(path: &Path) -> Result<()> {
     let branch_list = BranchList::new()?;
     let minibuffer = MiniBuffer::new();
     let view = View::Status;
+    let renderer = Renderer::default();
 
     let mut state = State {
         view,
@@ -99,6 +104,7 @@ fn run(path: &Path) -> Result<()> {
         status,
         branch_list,
         repo,
+        renderer,
     };
 
     // Non-English locale settings are currently unsupported. See
@@ -141,24 +147,11 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
             terminal::size().context("failed to query terminal dimensions")?;
 
         match state.view {
-            View::Status | View::Command(_) => {
-                print!(
-                    "{}{}{status}\r",
-                    cursor::MoveToRow(0),
-                    terminal::Clear(ClearType::All),
-                    status = state.status,
-                );
-            }
-            View::BranchList => {
-                print!(
-                    "{}{}{branch_list}",
-                    cursor::MoveToRow(0),
-                    terminal::Clear(ClearType::All),
-                    branch_list = state.branch_list,
-                );
-                drop(stdout().flush());
-            }
+            View::Status | View::Command(_) => state.status.render(&mut state.renderer)?,
+            View::BranchList => state.branch_list.render(&mut state.renderer)?,
         }
+        state.renderer.show_and_clear(term_height as usize);
+        drop(stdout().flush());
 
         // Display the available subcommands
         if let View::Command(cmd) = state.view {
