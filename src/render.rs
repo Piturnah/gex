@@ -50,13 +50,7 @@ impl Renderer {
             else if self.cursor_idx >= self.start_line + height {
                 self.start_line = self.cursor_idx - height + 1;
             }
-            for (_idx, l) in self
-                .buffer
-                .lines()
-                .enumerate()
-                .skip(self.start_line)
-                .take_while(|(idx, _)| *idx < self.start_line + height)
-            {
+            for l in self.buffer.lines().skip(self.start_line).take(height) {
                 print!("\r\n{l}");
             }
         }
