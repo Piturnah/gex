@@ -15,7 +15,7 @@ strip = true
 
 [dependencies]
 anyhow = "1.0.68"
-clap = { version = "4.0", features = ["cargo"] }
+clap = { version = "4.3.11", features = ["cargo"] }
 crossterm = "0.26.0"
 git2 = { version = "0.17.1", default-features = false }
 itertools = "0.11.0"
