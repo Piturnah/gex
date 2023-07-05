@@ -219,7 +219,7 @@ impl render::Render for Status {
         use fmt::Write;
         // Display the current branch
         writeln!(
-            f.buffer,
+            f,
             "\rOn branch {}{}{}",
             Attribute::Bold,
             self.branch,

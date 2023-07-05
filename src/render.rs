@@ -1,4 +1,6 @@
 //! Rendering! Woooooo!
+//!
+//! This module implements a type [`Renderer`] and a trait [`Render`]. 
 use std::fmt;
 
 use crossterm::{
@@ -7,14 +9,26 @@ use crossterm::{
     terminal::{self, ClearType},
 };
 
+/// The [`Renderer`] type contains a buffer to be rendered to the screen. It handles scrolling based
+/// on the cursor's position and will only write the lines that should be visible.
 #[derive(Default)]
 pub struct Renderer {
-    pub buffer: String,
+    buffer: String,
     cursor_idx: usize,
+    /// This field contains the starting line index from the buffer at the time of the previous
+    /// show.
     start_line: usize,
 }
 
+/// Types implementing [`Render`] can write to the given [`Renderer`] and update its cursor
+/// position.
 pub trait Render {
+    /// This function is used to render the Self to the given [`Renderer`], `r`. [`Renderer`]
+    /// implements [`fmt::Write`](std::fmt::Write) so the natural way to do this is to use methods
+    /// from `Write` to write to the Renderer's buffer.
+    ///
+    /// You should also use [`Renderer::insert_cursor`] right before writing any line that should
+    /// be the cursor position.
     fn render(&self, r: &mut Renderer) -> fmt::Result;
 }
 
@@ -30,7 +44,7 @@ impl Renderer {
         self.cursor_idx = self.buffer.lines().count();
     }
 
-    /// Render to stdout.
+    /// Render to stdout and clear the buffer.
     pub fn show_and_clear(&mut self, height: usize) {
         print!(
             "{}{}",
