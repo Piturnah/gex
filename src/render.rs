@@ -1,6 +1,6 @@
 //! Rendering! Woooooo!
 //!
-//! This module implements a type [`Renderer`] and a trait [`Render`]. 
+//! This module implements a type [`Renderer`] and a trait [`Render`].
 use std::fmt;
 
 use crossterm::{
