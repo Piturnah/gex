@@ -51,9 +51,9 @@ impl Renderer {
     ///
     /// E.g.
     /// ```
-    /// r.insert_cursor()
+    /// r.insert_cursor();
     ///  writeln!(r, "multi\n line\n item");
-    /// r.insert_item_end()
+    /// r.insert_item_end();
     /// ```
     pub fn insert_item_end(&mut self) {
         self.selected_item.1 = self.buffer.lines().count() - 1;
@@ -72,14 +72,21 @@ impl Renderer {
         if count_lines < height {
             print!("{}", self.buffer);
         } else {
-            // Going up.
-            if cursor_start_idx < self.start_line {
+            // Distance to end is less than the terminal height
+            if count_lines - self.start_line < height {
+                self.start_line = count_lines - height;
+            }
+            // Going up, or selection bigger than the terminal height
+            else if cursor_start_idx < self.start_line
+                || cursor_end_idx - cursor_start_idx > height
+            {
                 self.start_line = cursor_start_idx;
             }
             // Going down.
             else if cursor_end_idx >= self.start_line + height {
                 self.start_line = cursor_end_idx - height + 1;
             }
+
             for l in self.buffer.lines().skip(self.start_line).take(height) {
                 print!("\r\n{l}");
             }
