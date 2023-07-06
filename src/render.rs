@@ -14,9 +14,11 @@ use crossterm::{
 #[derive(Default)]
 pub struct Renderer {
     buffer: String,
-    cursor_idx: usize,
+    /// The indexes of the first and last lines of the section we want to prioritise rendering.
+    selected_item: (usize, usize),
     /// This field contains the starting line index from the buffer at the time of the previous
-    /// show.
+    /// show. Can also be thought of as a "target" starting line, which will be updated based on
+    /// where the cursor is.
     start_line: usize,
 }
 
@@ -41,7 +43,20 @@ impl fmt::Write for Renderer {
 impl Renderer {
     /// Insert the cursor at the next line.
     pub fn insert_cursor(&mut self) {
-        self.cursor_idx = self.buffer.lines().count();
+        let next_line = self.buffer.lines().count();
+        self.selected_item = (next_line, next_line);
+    }
+
+    /// Insert after the end of the selected item. For if your "cursor" is more than one line long.
+    ///
+    /// E.g.
+    /// ```
+    /// r.insert_cursor()
+    ///  writeln!(r, "multi\n line\n item");
+    /// r.insert_item_end()
+    /// ```
+    pub fn insert_item_end(&mut self) {
+        self.selected_item.1 = self.buffer.lines().count() - 1;
     }
 
     /// Render to stdout and clear the buffer.
@@ -52,17 +67,18 @@ impl Renderer {
             terminal::Clear(ClearType::All)
         );
 
+        let (cursor_start_idx, cursor_end_idx) = self.selected_item;
         let count_lines = self.buffer.lines().count();
         if count_lines < height {
             print!("{}", self.buffer);
         } else {
             // Going up.
-            if self.cursor_idx < self.start_line {
-                self.start_line = self.cursor_idx;
+            if cursor_start_idx < self.start_line {
+                self.start_line = cursor_start_idx;
             }
             // Going down.
-            else if self.cursor_idx >= self.start_line + height {
-                self.start_line = self.cursor_idx - height + 1;
+            else if cursor_end_idx >= self.start_line + height {
+                self.start_line = cursor_end_idx - height + 1;
             }
             for l in self.buffer.lines().skip(self.start_line).take(height) {
                 print!("\r\n{l}");

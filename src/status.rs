@@ -124,12 +124,16 @@ impl render::Render for FileDiff {
                     for l in file_content.lines() {
                         write!(f, "\r\n{}+{l}", style::SetForegroundColor(Color::DarkGreen))?;
                     }
+                    if self.selected {
+                        f.insert_item_end();
+                    }
                 }
             } else {
                 for (i, hunk) in self.hunks.iter().enumerate() {
                     if self.selected && i + 1 == self.cursor {
                         f.insert_cursor();
                         write!(f, "{}\r\n{}{hunk}", Attribute::Reset, Attribute::Reverse)?;
+                        f.insert_item_end();
                     } else {
                         write!(f, "{}\r\n{hunk}", Attribute::Reset)?;
                     }
