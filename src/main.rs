@@ -226,7 +226,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                             .push_command_output(&git_process(&["reset"])?);
                         state.status.fetch(&state.repo)?;
                     }
-                    KeyCode::Tab | KeyCode::Enter => state.status.expand()?,
+                    KeyCode::Tab | KeyCode::Char(' ') => state.status.expand()?,
                     KeyCode::Char('F') => {
                         state
                             .minibuffer

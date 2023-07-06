@@ -3,7 +3,7 @@
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.4.0...main)
 ### Added
 - Scrolling on cursor movement if content goes off-screen ([#1](https://github.com/Piturnah/gex/issues/1))
-- Use <kbd>Ret</kbd> to toggle expansion of items
+- Use <kbd>Space</kbd> to toggle expansion of items
 ### Fixed
 - Minibuffer can obscure the available subcommands ([#34](https://github.com/Piturnah/gex/issues/34))
 
