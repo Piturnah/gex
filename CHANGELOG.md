@@ -5,7 +5,7 @@
 - Scrolling on cursor movement if content goes off-screen ([#1](https://github.com/Piturnah/gex/issues/1))
 - Use <kbd>Space</kbd> to toggle expansion of items
 ### Fixed
-- Minibuffer can obscure the available subcommands ([#34](https://github.com/Piturnah/gex/issues/34))
+- Minibuffer can obscure the available subcommands ([#33](https://github.com/Piturnah/gex/issues/33))
 
 ## [0.4.0](https://github.com/Piturnah/gex/compare/v0.3.8...v0.4.0) - 2023-07-03
 ### Added
