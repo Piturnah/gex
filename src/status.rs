@@ -293,6 +293,9 @@ impl render::Render for Status {
             write!(f, "\r    ")?;
             file.render(f)?;
             writeln!(f, "{}", Attribute::Reset)?;
+            if file.cursor == 0 && self.cursor == index {
+                f.insert_item_end();
+            }
         }
 
         Ok(())
