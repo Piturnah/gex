@@ -72,7 +72,7 @@ impl Renderer {
         if count_lines < height {
             print!("{}", self.buffer);
         } else {
-            // Draw from the top of the buffer if distance to end of selection is less than the 
+            // Draw from the top of the buffer if distance to end of selection is less than the
             // terminal height, and we are heading up.
             if cursor_end_idx < height {
                 self.start_line = 0;
