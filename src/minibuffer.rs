@@ -38,6 +38,10 @@ impl MiniBuffer {
         Self::default()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.messages.is_empty()
+    }
+
     /// Push a new message onto the message stack.
     pub fn push(&mut self, msg: &str, msg_type: MessageType) {
         if !msg.is_empty() {

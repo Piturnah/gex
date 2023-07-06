@@ -196,6 +196,10 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                 continue;
             }
 
+            if !state.minibuffer.is_empty() {
+                break;
+            }
+
             match state.view {
                 View::Status => match event.code {
                     KeyCode::Char('j') | KeyCode::Down => state.status.down()?,
