@@ -18,7 +18,7 @@ Primarily, this is a personal project since I recently switched to Neovim from E
 - [x] Simple - uncluttered UI.
 - [x] Intuitive - it should be easy to learn to use gex.
 - [x] Cross platform - primary focus on Linux, but should work well on Windows and MacOS.
-- [ ] Configurable - certain preferences in gex should be configurable to suit your own workflow.
+- [x] [Configurable](./#Configuration) - certain preferences in gex should be configurable to suit your own workflow.
 - [ ] Comprehensive\* - you should be able to use gex to do everything you can do in git.
 
 \* gex supports executing arbitrary git commands with <kbd>:</kbd> for when something is not yet available
@@ -87,6 +87,24 @@ $ gex
 | <kbd>b</kbd> | branch            |
 | <kbd>p</kbd> | push              |
 | <kbd>z</kbd> | stash             |
+
+## Configuration
+
+Gex will look for a config file in the following places:
+
+| OS      | Path                                              |
+| ------- | ------------------------------------------------- |
+| Linux   | $XDG_CONFIG_HOME/gex/config.toml                  |
+| MacOS   | $HOME/Library/Application Support/gex/config.toml |
+| Windows | {FOLDERID_RoamingAppData}/gex/config.toml         |
+
+Here is an example `config.toml`:
+
+```toml
+[options]
+auto_expand_files = false
+auto_expand_hunks = false
+```
 
 ## License
 

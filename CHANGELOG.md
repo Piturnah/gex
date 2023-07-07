@@ -3,6 +3,9 @@
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.4.0...main)
 ### Added
 - Scrolling on cursor movement if content goes off-screen ([#1](https://github.com/Piturnah/gex/issues/1))
+- Config file to configure certain options
+  - `auto_expand_files`
+  - `auto_expand_hunks`
 - Use <kbd>Space</kbd> to toggle expansion of items
 ### Fixed
 - Minibuffer can obscure the available subcommands ([#33](https://github.com/Piturnah/gex/issues/33))

@@ -28,12 +28,14 @@ use git2::Repository;
 
 use crate::{
     command::GexCommand,
+    config::Config,
     minibuffer::{MessageType, MiniBuffer},
     render::Render,
 };
 
 mod branch;
 mod command;
+mod config;
 mod debug;
 mod minibuffer;
 mod parse;
@@ -92,9 +94,22 @@ fn run(path: &Path) -> Result<()> {
     std::env::set_current_dir(repo.path().parent().context("`.git` cannot be root dir")?)
         .context("failed to set working directory")?;
 
-    let status = Status::new(&repo)?;
+    let mut minibuffer = MiniBuffer::new();
+
+    let config = Config::read_from_file().map_or_else(Config::default, |(config, unused_keys)| {
+        if !unused_keys.is_empty() {
+            let mut warning = String::from("Unknown keys in config file:");
+            for key in unused_keys {
+                warning.push_str("\n    ");
+                warning.push_str(&key);
+            }
+            minibuffer.push(&warning, MessageType::Error);
+        }
+        config
+    });
+
+    let status = Status::new(&repo, &config.options)?;
     let branch_list = BranchList::new()?;
-    let minibuffer = MiniBuffer::new();
     let view = View::Status;
     let renderer = Renderer::default();
 
@@ -208,35 +223,35 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     KeyCode::Char('g' | 'K') => state.status.cursor_first()?,
                     KeyCode::Char('s') => {
                         state.status.stage(&mut state.minibuffer)?;
-                        state.status.fetch(&state.repo)?;
+                        state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('S') => {
                         state
                             .minibuffer
                             .push_command_output(&git_process(&["add", "."])?);
-                        state.status.fetch(&state.repo)?;
+                        state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('u') => {
                         state.status.unstage(&mut state.minibuffer)?;
-                        state.status.fetch(&state.repo)?;
+                        state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('U') => {
                         state
                             .minibuffer
                             .push_command_output(&git_process(&["reset"])?);
-                        state.status.fetch(&state.repo)?;
+                        state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Tab | KeyCode::Char(' ') => state.status.expand()?,
                     KeyCode::Char('F') => {
                         state
                             .minibuffer
                             .push_command_output(&git_process(&["pull"])?);
-                        state.status.fetch(&state.repo)?;
+                        state.status.fetch(&state.repo, &config.options)?;
                     }
-                    KeyCode::Char('r') => state.status.fetch(&state.repo)?,
+                    KeyCode::Char('r') => state.status.fetch(&state.repo, &config.options)?,
                     KeyCode::Char(':') => {
                         state.minibuffer.git_command(term_width, term_height)?;
-                        state.status.fetch(&state.repo)?;
+                        state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('q') => {
                         terminal::disable_raw_mode().context("failed to disable raw mode")?;
@@ -276,7 +291,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         state
                             .minibuffer
                             .push_command_output(&state.branch_list.checkout()?);
-                        state.status.fetch(&state.repo)?;
+                        state.status.fetch(&state.repo, &config.options)?;
                         state.view = View::Status;
                     }
                     KeyCode::Esc => state.view = View::Status,
@@ -306,7 +321,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         .context("failed to leave alternate screen")?;
                         process::exit(0);
                     }
-                    KeyCode::Char(c) => cmd.handle_input(c, &mut state)?,
+                    KeyCode::Char(c) => cmd.handle_input(c, &mut state, &config)?,
                     _ => {}
                 },
             };

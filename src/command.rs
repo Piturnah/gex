@@ -7,7 +7,7 @@ use std::{
 use anyhow::{Context, Result};
 use crossterm::{cursor, terminal};
 
-use crate::{branch::BranchList, git_process, State, View};
+use crate::{branch::BranchList, config::Config, git_process, State, View};
 
 macro_rules! commands {
     ($($key:literal: $cmd:tt => [$($subkey:literal: $subcmd:tt),+$(,)?]),*$(,)?) => {
@@ -65,7 +65,7 @@ commands! {
 
 impl GexCommand {
     #[allow(clippy::enum_glob_use)]
-    pub fn handle_input(self, key: char, state: &mut State) -> Result<()> {
+    pub fn handle_input(self, key: char, state: &mut State, config: &Config) -> Result<()> {
         use SubCommand::*;
         let State {
             ref mut minibuffer,
@@ -85,7 +85,7 @@ impl GexCommand {
                     SubCommand::New => {
                         let checkout = BranchList::checkout_new()?;
                         minibuffer.push_command_output(&checkout);
-                        status.fetch(repo)?;
+                        status.fetch(repo, &config.options)?;
                         *view = View::Status;
                     }
                     SubCommand::Checkout => {
@@ -108,7 +108,7 @@ impl GexCommand {
                                 .output()
                                 .context("failed to run `git commit`")?,
                         );
-                        status.fetch(repo)?;
+                        status.fetch(repo, &config.options)?;
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .context("failed to enter alternate screen")?;
                     }
@@ -121,7 +121,7 @@ impl GexCommand {
                                 .output()
                                 .context("failed to run `git commit`")?,
                         );
-                        status.fetch(repo)?;
+                        status.fetch(repo, &config.options)?;
                     }
                     SubCommand::Amend => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
@@ -134,7 +134,7 @@ impl GexCommand {
                                 .output()
                                 .context("failed to run `git commit`")?,
                         );
-                        status.fetch(repo)?;
+                        status.fetch(repo, &config.options)?;
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .context("failed to enter alternate screen")?;
                     }
@@ -165,7 +165,7 @@ impl GexCommand {
                         minibuffer.push_command_output(&git_process(&["stash", "pop"])?);
                     }
                 }
-                status.fetch(repo)?;
+                status.fetch(repo, &config.options)?;
                 *view = View::Status;
             }
         }

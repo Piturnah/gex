@@ -12,6 +12,7 @@ use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
 
 use crate::{
+    config::Options,
     git_process,
     minibuffer::{MessageType, MiniBuffer},
     parse,
@@ -72,11 +73,8 @@ impl fmt::Display for Hunk {
 }
 
 impl Hunk {
-    pub const fn new(diff: String) -> Self {
-        Self {
-            diff,
-            expanded: false,
-        }
+    pub const fn new(diff: String, expanded: bool) -> Self {
+        Self { diff, expanded }
     }
 }
 
@@ -145,14 +143,14 @@ impl render::Render for FileDiff {
 }
 
 impl FileDiff {
-    fn new(path: &str, kind: DiffType) -> Self {
+    fn new(path: &str, kind: DiffType, expanded: bool) -> Self {
         Self {
             path: path.to_string(),
-            expanded: false,
             hunks: Vec::new(),
             cursor: 0,
-            kind,
             selected: false,
+            kind,
+            expanded,
         }
     }
 
@@ -300,13 +298,13 @@ impl render::Render for Status {
 }
 
 impl Status {
-    pub fn new(repo: &Repository) -> Result<Self> {
+    pub fn new(repo: &Repository, options: &Options) -> Result<Self> {
         let mut status = Self::default();
-        status.fetch(repo)?;
+        status.fetch(repo, options)?;
         Ok(status)
     }
 
-    pub fn fetch(&mut self, repo: &Repository) -> Result<()> {
+    pub fn fetch(&mut self, repo: &Repository, options: &Options) -> Result<()> {
         let output = git_process(&["status"])?;
 
         let input =
@@ -354,7 +352,11 @@ impl Status {
                     if line.is_empty() {
                         break;
                     }
-                    untracked.push(FileDiff::new(line.trim_start(), DiffType::Untracked));
+                    untracked.push(FileDiff::new(
+                        line.trim_start(),
+                        DiffType::Untracked,
+                        options.auto_expand_files,
+                    ));
                 }
             } else if line == "Changes to be committed:" {
                 // (use "git restore --staged <file>..." to unstage)
@@ -383,6 +385,7 @@ impl Status {
                                 ))
                             }
                         },
+                        options.auto_expand_files,
                     ));
                 }
             } else if line == "Changes not staged for commit:" {
@@ -414,6 +417,7 @@ impl Status {
                                 ))
                             }
                         },
+                        options.auto_expand_files,
                     ));
                 }
             }
@@ -424,8 +428,11 @@ impl Status {
         let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
         let hunks = parse::parse_diff(diff)?;
         for mut file in &mut unstaged {
-            if let Some(hunk) = hunks.get(file.path.as_str()) {
-                file.hunks = hunk.clone();
+            if let Some(hunks) = hunks.get(file.path.as_str()) {
+                file.hunks = hunks
+                    .iter()
+                    .map(|hunk| Hunk::new(hunk.clone(), options.auto_expand_hunks))
+                    .collect();
             }
         }
 
@@ -435,8 +442,11 @@ impl Status {
             .context("malformed stdout from `git diff --cached`")?;
         let hunks = parse::parse_diff(staged_diff)?;
         for mut file in &mut staged {
-            if let Some(hunk) = hunks.get(file.path.as_str()) {
-                file.hunks = hunk.clone();
+            if let Some(hunks) = hunks.get(file.path.as_str()) {
+                file.hunks = hunks
+                    .iter()
+                    .map(|hunk| Hunk::new(hunk.clone(), options.auto_expand_hunks))
+                    .collect();
             }
         }
 
