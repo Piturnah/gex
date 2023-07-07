@@ -2,6 +2,7 @@
 #![allow(clippy::derivable_impls)]
 use std::{fs, path::PathBuf};
 
+use anyhow::{Context, Result};
 use clap::Parser;
 use serde::Deserialize;
 
@@ -44,26 +45,30 @@ impl Default for Options {
 impl Config {
     /// Reads the config from the config file (usually `~/.config/gex/config.toml` on Linux) and
     /// returns it along with a Vec of unrecognised keys.
-    pub fn read_from_file(path: &Option<String>) -> Option<(Self, Vec<String>)> {
+    /// If there is no config file, it will return `Ok(None)`.
+    /// If there is a config file but it is unable to parse it, it will return `Err(_)`.
+    pub fn read_from_file(path: &Option<String>) -> Result<Option<(Self, Vec<String>)>> {
         let mut config_path;
         if let Some(path) = path {
             config_path = PathBuf::from(path);
-        } else {
-            config_path = dirs::config_dir()?;
+        } else if let Some(path) = dirs::config_dir() {
+            config_path = path;
             config_path.push("gex");
             config_path.push("config.toml");
+        } else {
+            return Ok(None);
         }
 
-        fs::read_to_string(config_path)
-            .map(|conf| {
-                let de = toml::Deserializer::new(&conf);
-                let mut unused_keys = Vec::new();
-                let config = serde_ignored::deserialize(de, |path| {
-                    unused_keys.push(path.to_string());
-                })
-                .unwrap();
-                (config, unused_keys)
-            })
-            .ok()
+        let Ok(config) = fs::read_to_string(config_path) else {
+            return Ok(None);
+        };
+
+        let de = toml::Deserializer::new(&config);
+        let mut unused_keys = Vec::new();
+        let config = serde_ignored::deserialize(de, |path| {
+            unused_keys.push(path.to_string());
+        })
+        .context("failed to parse config file")?;
+        Ok(Some((config, unused_keys)))
     }
 }

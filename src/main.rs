@@ -96,9 +96,12 @@ fn run(clargs: &Clargs) -> Result<()> {
 
     let mut minibuffer = MiniBuffer::new();
 
-    let config = Config::read_from_file(&clargs.config_file).map_or_else(
-        Config::default,
-        |(config, unused_keys)| {
+    let config = Config::read_from_file(&clargs.config_file)
+        .unwrap_or_else(|e| {
+            minibuffer.push(&format!("{e:?}"), MessageType::Error);
+            Some((Config::default(), Vec::new()))
+        })
+        .map_or_else(Config::default, |(config, unused_keys)| {
             if !unused_keys.is_empty() {
                 let mut warning = String::from("Unknown keys in config file:");
                 for key in unused_keys {
@@ -108,8 +111,7 @@ fn run(clargs: &Clargs) -> Result<()> {
                 minibuffer.push(&warning, MessageType::Error);
             }
             config
-        },
-    );
+        });
 
     let status = Status::new(&repo, &config.options)?;
     let branch_list = BranchList::new()?;
