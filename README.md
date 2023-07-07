@@ -55,6 +55,24 @@ To enter gex simply type `gex` in console, optionally providing a path.
 $ gex
 ```
 
+Full usage:
+
+```console
+$ gex --help
+
+Git workflow improvement CLI tool inspired by Magit
+
+Usage: gex [OPTIONS] [PATH]
+
+Arguments:
+  [PATH]  The path to the repository [default: .]
+
+Options:
+  -c, --config-file <PATH>  Path to a config file to use
+  -h, --help                Print help
+  -V, --version             Print version
+```
+
 ### Navigation
 
 | Key                               | Action       |

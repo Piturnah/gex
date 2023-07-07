@@ -12,12 +12,12 @@ use std::{
     cmp, env,
     io::{stdin, stdout, BufRead, Write},
     panic,
-    path::Path,
     process::{self, Command, Output},
 };
 
 use anyhow::{Context, Result};
-use clap::Arg;
+use clap::Parser;
+use config::Clargs;
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEventKind},
@@ -70,9 +70,9 @@ pub fn git_process(args: &[&str]) -> Result<Output> {
     })
 }
 
-fn run(path: &Path) -> Result<()> {
+fn run(clargs: &Clargs) -> Result<()> {
     // Attempt to find a git repository at or above current path
-    let repo = if let Ok(repo) = Repository::discover(path) {
+    let repo = if let Ok(repo) = Repository::discover(&clargs.path) {
         repo
     } else {
         print!("Not a git repository. Initialise one? [y/N]");
@@ -87,7 +87,7 @@ fn run(path: &Path) -> Result<()> {
             process::exit(0);
         }
 
-        Repository::init(path).context("failed to initialise git repository")?
+        Repository::init(&clargs.path).context("failed to initialise git repository")?
     };
 
     // Set working directory in case the repository is not the current directory
@@ -96,17 +96,20 @@ fn run(path: &Path) -> Result<()> {
 
     let mut minibuffer = MiniBuffer::new();
 
-    let config = Config::read_from_file().map_or_else(Config::default, |(config, unused_keys)| {
-        if !unused_keys.is_empty() {
-            let mut warning = String::from("Unknown keys in config file:");
-            for key in unused_keys {
-                warning.push_str("\n    ");
-                warning.push_str(&key);
+    let config = Config::read_from_file(&clargs.config_file).map_or_else(
+        Config::default,
+        |(config, unused_keys)| {
+            if !unused_keys.is_empty() {
+                let mut warning = String::from("Unknown keys in config file:");
+                for key in unused_keys {
+                    warning.push_str("\n    ");
+                    warning.push_str(&key);
+                }
+                minibuffer.push(&warning, MessageType::Error);
             }
-            minibuffer.push(&warning, MessageType::Error);
-        }
-        config
-    });
+            config
+        },
+    );
 
     let status = Status::new(&repo, &config.options)?;
     let branch_list = BranchList::new()?;
@@ -342,20 +345,7 @@ fn restore_terminal() {
 }
 
 fn main() -> Result<()> {
-    let matches = clap::command!()
-        .version(env!("GEX_VERSION"))
-        .arg(
-            Arg::new("path")
-                .default_value(".")
-                .value_name("PATH")
-                .help("The path to the repository"),
-        )
-        .get_matches();
-    let path = matches
-        .get_one::<String>("path")
-        .expect("default value provided");
-
-    run(Path::new(path)).map_err(|e| {
+    run(&Clargs::parse()).map_err(|e| {
         restore_terminal();
         e
     })

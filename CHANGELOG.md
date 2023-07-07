@@ -6,6 +6,7 @@
 - Config file to configure certain options
   - `auto_expand_files`
   - `auto_expand_hunks`
+- Command line argument to provide alternative config file to use
 - Use <kbd>Space</kbd> to toggle expansion of items
 ### Fixed
 - Minibuffer can obscure the available subcommands ([#33](https://github.com/Piturnah/gex/issues/33))
