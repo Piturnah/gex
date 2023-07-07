@@ -10,7 +10,7 @@ use std::{
 use anyhow::{Context, Result};
 use crossterm::{
     cursor::{self, SetCursorStyle},
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     style::{Color, SetForegroundColor},
     terminal::{self, ClearType},
 };
@@ -95,9 +95,16 @@ impl MiniBuffer {
             );
             drop(stdout().flush());
 
+            // TODO: ideally I'd like to refactor it such that all the inputs are received in the
+            // same place as everywhere else (currently in `main.rs`). This would solve other minor
+            // issues like the minibuffer not adjusting when the terminal font is increased. This
+            // could probably be achieved by having the minibuffer be a `View`.
             if let Event::Key(key_event) =
                 event::read().context("failed to read a terminal event")?
             {
+                if key_event.kind == KeyEventKind::Release {
+                    continue;
+                }
                 match (key_event.code, key_event.modifiers) {
                     (KeyCode::Enter, _) => break,
                     (KeyCode::Left, _) | (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
