@@ -52,7 +52,7 @@ impl Renderer {
     /// E.g.
     /// ```
     /// r.insert_cursor();
-    ///  writeln!(r, "multi\n line\n item");
+    /// writeln!(r, "multi\n line\n item");
     /// r.insert_item_end();
     /// ```
     pub fn insert_item_end(&mut self) {

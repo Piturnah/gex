@@ -110,11 +110,11 @@ Options:
 
 Gex will look for a config file in the following places:
 
-| OS      | Path                                              |
-| ------- | ------------------------------------------------- |
-| Linux   | $XDG_CONFIG_HOME/gex/config.toml                  |
-| MacOS   | $HOME/Library/Application Support/gex/config.toml |
-| Windows | {FOLDERID_RoamingAppData}/gex/config.toml         |
+| OS      | Path                                                |
+| ------- | --------------------------------------------------- |
+| Linux   | `$XDG_CONFIG_HOME/gex/config.toml`                  |
+| MacOS   | `$HOME/Library/Application Support/gex/config.toml` |
+| Windows | `{FOLDERID_RoamingAppData}/gex/config.toml`         |
 
 Here is an example `config.toml`:
 
