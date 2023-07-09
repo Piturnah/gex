@@ -170,7 +170,9 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
             View::Status | View::Command(_) => state.status.render(&mut state.renderer)?,
             View::BranchList => state.branch_list.render(&mut state.renderer)?,
         }
-        state.renderer.show_and_clear(term_height as usize);
+        state
+            .renderer
+            .show_and_clear(term_height as usize, config.options.lookahead_lines);
         drop(stdout().flush());
 
         // Display the available subcommands

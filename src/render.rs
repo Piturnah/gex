@@ -60,7 +60,7 @@ impl Renderer {
     }
 
     /// Render to stdout and clear the buffer.
-    pub fn show_and_clear(&mut self, height: usize) {
+    pub fn show_and_clear(&mut self, height: usize, lookahead: usize) {
         print!(
             "{}{}",
             cursor::MoveTo(0, 0),
@@ -72,24 +72,21 @@ impl Renderer {
         if count_lines < height {
             print!("{}", self.buffer);
         } else {
-            // Draw from the top of the buffer if distance to end of selection is less than the
-            // terminal height, and we are heading up.
-            if cursor_end_idx < height {
-                self.start_line = 0;
-            }
             // Distance to end of buffer is less than the terminal height.
-            else if count_lines - self.start_line < height {
+            if count_lines - self.start_line < height {
                 self.start_line = count_lines - height;
             }
-            // Going up, or selection bigger than the terminal height.
-            else if cursor_start_idx < self.start_line
-                || cursor_end_idx - cursor_start_idx > height
-            {
+            // Selection bigger than the terminal height.
+            else if cursor_end_idx - cursor_start_idx > height {
                 self.start_line = cursor_start_idx;
             }
             // Going down.
-            else if cursor_end_idx >= self.start_line + height {
-                self.start_line = cursor_end_idx - height + 1;
+            else if cursor_end_idx + lookahead >= self.start_line + height {
+                self.start_line = (cursor_end_idx + lookahead).min(count_lines - 1) - (height - 1);
+            }
+            // Going up.
+            else if cursor_start_idx.saturating_sub(lookahead) < self.start_line {
+                self.start_line = cursor_start_idx.saturating_sub(lookahead);
             }
 
             for l in self.buffer.lines().skip(self.start_line).take(height) {

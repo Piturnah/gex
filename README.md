@@ -122,6 +122,7 @@ Here is an example `config.toml`:
 [options]
 auto_expand_files = false
 auto_expand_hunks = false
+lookahead_lines = 5
 ```
 
 ## License
