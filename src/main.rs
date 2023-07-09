@@ -232,8 +232,12 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     KeyCode::Char('G' | 'J') => state.status.cursor_last()?,
                     KeyCode::Char('g' | 'K') => state.status.cursor_first()?,
                     KeyCode::Char('s') => {
-                        state.status.stage(&mut state.minibuffer)?;
-                        state.status.fetch(&state.repo, &config.options)?;
+                        if state.status.cursor
+                            < state.status.count_untracked + state.status.count_unstaged
+                        {
+                            state.status.stage(&mut state.minibuffer)?;
+                            state.status.fetch(&state.repo, &config.options)?;
+                        }
                     }
                     KeyCode::Char('S') => {
                         state
@@ -242,8 +246,12 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('u') => {
-                        state.status.unstage(&mut state.minibuffer)?;
-                        state.status.fetch(&state.repo, &config.options)?;
+                        if state.status.cursor
+                            >= state.status.count_untracked + state.status.count_unstaged
+                        {
+                            state.status.unstage(&mut state.minibuffer)?;
+                            state.status.fetch(&state.repo, &config.options)?;
+                        }
                     }
                     KeyCode::Char('U') => {
                         state

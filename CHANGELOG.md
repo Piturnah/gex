@@ -13,6 +13,7 @@
 ### Fixed
 - Minibuffer can obscure the available subcommands ([#33](https://github.com/Piturnah/gex/issues/33))
 - Minibuffer receiving double inputs on certain terminals such as Windows Terminal
+- (un)staging an already (un)staged hunk may affect the wrong hunk ([#27](https://github.com/Piturnah/gex/issues/27))
 
 ## [0.4.0](https://github.com/Piturnah/gex/compare/v0.3.8...v0.4.0) - 2023-07-03
 ### Added
