@@ -4,7 +4,7 @@
 use std::fmt;
 
 use crossterm::{
-    cursor,
+    cursor::MoveTo,
     style::{Attribute, ResetColor},
     terminal::{self, ClearType},
 };
@@ -87,51 +87,57 @@ impl Renderer {
         lookahead: usize,
         truncate: bool,
     ) {
-        print!(
-            "{}{}",
-            cursor::MoveTo(0, 0),
-            terminal::Clear(ClearType::All)
-        );
+        print!("{}", terminal::Clear(ClearType::All));
 
         let (cursor_start_idx, cursor_end_idx) = self.selected_item;
         let count_lines = self.buffer.lines().count();
-        if count_lines < height {
-            print!("{}", self.buffer);
-        } else {
-            // Distance to end of buffer is less than the terminal height.
-            if count_lines - self.start_line < height {
-                self.start_line = count_lines - height;
-            }
-            // Going down.
-            else if cursor_end_idx + lookahead >= self.start_line + height {
-                self.start_line = (cursor_end_idx + lookahead).min(count_lines - 1) - (height - 1);
-            }
-            // Going up.
-            else if cursor_start_idx.saturating_sub(lookahead) < self.start_line {
-                self.start_line = cursor_start_idx.saturating_sub(lookahead);
-            }
-            // Selection bigger than the terminal height.
-            if cursor_end_idx - cursor_start_idx > height {
-                self.start_line = cursor_start_idx;
-            }
 
-            if truncate {
-                for l in self
-                    .buffer
-                    .lines()
-                    .skip(self.start_line)
-                    .take(height)
-                    .map(|l| truncate_ansi(l, width))
-                {
-                    print!("\r\n{l}{}{}", Attribute::Reset, ResetColor);
-                }
-            } else {
-                for l in self.buffer.lines().skip(self.start_line).take(height) {
-                    print!("\r\n{l}");
-                }
-            }
+        // Going down.
+        if cursor_end_idx + lookahead >= self.start_line + height {
+            self.start_line = (cursor_end_idx + lookahead).min(count_lines - 1) - (height - 1);
         }
-        print!("{}", Attribute::Reset);
+        // Going up.
+        else if cursor_start_idx.saturating_sub(lookahead) < self.start_line {
+            self.start_line = cursor_start_idx.saturating_sub(lookahead);
+        }
+
+        // Selection bigger than the terminal height.
+        if cursor_end_idx - cursor_start_idx > height {
+            self.start_line = cursor_start_idx;
+        }
+        // Distance to end of buffer is less than the terminal height.
+        else if count_lines - self.start_line < height {
+            self.start_line = count_lines.saturating_sub(height);
+        }
+
+        if truncate {
+            for (row, l) in self
+                .buffer
+                .lines()
+                .skip(self.start_line)
+                .take(height)
+                .map(|l| truncate_ansi(l, width))
+                .enumerate()
+            {
+                print!(
+                    "{}{l}{}{}",
+                    MoveTo(0, row as u16),
+                    Attribute::Reset,
+                    ResetColor
+                );
+            }
+        } else {
+            for (row, l) in self
+                .buffer
+                .lines()
+                .skip(self.start_line)
+                .take(height)
+                .enumerate()
+            {
+                print!("{}{l}", MoveTo(0, row as u16));
+            }
+            print!("{}", Attribute::Reset);
+        }
         self.buffer.clear();
     }
 }
