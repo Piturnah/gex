@@ -5,7 +5,7 @@ use std::fmt;
 
 use crossterm::{
     cursor,
-    style::Attribute,
+    style::{Attribute, ResetColor},
     terminal::{self, ClearType},
 };
 
@@ -40,6 +40,26 @@ impl fmt::Write for Renderer {
     }
 }
 
+/// Truncates a string to the given `length`, ignoring ANSI escape sequences.
+fn truncate_ansi(s: &str, length: usize) -> &str {
+    struct Performer(usize);
+    impl vte::Perform for Performer {
+        fn print(&mut self, _c: char) {
+            self.0 += 1;
+        }
+    }
+    let mut performer = Performer(0);
+    let mut parser = vte::Parser::new();
+    let bytes = s.as_bytes().iter().enumerate();
+    for (i, b) in bytes {
+        parser.advance(&mut performer, *b);
+        if performer.0 > length {
+            return &s[0..i];
+        }
+    }
+    s
+}
+
 impl Renderer {
     /// Insert the cursor at the next line.
     pub fn insert_cursor(&mut self) {
@@ -60,7 +80,13 @@ impl Renderer {
     }
 
     /// Render to stdout and clear the buffer.
-    pub fn show_and_clear(&mut self, height: usize, lookahead: usize) {
+    pub fn show_and_clear(
+        &mut self,
+        width: usize,
+        height: usize,
+        lookahead: usize,
+        truncate: bool,
+    ) {
         print!(
             "{}{}",
             cursor::MoveTo(0, 0),
@@ -89,8 +115,20 @@ impl Renderer {
                 self.start_line = cursor_start_idx.saturating_sub(lookahead);
             }
 
-            for l in self.buffer.lines().skip(self.start_line).take(height) {
-                print!("\r\n{l}");
+            if truncate {
+                for l in self
+                    .buffer
+                    .lines()
+                    .skip(self.start_line)
+                    .take(height)
+                    .map(|l| truncate_ansi(l, width))
+                {
+                    print!("\r\n{l}{}{}", Attribute::Reset, ResetColor);
+                }
+            } else {
+                for l in self.buffer.lines().skip(self.start_line).take(height) {
+                    print!("\r\n{l}");
+                }
             }
         }
         print!("{}", Attribute::Reset);

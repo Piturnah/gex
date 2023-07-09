@@ -32,6 +32,7 @@ pub struct Options {
     pub auto_expand_files: bool,
     pub auto_expand_hunks: bool,
     pub lookahead_lines: usize,
+    pub truncate_lines: bool,
 }
 
 impl Default for Options {
@@ -40,6 +41,7 @@ impl Default for Options {
             auto_expand_files: false,
             auto_expand_hunks: false,
             lookahead_lines: 5,
+            truncate_lines: true,
         }
     }
 }
