@@ -121,9 +121,9 @@ Here is an example `config.toml`:
 ```toml
 [options]
 auto_expand_files = false
-auto_expand_hunks = false
+auto_expand_hunks = true
 lookahead_lines = 5
-truncate_lines = false # `false` is not recommended - see #37
+truncate_lines = true # `false` is not recommended - see #37
 ```
 
 ## License
