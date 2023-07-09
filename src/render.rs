@@ -102,10 +102,6 @@ impl Renderer {
             if count_lines - self.start_line < height {
                 self.start_line = count_lines - height;
             }
-            // Selection bigger than the terminal height.
-            else if cursor_end_idx - cursor_start_idx > height {
-                self.start_line = cursor_start_idx;
-            }
             // Going down.
             else if cursor_end_idx + lookahead >= self.start_line + height {
                 self.start_line = (cursor_end_idx + lookahead).min(count_lines - 1) - (height - 1);
@@ -113,6 +109,10 @@ impl Renderer {
             // Going up.
             else if cursor_start_idx.saturating_sub(lookahead) < self.start_line {
                 self.start_line = cursor_start_idx.saturating_sub(lookahead);
+            }
+            // Selection bigger than the terminal height.
+            if cursor_end_idx - cursor_start_idx > height {
+                self.start_line = cursor_start_idx;
             }
 
             if truncate {
