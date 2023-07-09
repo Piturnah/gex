@@ -570,6 +570,48 @@ impl Status {
         Ok(())
     }
 
+    /// Jump to previous file.
+    pub fn file_up(&mut self) -> Result<()> {
+        if self.file_diffs.is_empty() {
+            return Ok(());
+        }
+        let file = self
+            .file_diffs
+            .get_mut(self.cursor)
+            .context("cursor is at invalid position")?;
+        if file.cursor == 0 {
+            file.selected = false;
+            self.cursor = self.cursor.saturating_sub(1);
+            let new_file = self
+                .file_diffs
+                .get_mut(self.cursor)
+                .expect("self.cursor >= 0, !self.file_diffs.is_empty");
+            new_file.selected = true;
+            new_file.cursor = 0;
+        } else {
+            file.cursor = 0;
+        }
+        Ok(())
+    }
+
+    /// Jump to next file.
+    pub fn file_down(&mut self) -> Result<()> {
+        if self.cursor < self.file_diffs.len() - 1 {
+            self.file_diffs
+                .get_mut(self.cursor)
+                .context("cursor is at invalid position")?
+                .selected = false;
+            self.cursor += 1;
+            let new_file = self
+                .file_diffs
+                .get_mut(self.cursor)
+                .expect("self.cursor < self.file_diffs.len");
+            new_file.selected = true;
+            new_file.cursor = 0;
+        }
+        Ok(())
+    }
+
     /// Move the cursor up one
     pub fn up(&mut self) -> Result<()> {
         if self.file_diffs.is_empty() {

@@ -75,13 +75,15 @@ Options:
 
 ### Navigation
 
-| Key                               | Action       |
-| --------------------------------- | ------------ |
-| <kbd>j</kbd> / <kbd>Down</kbd>    | Move down    |
-| <kbd>k</kbd> / <kbd>Up</kbd>      | Move up      |
-| <kbd>Tab</kbd> / <kbd>Space</kbd> | Expand item  |
-| <kbd>g</kbd> / <kbd>K</kbd>       | Go to top    |
-| <kbd>G</kbd> / <kbd>J</kbd>       | Go to bottom |
+| Key                               | Action                |
+| --------------------------------- | ------------          |
+| <kbd>j</kbd> / <kbd>Down</kbd>    | Move down             |
+| <kbd>k</kbd> / <kbd>Up</kbd>      | Move up               |
+| <kbd>J</kbd>                      | Jump to next file     |
+| <kbd>K</kbd>                      | Jump to previous file |
+| <kbd>Tab</kbd> / <kbd>Space</kbd> | Toggle expand         |
+| <kbd>g</kbd>                      | Go to top             |
+| <kbd>G</kbd>                      | Go to bottom          |
 
 ### Gex actions
 

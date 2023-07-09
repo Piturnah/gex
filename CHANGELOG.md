@@ -10,6 +10,9 @@
   - `truncate_lines`
 - Command line argument to provide alternative config file to use
 - Use <kbd>Space</kbd> to toggle expansion of items
+### Changed
+- <kbd>J</kbd> to jump to next file
+- <kbd>K</kbd> to jump to previous file
 ### Fixed
 - Minibuffer can obscure the available subcommands ([#33](https://github.com/Piturnah/gex/issues/33))
 - Minibuffer receiving double inputs on certain terminals such as Windows Terminal

@@ -229,8 +229,10 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                 View::Status => match event.code {
                     KeyCode::Char('j') | KeyCode::Down => state.status.down()?,
                     KeyCode::Char('k') | KeyCode::Up => state.status.up()?,
-                    KeyCode::Char('G' | 'J') => state.status.cursor_last()?,
-                    KeyCode::Char('g' | 'K') => state.status.cursor_first()?,
+                    KeyCode::Char('J') => state.status.file_down()?,
+                    KeyCode::Char('K') => state.status.file_up()?,
+                    KeyCode::Char('G') => state.status.cursor_last()?,
+                    KeyCode::Char('g') => state.status.cursor_first()?,
                     KeyCode::Char('s') => {
                         if state.status.cursor
                             < state.status.count_untracked + state.status.count_unstaged
