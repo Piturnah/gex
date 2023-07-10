@@ -96,7 +96,7 @@ impl Renderer {
         if cursor_end_idx + lookahead >= self.start_line + height {
             self.start_line = (cursor_end_idx + lookahead)
                 .min(count_lines - 1)
-                .saturating_sub(height);
+                .saturating_sub(height - 1);
         }
         // Going up.
         else if cursor_start_idx.saturating_sub(lookahead) < self.start_line {
