@@ -39,7 +39,7 @@ impl Default for Options {
     fn default() -> Self {
         Self {
             auto_expand_files: false,
-            auto_expand_hunks: false,
+            auto_expand_hunks: true,
             lookahead_lines: 5,
             truncate_lines: true,
         }
