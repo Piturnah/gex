@@ -96,7 +96,7 @@ impl Renderer {
         if cursor_end_idx + lookahead >= self.start_line + height {
             self.start_line = (cursor_end_idx + lookahead)
                 .min(count_lines - 1)
-                .saturating_sub(height - 1);
+                .saturating_sub(height);
         }
         // Going up.
         else if cursor_start_idx.saturating_sub(lookahead) < self.start_line {
@@ -104,7 +104,7 @@ impl Renderer {
         }
 
         // Selection bigger than the terminal height.
-        if cursor_end_idx - cursor_start_idx > height {
+        if cursor_end_idx - cursor_start_idx >= height {
             self.start_line = cursor_start_idx;
         }
         // Distance to end of buffer is less than the terminal height.
