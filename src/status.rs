@@ -3,7 +3,7 @@
 use std::{
     fmt, fs,
     io::{stdout, Read, Write},
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
 };
 
 use anyhow::{anyhow, Context, Error, Result};
@@ -448,69 +448,13 @@ impl Status {
 
         // Get the diff information for unstaged changes
         let diff = git_process(&["diff", "--no-ext-diff"])?;
-        let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
-        let hunks = parse::parse_diff(diff)?;
-        for mut file in &mut unstaged {
-            if let Some(hunks) = hunks.get(file.path.as_str()) {
-                // Get all the diffs entries of this file from the previous iteration.
-                let previous_file_entries = self.file_diffs.iter().filter(|f| f.path == file.path);
-                file.hunks = hunks
-                    .iter()
-                    .map(|hunk| {
-                        let expanded = previous_file_entries
-                            .clone()
-                            .find_map(|f| {
-                                f.hunks.iter().find(|h| {
-                                    let h_header =
-                                        h.diff.lines().next().expect("hunk should never be empty");
-                                    let hunk_header =
-                                        hunk.lines().next().expect("hunk should never be empty");
-                                    (parse_hunk_new(h_header).unwrap()
-                                        == parse_hunk_new(hunk_header).unwrap())
-                                        || (parse_hunk_old(h_header).unwrap()
-                                            == parse_hunk_old(hunk_header).unwrap())
-                                })
-                            })
-                            .map_or(options.auto_expand_hunks, |h| h.expanded);
-
-                        Hunk::new(hunk.clone(), expanded)
-                    })
-                    .collect();
-            }
-        }
+        Self::populate_diffs(&mut unstaged, &self.file_diffs, &diff, options)
+            .context("failed to populate unstaged file diffs")?;
 
         // Get the diff information for staged changes
-        let staged_diff = git_process(&["diff", "--cached", "--no-ext-diff"])?;
-        let staged_diff = std::str::from_utf8(&staged_diff.stdout)
-            .context("malformed stdout from `git diff --cached`")?;
-        let hunks = parse::parse_diff(staged_diff)?;
-        for mut file in &mut staged {
-            let previous_file_entries = self.file_diffs.iter().filter(|f| f.path == file.path);
-            if let Some(hunks) = hunks.get(file.path.as_str()) {
-                file.hunks = hunks
-                    .iter()
-                    .map(|hunk| {
-                        let expanded = previous_file_entries
-                            .clone()
-                            .find_map(|f| {
-                                f.hunks.iter().find(|h| {
-                                    let h_header =
-                                        h.diff.lines().next().expect("hunk should never be empty");
-                                    let hunk_header =
-                                        hunk.lines().next().expect("hunk should never be empty");
-                                    (parse_hunk_new(h_header).unwrap()
-                                        == parse_hunk_new(hunk_header).unwrap())
-                                        || (parse_hunk_old(h_header).unwrap()
-                                            == parse_hunk_old(hunk_header).unwrap())
-                                })
-                            })
-                            .map_or(options.auto_expand_hunks, |h| h.expanded);
-
-                        Hunk::new(hunk.clone(), expanded)
-                    })
-                    .collect();
-            }
-        }
+        let diff = git_process(&["diff", "--cached", "--no-ext-diff"])?;
+        Self::populate_diffs(&mut staged, &self.file_diffs, &diff, options)
+            .context("failed to populate unstaged file diffs")?;
 
         self.branch = branch;
         self.head = std::str::from_utf8(
@@ -538,6 +482,50 @@ impl Status {
             file_diff.selected = true;
         }
 
+        Ok(())
+    }
+
+    /// Takes a vec `file_diffs` containing `FileDiff` elements that have only the name populated,
+    /// and populates their hunks based on the parsing of `diff`, and the `prev_file_diffs`.
+    fn populate_diffs(
+        file_diffs: &mut Vec<FileDiff>,
+        prev_file_diffs: &[FileDiff],
+        diff: &Output,
+        options: &Options,
+    ) -> Result<()> {
+        let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
+        let hunks = parse::parse_diff(diff)?;
+        for file in file_diffs {
+            if let Some(hunks) = hunks.get(file.path.as_str()) {
+                // Get all the diffs entries of this file from the previous iteration.
+                let previous_file_entries = prev_file_diffs.iter().filter(|f| f.path == file.path);
+                file.hunks = hunks
+                    .iter()
+                    .map(|hunk| {
+                        let expanded = previous_file_entries
+                            .clone()
+                            .find_map(|f| {
+                                f.hunks.iter().find(|h| {
+                                    let h_header =
+                                        h.diff.lines().next().expect("hunk should never be empty");
+                                    let hunk_header =
+                                        hunk.lines().next().expect("hunk should never be empty");
+                                    (parse_hunk_new(h_header).unwrap_or_else(|e| panic!("{e:?}"))
+                                        == parse_hunk_new(hunk_header)
+                                            .unwrap_or_else(|e| panic!("{e:?}")))
+                                        || (parse_hunk_old(h_header)
+                                            .unwrap_or_else(|e| panic!("{e:?}"))
+                                            == parse_hunk_old(hunk_header)
+                                                .unwrap_or_else(|e| panic!("{e:?}")))
+                                })
+                            })
+                            .map_or(options.auto_expand_hunks, |h| h.expanded);
+
+                        Hunk::new(hunk.clone(), expanded)
+                    })
+                    .collect();
+            }
+        }
         Ok(())
     }
 
