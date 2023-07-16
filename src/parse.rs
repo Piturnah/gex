@@ -52,3 +52,27 @@ fn get_hunks(diff: &[&str]) -> Result<Vec<String>> {
     }
     Ok(hunks)
 }
+
+/// Gets the `old` part of the hunk header
+/// E.g. @@ -305,6 +305,7 @@ --> "305,6"
+pub fn parse_hunk_old(header: &str) -> Result<&str> {
+    let (_, header) = header
+        .split_once('-')
+        .with_context(|| format!("tried to parse strange hunk header: {header}"))?;
+    let (old, _) = header
+        .split_once(' ')
+        .with_context(|| format!("tried to parse strange hunk header: {header}"))?;
+    Ok(old)
+}
+
+/// Gets the `new` part of the hunk header
+/// E.g. @@ -305,6 +305,7 @@ --> "305,7"
+pub fn parse_hunk_new(header: &str) -> Result<&str> {
+    let (_, header) = header
+        .split_once('+')
+        .with_context(|| format!("tried to parse strange hunk header: {header}"))?;
+    let (old, _) = header
+        .split_once(' ')
+        .with_context(|| format!("tried to parse strange hunk header: {header}"))?;
+    Ok(old)
+}

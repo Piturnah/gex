@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased](https://github.com/Piturnah/gex/compare/v0.5.0...main)
+### Changed
+- Item expansion no longer resets on updating status ([#39](https://github.com/Piturnah/gex/issues/39))
+
 ## [0.5.0](https://github.com/Piturnah/gex/compare/v0.4.0...v0.5.0) - 2023-07-10
 ### Added
 - Scrolling on cursor movement if content goes off-screen ([#1](https://github.com/Piturnah/gex/issues/1))

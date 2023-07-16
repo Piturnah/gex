@@ -15,7 +15,7 @@ use crate::{
     config::Options,
     git_process,
     minibuffer::{MessageType, MiniBuffer},
-    parse,
+    parse::{self, parse_hunk_new, parse_hunk_old},
     render::{self, Renderer},
 };
 
@@ -143,14 +143,14 @@ impl render::Render for FileDiff {
 }
 
 impl FileDiff {
-    fn new(path: &str, kind: DiffType, expanded: bool) -> Self {
+    fn new(path: &str, kind: DiffType, expanded: bool, cursor: usize) -> Self {
         Self {
             path: path.to_string(),
             hunks: Vec::new(),
-            cursor: 0,
             selected: false,
             kind,
             expanded,
+            cursor,
         }
     }
 
@@ -305,6 +305,7 @@ impl Status {
     }
 
     pub fn fetch(&mut self, repo: &Repository, options: &Options) -> Result<()> {
+        // Leaving ourselves a lot of room to optimise and tidy up in here :D
         let output = git_process(&["status"])?;
 
         let input =
@@ -352,40 +353,17 @@ impl Status {
                     if line.is_empty() {
                         break;
                     }
+                    let path = line.trim_start();
+                    let previous_entry = self
+                        .file_diffs
+                        .iter()
+                        .take(self.count_untracked)
+                        .find(|f| f.path == path);
                     untracked.push(FileDiff::new(
-                        line.trim_start(),
+                        path,
                         DiffType::Untracked,
-                        options.auto_expand_files,
-                    ));
-                }
-            } else if line == "Changes to be committed:" {
-                // (use "git restore --staged <file>..." to unstage)
-                lines.next().context("strange `git status` output")?;
-                for line in lines.by_ref() {
-                    if line.is_empty() {
-                        break;
-                    }
-
-                    let parse_result: IResult<&str, &str> = take_until("  ")(line.trim_start());
-                    let (line, prefix) = parse_result
-                        .map_err(|e| e.to_owned())
-                        .context("strange `git status` output")?;
-
-                    staged.push(FileDiff::new(
-                        line.trim_start(),
-                        match prefix {
-                            "" => DiffType::Untracked,        // untracked files
-                            "new file:" => DiffType::Created, // staged new files
-                            "modified:" => DiffType::Modified,
-                            "renamed:" => DiffType::Renamed,
-                            "deleted:" => DiffType::Deleted,
-                            _ => {
-                                return Err(anyhow!(
-                                    "unknown file prefix in `git status` output: `{prefix}`"
-                                ))
-                            }
-                        },
-                        options.auto_expand_files,
+                        previous_entry.map_or(options.auto_expand_files, |f| f.expanded),
+                        previous_entry.map_or(0, |f| f.cursor),
                     ));
                 }
             } else if line == "Changes not staged for commit:" {
@@ -403,8 +381,15 @@ impl Status {
                         .map_err(|e| e.to_owned())
                         .context("strange diff output")?;
 
+                    let path = line.trim_start();
+                    let previous_entry = self
+                        .file_diffs
+                        .iter()
+                        .skip(self.count_untracked)
+                        .take(self.count_unstaged)
+                        .find(|f| f.path == path);
                     unstaged.push(FileDiff::new(
-                        line.trim_start(),
+                        path,
                         match prefix {
                             "" => DiffType::Untracked,        // untracked files
                             "new file:" => DiffType::Created, // staged new files
@@ -417,7 +402,45 @@ impl Status {
                                 ))
                             }
                         },
-                        options.auto_expand_files,
+                        previous_entry.map_or(options.auto_expand_files, |f| f.expanded),
+                        previous_entry.map_or(0, |f| f.cursor),
+                    ));
+                }
+            } else if line == "Changes to be committed:" {
+                // (use "git restore --staged <file>..." to unstage)
+                lines.next().context("strange `git status` output")?;
+                for line in lines.by_ref() {
+                    if line.is_empty() {
+                        break;
+                    }
+
+                    let parse_result: IResult<&str, &str> = take_until("  ")(line.trim_start());
+                    let (line, prefix) = parse_result
+                        .map_err(|e| e.to_owned())
+                        .context("strange `git status` output")?;
+
+                    let path = line.trim_start();
+                    let previous_entry = self
+                        .file_diffs
+                        .iter()
+                        .skip(self.count_untracked + self.count_unstaged)
+                        .find(|f| f.path == path);
+                    staged.push(FileDiff::new(
+                        path,
+                        match prefix {
+                            "" => DiffType::Untracked,        // untracked files
+                            "new file:" => DiffType::Created, // staged new files
+                            "modified:" => DiffType::Modified,
+                            "renamed:" => DiffType::Renamed,
+                            "deleted:" => DiffType::Deleted,
+                            _ => {
+                                return Err(anyhow!(
+                                    "unknown file prefix in `git status` output: `{prefix}`"
+                                ))
+                            }
+                        },
+                        previous_entry.map_or(options.auto_expand_files, |f| f.expanded),
+                        previous_entry.map_or(0, |f| f.cursor),
                     ));
                 }
             }
@@ -429,9 +452,29 @@ impl Status {
         let hunks = parse::parse_diff(diff)?;
         for mut file in &mut unstaged {
             if let Some(hunks) = hunks.get(file.path.as_str()) {
+                // Get all the diffs entries of this file from the previous iteration.
+                let previous_file_entries = self.file_diffs.iter().filter(|f| f.path == file.path);
                 file.hunks = hunks
                     .iter()
-                    .map(|hunk| Hunk::new(hunk.clone(), options.auto_expand_hunks))
+                    .map(|hunk| {
+                        let expanded = previous_file_entries
+                            .clone()
+                            .find_map(|f| {
+                                f.hunks.iter().find(|h| {
+                                    let h_header =
+                                        h.diff.lines().next().expect("hunk should never be empty");
+                                    let hunk_header =
+                                        hunk.lines().next().expect("hunk should never be empty");
+                                    (parse_hunk_new(h_header).unwrap()
+                                        == parse_hunk_new(hunk_header).unwrap())
+                                        || (parse_hunk_old(h_header).unwrap()
+                                            == parse_hunk_old(hunk_header).unwrap())
+                                })
+                            })
+                            .map_or(options.auto_expand_hunks, |h| h.expanded);
+
+                        Hunk::new(hunk.clone(), expanded)
+                    })
                     .collect();
             }
         }
@@ -442,10 +485,29 @@ impl Status {
             .context("malformed stdout from `git diff --cached`")?;
         let hunks = parse::parse_diff(staged_diff)?;
         for mut file in &mut staged {
+            let previous_file_entries = self.file_diffs.iter().filter(|f| f.path == file.path);
             if let Some(hunks) = hunks.get(file.path.as_str()) {
                 file.hunks = hunks
                     .iter()
-                    .map(|hunk| Hunk::new(hunk.clone(), options.auto_expand_hunks))
+                    .map(|hunk| {
+                        let expanded = previous_file_entries
+                            .clone()
+                            .find_map(|f| {
+                                f.hunks.iter().find(|h| {
+                                    let h_header =
+                                        h.diff.lines().next().expect("hunk should never be empty");
+                                    let hunk_header =
+                                        hunk.lines().next().expect("hunk should never be empty");
+                                    (parse_hunk_new(h_header).unwrap()
+                                        == parse_hunk_new(hunk_header).unwrap())
+                                        || (parse_hunk_old(h_header).unwrap()
+                                            == parse_hunk_old(hunk_header).unwrap())
+                                })
+                            })
+                            .map_or(options.auto_expand_hunks, |h| h.expanded);
+
+                        Hunk::new(hunk.clone(), expanded)
+                    })
                     .collect();
             }
         }
@@ -463,6 +525,10 @@ impl Status {
         self.file_diffs = untracked;
         self.file_diffs.append(&mut unstaged);
         self.file_diffs.append(&mut staged);
+
+        for file_diff in self.file_diffs.iter_mut().filter(|f| f.cursor >= f.len()) {
+            file_diff.cursor = file_diff.len() - 1;
+        }
 
         if !self.file_diffs.is_empty() && self.cursor >= self.file_diffs.len() {
             self.cursor = self.file_diffs.len() - 1;
