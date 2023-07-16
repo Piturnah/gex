@@ -610,7 +610,7 @@ impl Status {
             return Ok(());
         }
 
-        let mut file = self
+        let file = self
             .file_diffs
             .get_mut(self.cursor)
             .context("cursor is at invalid position")?;
