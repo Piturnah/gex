@@ -207,7 +207,7 @@ impl MiniBuffer {
                 let mut words = cmd.split_whitespace();
                 words.next().map(|cmd| {
                     Command::new(cmd)
-                        .args(words.collect::<Vec<_>>())
+                        .args(words)
                         .output()
                         .context("failed to run command")
                 })
