@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.5.0...main)
+### Added
+- Arbitrary process execution with <kbd>!</kbd> ([#25](https://github.com/Piturnah/gex/issues/25))
 ### Changed
 - Item expansion no longer resets on updating status ([#39](https://github.com/Piturnah/gex/issues/39))
 

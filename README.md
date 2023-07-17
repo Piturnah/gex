@@ -95,6 +95,7 @@ Options:
 | <kbd>U</kbd>   | unstage all items   |
 | <kbd>F</kbd>   | pull from remote    |
 | <kbd>:</kbd>   | execute git command |
+| <kbd>!</kbd>   | execute subprocess  |
 | <kbd>r</kbd>   | refresh             |
 | <kbd>Esc</kbd> | cancel current      |
 | <kbd>q</kbd>   | quit gex            |

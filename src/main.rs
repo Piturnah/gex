@@ -270,7 +270,11 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     }
                     KeyCode::Char('r') => state.status.fetch(&state.repo, &config.options)?,
                     KeyCode::Char(':') => {
-                        state.minibuffer.git_command(term_width, term_height)?;
+                        state.minibuffer.command(term_width, term_height, true)?;
+                        state.status.fetch(&state.repo, &config.options)?;
+                    }
+                    KeyCode::Char('!') => {
+                        state.minibuffer.command(term_width, term_height, false)?;
                         state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('q') => {
