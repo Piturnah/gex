@@ -25,7 +25,7 @@ pub struct MiniBuffer {
     /// The current height of the buffer, including the border.
     current_height: usize,
     /// History of commands sent via `:`.
-    command_history: Vec<String>,
+    git_command_history: Vec<String>,
 }
 
 pub enum MessageType {
@@ -116,9 +116,10 @@ impl MiniBuffer {
                         }
                     }
                     (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
-                        if history_cursor < self.command_history.len() {
+                        if history_cursor < self.git_command_history.len() {
                             history_cursor += 1;
-                            self.command_history[self.command_history.len() - history_cursor]
+                            self.git_command_history
+                                [self.git_command_history.len() - history_cursor]
                                 .clone_into(&mut command);
                             cursor = command.len() as u16;
                         }
@@ -128,7 +129,8 @@ impl MiniBuffer {
                         if history_cursor == 0 {
                             command.clear();
                         } else {
-                            self.command_history[self.command_history.len() - history_cursor]
+                            self.git_command_history
+                                [self.git_command_history.len() - history_cursor]
                                 .clone_into(&mut command);
                         }
                         cursor = command.len() as u16;
@@ -185,7 +187,7 @@ impl MiniBuffer {
         )?);
         terminal::enable_raw_mode().context("failed to enable raw mode")?;
 
-        self.command_history.push(command);
+        self.git_command_history.push(command);
 
         print!("{}", cursor::Hide);
         Ok(())
