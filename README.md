@@ -5,6 +5,8 @@
 [![license](https://img.shields.io/crates/l/gex)](https://crates.io/crates/gex)
 [![stargazers](https://img.shields.io/github/stars/Piturnah/gex?style=social)](https://github.com/Piturnah/gex/stargazers)
 
+**NOTE: GEX IS UNFINISHED SOFTWARE.** As a result, many features are missing, and the interface can change at any moment.
+
 <p align="center">
   <img src="https://user-images.githubusercontent.com/20472367/185642346-7f4b3738-0b75-42c1-9983-6ef7b3b72bde.gif" alt="Gex">
 </p>
@@ -128,6 +130,16 @@ auto_expand_hunks = true
 lookahead_lines = 5
 truncate_lines = true # `false` is not recommended - see #37
 ```
+
+## Versioning
+
+A `0.X` version increase indicates some change that could reasonably break someone's workflow. This is quite hard to define, so apologies if it does not meet your expectations. Usually this means changing a default setting or redesigning parts of the UI.
+
+A `0.x.Y` version increase indicates a change that should not break any workflow - i.e. fixing a bugs or adding features.
+
+Whichever number is increased does not deliberately correlate with the *size* of the update.
+
+`1.0.0` will come when I consider the software to be "finished", subject to small improvements/features or bug fixes. What this means is very subjective, and my own thoughts on this are likely to evolve as the project progresses.
 
 ## License
 
