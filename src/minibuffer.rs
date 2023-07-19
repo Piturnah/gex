@@ -206,13 +206,17 @@ impl MiniBuffer {
                 Some(output)
             } else {
                 // TODO: lazy_static the shell or something.
-                // TODO: this probably won't work on Windows. Why did I say we support Windows.
-                let output = env::var("SHELL")
-                    .map_or_else(|_| Command::new("/bin/sh"), Command::new)
-                    .args(["-c", cmd])
-                    .output()
-                    .context("failed to run command");
-                Some(output)
+                let output = env::var("SHELL").map_or_else(
+                    |_| {
+                        let mut words = cmd.split_whitespace();
+                        words
+                            .next()
+                            .map(|cmd| Command::new(cmd).args(words).output())
+                    },
+                    |sh| Some(Command::new(sh).args(["-c", cmd]).output()),
+                );
+
+                output.map(|o| o.context("failed to run command"))
             };
             match cmd_output {
                 Some(Ok(cmd_output)) => self.push_command_output(&cmd_output),
