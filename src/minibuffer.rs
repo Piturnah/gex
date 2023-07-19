@@ -2,6 +2,7 @@
 //! certain actions are performed and handles the arbitrary git command functionality.
 
 use std::{
+    env,
     io::{stdout, Write},
     process::{Command, Output},
     str,
@@ -204,13 +205,14 @@ impl MiniBuffer {
                 let output = git_process(&cmd.split_whitespace().collect::<Vec<_>>());
                 Some(output)
             } else {
-                let mut words = cmd.split_whitespace();
-                words.next().map(|cmd| {
-                    Command::new(cmd)
-                        .args(words)
-                        .output()
-                        .context("failed to run command")
-                })
+                // TODO: lazy_static the shell or something.
+                // TODO: this probably won't work on Windows. Why did I say we support Windows.
+                let output = env::var("SHELL")
+                    .map_or_else(|_| Command::new("/bin/sh"), Command::new)
+                    .args(["-c", cmd])
+                    .output()
+                    .context("failed to run command");
+                Some(output)
             };
             match cmd_output {
                 Some(Ok(cmd_output)) => self.push_command_output(&cmd_output),
