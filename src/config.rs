@@ -4,7 +4,10 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use once_cell::sync::OnceCell;
 use serde::Deserialize;
+
+pub static CONFIG: OnceCell<Config> = OnceCell::new();
 
 /// Command line args.
 #[derive(Parser)]

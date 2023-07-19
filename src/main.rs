@@ -28,7 +28,7 @@ use git2::Repository;
 
 use crate::{
     command::GexCommand,
-    config::Config,
+    config::{Config, CONFIG},
     minibuffer::{MessageType, MiniBuffer},
     render::Render,
 };
@@ -96,22 +96,24 @@ fn run(clargs: &Clargs) -> Result<()> {
 
     let mut minibuffer = MiniBuffer::new();
 
-    let config = Config::read_from_file(&clargs.config_file)
-        .unwrap_or_else(|e| {
-            minibuffer.push(&format!("{e:?}"), MessageType::Error);
-            Some((Config::default(), Vec::new()))
-        })
-        .map_or_else(Config::default, |(config, unused_keys)| {
-            if !unused_keys.is_empty() {
-                let mut warning = String::from("Unknown keys in config file:");
-                for key in unused_keys {
-                    warning.push_str("\n    ");
-                    warning.push_str(&key);
+    let config = CONFIG.get_or_init(|| {
+        Config::read_from_file(&clargs.config_file)
+            .unwrap_or_else(|e| {
+                minibuffer.push(&format!("{e:?}"), MessageType::Error);
+                Some((Config::default(), Vec::new()))
+            })
+            .map_or_else(Config::default, |(config, unused_keys)| {
+                if !unused_keys.is_empty() {
+                    let mut warning = String::from("Unknown keys in config file:");
+                    for key in unused_keys {
+                        warning.push_str("\n    ");
+                        warning.push_str(&key);
+                    }
+                    minibuffer.push(&warning, MessageType::Error);
                 }
-                minibuffer.push(&warning, MessageType::Error);
-            }
-            config
-        });
+                config
+            })
+    });
 
     let status = Status::new(&repo, &config.options)?;
     let branch_list = BranchList::new()?;
