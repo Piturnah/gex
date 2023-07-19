@@ -2,6 +2,8 @@
 
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.5.0...main)
 ### Added
+- Trailing whitespace detection based on setting in either gitconfig or gex config ([#45](https://github.com/Piturnah/gex/issues/45))
+  - New config option: `options.ws_error_highlight`
 - Arbitrary process execution with <kbd>!</kbd> ([#25](https://github.com/Piturnah/gex/issues/25))
 ### Changed
 - Item expansion no longer resets on updating status ([#39](https://github.com/Piturnah/gex/issues/39))

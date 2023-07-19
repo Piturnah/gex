@@ -1,6 +1,7 @@
 //! Module relating to the Status display, including diffs of files.
 
 use std::{
+    borrow::Cow,
     fmt, fs,
     io::{stdout, Read, Write},
     process::{Command, Output, Stdio},
@@ -12,7 +13,7 @@ use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
 
 use crate::{
-    config::Options,
+    config::{Options, CONFIG},
     git_process,
     minibuffer::{MessageType, MiniBuffer},
     parse::{self, parse_hunk_new, parse_hunk_old},
@@ -55,20 +56,68 @@ impl fmt::Display for Hunk {
         );
 
         if self.expanded {
+            let ws_error_highlight = CONFIG
+                .get()
+                .expect("config is initialised at the start of the program")
+                .options
+                .ws_error_highlight;
             for line in lines {
-                write!(
-                    &mut outbuf,
-                    "\r\n{}{}",
-                    match line.chars().next() {
-                        Some('+') => style::SetForegroundColor(Color::DarkGreen),
-                        Some('-') => style::SetForegroundColor(Color::DarkRed),
-                        _ => style::SetForegroundColor(Color::Reset),
-                    },
-                    line
-                )?;
+                match line.chars().next() {
+                    Some('+') => write!(
+                        &mut outbuf,
+                        "\r\n{}{}",
+                        style::SetForegroundColor(Color::DarkGreen),
+                        if ws_error_highlight.new {
+                            format_trailing_whitespace(line)
+                        } else {
+                            Cow::Borrowed(line)
+                        }
+                    ),
+                    Some('-') => write!(
+                        &mut outbuf,
+                        "\r\n{}{}",
+                        style::SetForegroundColor(Color::DarkRed),
+                        if ws_error_highlight.old {
+                            format_trailing_whitespace(line)
+                        } else {
+                            Cow::Borrowed(line)
+                        }
+                    ),
+                    _ => write!(
+                        &mut outbuf,
+                        "\r\n{}{}",
+                        style::SetForegroundColor(Color::Reset),
+                        if ws_error_highlight.context {
+                            format_trailing_whitespace(line)
+                        } else {
+                            Cow::Borrowed(line)
+                        }
+                    ),
+                }?;
             }
         }
         write!(f, "{outbuf}")
+    }
+}
+
+fn format_trailing_whitespace(s: &str) -> Cow<'_, str> {
+    let count_trailing_whitespace = s
+        .bytes()
+        .skip(1)
+        .rev()
+        .take_while(|c| c.is_ascii_whitespace())
+        .count();
+    if count_trailing_whitespace > 0 {
+        Cow::Owned({
+            let mut line = s.to_string();
+            line.insert_str(
+                line.len() - count_trailing_whitespace,
+                &format!("{}", style::SetBackgroundColor(Color::Red)),
+            );
+            line
+        })
+    } else {
+        Cow::Borrowed(s)
     }
 }
 

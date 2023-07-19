@@ -129,6 +129,7 @@ auto_expand_files = false
 auto_expand_hunks = true
 lookahead_lines = 5
 truncate_lines = true # `false` is not recommended - see #37
+ws_error_highlight = "new" # override git's diff.wsErrorHighlight
 ```
 
 ## Versioning

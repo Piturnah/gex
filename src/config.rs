@@ -1,6 +1,6 @@
 //! Gex configuration.
 #![allow(clippy::derivable_impls)]
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, str::FromStr};
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -36,6 +36,15 @@ pub struct Options {
     pub auto_expand_hunks: bool,
     pub lookahead_lines: usize,
     pub truncate_lines: bool,
+    pub ws_error_highlight: WsErrorHighlight,
+}
+
+#[derive(Deserialize, Clone, Copy, Debug)]
+#[serde(try_from = "String")]
+pub struct WsErrorHighlight {
+    pub old: bool,
+    pub new: bool,
+    pub context: bool,
 }
 
 impl Default for Options {
@@ -45,6 +54,7 @@ impl Default for Options {
             auto_expand_hunks: true,
             lookahead_lines: 5,
             truncate_lines: true,
+            ws_error_highlight: WsErrorHighlight::default(),
         }
     }
 }
@@ -77,5 +87,78 @@ impl Config {
         })
         .context("failed to parse config file")?;
         Ok(Some((config, unused_keys)))
+    }
+}
+
+impl WsErrorHighlight {
+    /// The default value defined by git.
+    const GIT_DEFAULT: Self = Self {
+        old: false,
+        new: true,
+        context: false,
+    };
+    const NONE: Self = Self {
+        old: false,
+        new: false,
+        context: false,
+    };
+    const ALL: Self = Self {
+        old: true,
+        new: true,
+        context: true,
+    };
+}
+
+impl Default for WsErrorHighlight {
+    /// If none was provided by the gex config, we will look in the git config. If we couldn't get
+    /// that one then we'll just provide `Self::GIT_DEFAULT`.
+    fn default() -> Self {
+        let Ok(Ok(git_config)) = git2::Config::open_default().map(|mut config| config.snapshot())
+        else {
+            return Self::GIT_DEFAULT;
+        };
+
+        let Ok(value) = git_config.get_str("diff.wsErrorHighlight") else {
+            return Self::GIT_DEFAULT;
+        };
+
+        Self::from_str(value).unwrap_or(Self::GIT_DEFAULT)
+    }
+}
+
+// NOTE: If anyone is reading this, do you happen to know why this impl is even needed? Really
+// feels like this should be provided by default is `FromStr` is implemented on the type.
+impl TryFrom<String> for WsErrorHighlight {
+    type Error = anyhow::Error;
+    fn try_from(s: String) -> std::result::Result<Self, Self::Error> {
+        Self::from_str(&s)
+    }
+}
+
+impl FromStr for WsErrorHighlight {
+    type Err = anyhow::Error;
+    /// Highlight whitespace errors in the context, old or new lines of the diff. Multiple values
+    /// are separated by by comma, none resets previous values, default reset the list to new and
+    /// all is a shorthand for old,new,context.
+    ///
+    /// <https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---ws-error-highlightltkindgt>
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let mut result = Self::GIT_DEFAULT;
+        for opt in s.split(',') {
+            match opt {
+                "all" => result = Self::ALL,
+                "default" => result = Self::GIT_DEFAULT,
+                "none" => result = Self::NONE,
+                "old" => result.old = true,
+                "new" => result.new = true,
+                "context" => result.context = true,
+                otherwise => {
+                    return Err(anyhow::Error::msg(format!(
+                        "unrecognised option in `ws_error_highlight`: {otherwise}"
+                    )))
+                }
+            }
+        }
+        Ok(result)
     }
 }
