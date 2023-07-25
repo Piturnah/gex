@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com/Piturnah/gex/compare/v0.5.0...main)
+## [0.6.0](https://github.com/Piturnah/gex/compare/v0.5.0...v0.6.0) - 2023-07-25
 ### Added
 - Trailing whitespace detection based on setting in either gitconfig or gex config ([#45](https://github.com/Piturnah/gex/issues/45))
   - New config option: `options.ws_error_highlight`
