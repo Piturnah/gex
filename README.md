@@ -130,6 +130,16 @@ auto_expand_hunks = true
 lookahead_lines = 5
 truncate_lines = true # `false` is not recommended - see #37
 ws_error_highlight = "new" # override git's diff.wsErrorHighlight
+
+# Named colours use the terminal colour scheme. You can also describe your colours
+# by RGB "rgb_(r,g,b)" or by Ansi "ansi_(value)".
+[colors]
+heading = "yellow"
+hunk_head = "blue"
+addition = "dark_green"
+deletion = "dark_red"
+key = "green"
+error = "red"
 ```
 
 ## Versioning
