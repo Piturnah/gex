@@ -83,15 +83,18 @@ impl fmt::Display for Hunk {
                             Cow::Borrowed(line)
                         }
                     ),
-                    _ => write!(
+                    Some(' ') => write!(
                         &mut outbuf,
-                        "\r\n{}{}",
+                        "\r\n{} {}",
                         style::SetForegroundColor(Color::Reset),
                         if ws_error_highlight.context {
-                            format_trailing_whitespace(line)
+                            format_trailing_whitespace(&line[1..])
                         } else {
                             Cow::Borrowed(line)
                         }
+                    ),
+                    _ => unreachable!(
+                        "every line in hunk has one of '+', '-', or ' ' inserted after parsing"
                     ),
                 }?;
             }
@@ -103,7 +106,6 @@ impl fmt::Display for Hunk {
 fn format_trailing_whitespace(s: &str) -> Cow<'_, str> {
     let count_trailing_whitespace = s
         .bytes()
-        .skip(1)
         .rev()
         .take_while(|c| c.is_ascii_whitespace())
         .count();
@@ -167,9 +169,24 @@ impl render::Render for FileDiff {
         if self.expanded {
             if self.hunks.is_empty() {
                 if let Ok(file_content) = fs::read_to_string(&self.path) {
+                    let ws_error_highlight = CONFIG
+                        .get()
+                        .expect("config is initialised at the start of the program")
+                        .options
+                        .ws_error_highlight;
+
                     write!(f, "{}", Attribute::Reset)?;
                     for l in file_content.lines() {
-                        write!(f, "\r\n{}+{l}", style::SetForegroundColor(Color::DarkGreen))?;
+                        write!(
+                            f,
+                            "\r\n{}+{l}",
+                            style::SetForegroundColor(Color::DarkGreen),
+                            l = if ws_error_highlight.new {
+                                format_trailing_whitespace(l)
+                            } else {
+                                Cow::Borrowed(l)
+                            }
+                        )?;
                     }
                     if self.selected {
                         f.insert_item_end();
