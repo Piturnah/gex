@@ -12,6 +12,7 @@ use crossterm::{
 };
 
 use crate::{
+    config::CONFIG,
     git_process,
     render::{self, Renderer},
 };
@@ -24,19 +25,20 @@ pub struct BranchList {
 impl render::Render for BranchList {
     fn render(&self, f: &mut Renderer) -> fmt::Result {
         use fmt::Write;
+        let config = CONFIG.get().expect("config wasn't initialised");
 
         if self.branches.is_empty() {
             return write!(
                 f,
                 "{}No branches yet.{}\r\n\nMake a commit or press b again to switch branch.",
-                SetForegroundColor(Color::Yellow),
+                SetForegroundColor(config.colors.heading),
                 SetForegroundColor(Color::Reset),
             );
         }
 
         for (i, branch) in self.branches.iter().enumerate() {
             if branch.starts_with('*') {
-                write!(f, "{}", SetForegroundColor(Color::Yellow))?;
+                write!(f, "{}", SetForegroundColor(config.colors.heading))?;
             }
             if i == self.cursor {
                 let mut branch = branch.to_string();

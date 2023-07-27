@@ -17,7 +17,7 @@ use crossterm::{
 };
 use itertools::Itertools;
 
-use crate::git_process;
+use crate::{config::CONFIG, git_process};
 
 #[derive(Default)]
 pub struct MiniBuffer {
@@ -249,7 +249,13 @@ impl MiniBuffer {
                 "{}{}\n{}{msg}{}",
                 cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
                 "─".repeat(term_width.into()),
-                SetForegroundColor(Color::Red),
+                SetForegroundColor(
+                    CONFIG
+                        .get()
+                        .expect("config wasn't initialised")
+                        .colors
+                        .error
+                ),
                 SetForegroundColor(Color::Reset),
             ),
         }

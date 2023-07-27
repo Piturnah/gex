@@ -4,6 +4,7 @@ use std::{fs, path::PathBuf, str::FromStr};
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use crossterm::style::Color;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
@@ -27,6 +28,7 @@ pub struct Clargs {
 #[serde(default)]
 pub struct Config {
     pub options: Options,
+    pub colors: Colors,
 }
 
 #[derive(Deserialize)]
@@ -55,6 +57,30 @@ impl Default for Options {
             lookahead_lines: 5,
             truncate_lines: true,
             ws_error_highlight: WsErrorHighlight::default(),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(default)]
+pub struct Colors {
+    pub heading: Color,
+    pub hunk_head: Color,
+    pub addition: Color,
+    pub deletion: Color,
+    pub key: Color,
+    pub error: Color,
+}
+
+impl Default for Colors {
+    fn default() -> Self {
+        Self {
+            heading: Color::Yellow,
+            hunk_head: Color::Blue,
+            addition: Color::DarkGreen,
+            deletion: Color::DarkRed,
+            key: Color::Green,
+            error: Color::Red,
         }
     }
 }

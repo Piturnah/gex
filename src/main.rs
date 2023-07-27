@@ -191,7 +191,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     .iter()
                     .map(|(k, v)| format!(
                         "\r\n {}{}{k}{} => {v}",
-                        SetForegroundColor(Color::Green),
+                        SetForegroundColor(config.colors.key),
                         Attribute::Bold,
                         Attribute::Reset,
                     ))

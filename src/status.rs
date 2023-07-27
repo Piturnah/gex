@@ -13,7 +13,7 @@ use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
 
 use crate::{
-    config::{Options, CONFIG},
+    config::{Config, Options, CONFIG},
     git_process,
     minibuffer::{MessageType, MiniBuffer},
     parse::{self, parse_hunk_new, parse_hunk_old},
@@ -43,6 +43,7 @@ pub struct Hunk {
 impl fmt::Display for Hunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         use fmt::Write;
+        let config = CONFIG.get().expect("config wasn't initialised");
 
         let mut lines = self.diff.lines();
         let Some(head) = lines.next() else {
@@ -50,7 +51,7 @@ impl fmt::Display for Hunk {
         };
         let mut outbuf = format!(
             "{}{}{}",
-            style::SetForegroundColor(Color::Blue),
+            style::SetForegroundColor(config.colors.hunk_head),
             if self.expanded { "⌄" } else { "›" },
             head.replace(" @@", &format!(" @@{}", Attribute::Reset))
         );
@@ -66,9 +67,9 @@ impl fmt::Display for Hunk {
                     Some('+') => write!(
                         &mut outbuf,
                         "\r\n{}{}",
-                        style::SetForegroundColor(Color::DarkGreen),
+                        style::SetForegroundColor(config.colors.addition),
                         if ws_error_highlight.new {
-                            format_trailing_whitespace(line)
+                            format_trailing_whitespace(line, config)
                         } else {
                             Cow::Borrowed(line)
                         }
@@ -76,9 +77,9 @@ impl fmt::Display for Hunk {
                     Some('-') => write!(
                         &mut outbuf,
                         "\r\n{}{}",
-                        style::SetForegroundColor(Color::DarkRed),
+                        style::SetForegroundColor(config.colors.deletion),
                         if ws_error_highlight.old {
-                            format_trailing_whitespace(line)
+                            format_trailing_whitespace(line, config)
                         } else {
                             Cow::Borrowed(line)
                         }
@@ -88,7 +89,7 @@ impl fmt::Display for Hunk {
                         "\r\n{} {}",
                         style::SetForegroundColor(Color::Reset),
                         if ws_error_highlight.context {
-                            format_trailing_whitespace(&line[1..])
+                            format_trailing_whitespace(&line[1..], config)
                         } else {
                             Cow::Borrowed(line)
                         }
@@ -103,7 +104,7 @@ impl fmt::Display for Hunk {
     }
 }
 
-fn format_trailing_whitespace(s: &str) -> Cow<'_, str> {
+fn format_trailing_whitespace<'s>(s: &'s str, config: &'_ Config) -> Cow<'s, str> {
     let count_trailing_whitespace = s
         .bytes()
         .rev()
@@ -114,7 +115,7 @@ fn format_trailing_whitespace(s: &str) -> Cow<'_, str> {
             let mut line = s.to_string();
             line.insert_str(
                 line.len() - count_trailing_whitespace,
-                &format!("{}", style::SetBackgroundColor(Color::Red)),
+                &format!("{}", style::SetBackgroundColor(config.colors.error)),
             );
             line
         })
@@ -154,6 +155,7 @@ pub struct FileDiff {
 impl render::Render for FileDiff {
     fn render(&self, f: &mut Renderer) -> fmt::Result {
         use fmt::Write;
+        let config = CONFIG.get().expect("config wasn't initialised");
         write!(
             f,
             "\r{}{}{}{}",
@@ -169,20 +171,16 @@ impl render::Render for FileDiff {
         if self.expanded {
             if self.hunks.is_empty() {
                 if let Ok(file_content) = fs::read_to_string(&self.path) {
-                    let ws_error_highlight = CONFIG
-                        .get()
-                        .expect("config is initialised at the start of the program")
-                        .options
-                        .ws_error_highlight;
+                    let ws_error_highlight = config.options.ws_error_highlight;
 
                     write!(f, "{}", Attribute::Reset)?;
                     for l in file_content.lines() {
                         write!(
                             f,
                             "\r\n{}+{l}",
-                            style::SetForegroundColor(Color::DarkGreen),
+                            style::SetForegroundColor(config.colors.addition),
                             l = if ws_error_highlight.new {
-                                format_trailing_whitespace(l)
+                                format_trailing_whitespace(l, config)
                             } else {
                                 Cow::Borrowed(l)
                             }
@@ -285,6 +283,7 @@ pub struct Status {
 impl render::Render for Status {
     fn render(&self, f: &mut Renderer) -> Result<(), fmt::Error> {
         use fmt::Write;
+        let config = CONFIG.get().expect("config wasn't initialised");
         // Display the current branch
         writeln!(
             f,
@@ -311,7 +310,7 @@ impl render::Render for Status {
             write!(
                 f,
                 "\r\n{}nothing to commit, working tree clean{}",
-                style::SetForegroundColor(Color::Yellow),
+                style::SetForegroundColor(config.colors.heading),
                 style::SetForegroundColor(Color::Reset)
             )?;
             drop(stdout().flush());
@@ -322,7 +321,7 @@ impl render::Render for Status {
                 writeln!(
                     f,
                     "\r\n{}Untracked files{} {}({}){}",
-                    style::SetForegroundColor(Color::Yellow),
+                    style::SetForegroundColor(config.colors.heading),
                     style::ResetColor,
                     style::Attribute::Dim,
                     self.count_untracked,
@@ -332,7 +331,7 @@ impl render::Render for Status {
                 writeln!(
                     f,
                     "\r\n{}Unstaged changes{} {}({}){}",
-                    style::SetForegroundColor(Color::Yellow),
+                    style::SetForegroundColor(config.colors.heading),
                     style::ResetColor,
                     style::Attribute::Dim,
                     self.count_unstaged,
@@ -342,7 +341,7 @@ impl render::Render for Status {
                 writeln!(
                     f,
                     "\r\n{}Staged changes{} {}({}){}",
-                    style::SetForegroundColor(Color::Yellow),
+                    style::SetForegroundColor(config.colors.heading),
                     style::ResetColor,
                     style::Attribute::Dim,
                     self.count_staged,

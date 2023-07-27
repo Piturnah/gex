@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.0...main)
+### Added
+- Support for custom colour themes via `colors` in config file ([#30](https://github.com/Piturnah/gex/issues/30))
 ### Fixed
 - `ws_error_highlight` setting was ignored for new files
 
