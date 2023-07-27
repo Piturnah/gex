@@ -3,6 +3,7 @@
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.0...main)
 ### Added
 - Support for custom colour themes via `colors` in config file ([#30](https://github.com/Piturnah/gex/issues/30))
+- Support for `NO_COLOR` environment variable ([#50](https://github.com/Piturnah/gex/issues/50))
 ### Fixed
 - `ws_error_highlight` setting was ignored for new files
 

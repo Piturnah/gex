@@ -74,13 +74,26 @@ pub struct Colors {
 
 impl Default for Colors {
     fn default() -> Self {
-        Self {
-            heading: Color::Yellow,
-            hunk_head: Color::Blue,
-            addition: Color::DarkGreen,
-            deletion: Color::DarkRed,
-            key: Color::Green,
-            error: Color::Red,
+        // NOTE: When crossterm is updated (current: 0.26) it should include support for this out
+        // of the box and this clause can be removed.
+        if std::env::var("NO_COLOR").map_or(false, |v| !v.is_empty()) {
+            Self {
+                heading: Color::Reset,
+                hunk_head: Color::Reset,
+                addition: Color::Reset,
+                deletion: Color::Reset,
+                key: Color::Reset,
+                error: Color::Reset,
+            }
+        } else {
+            Self {
+                heading: Color::Yellow,
+                hunk_head: Color::Blue,
+                addition: Color::DarkGreen,
+                deletion: Color::DarkRed,
+                key: Color::Green,
+                error: Color::Red,
+            }
         }
     }
 }
