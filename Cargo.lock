@@ -256,7 +256,6 @@ dependencies = [
  "git2",
  "itertools",
  "nom",
- "once_cell",
  "paste",
  "serde",
  "serde_ignored",

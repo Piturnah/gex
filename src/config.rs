@@ -1,14 +1,13 @@
 //! Gex configuration.
 #![allow(clippy::derivable_impls)]
-use std::{fs, path::PathBuf, str::FromStr};
+use std::{fs, path::PathBuf, str::FromStr, sync::OnceLock};
 
 use anyhow::{Context, Result};
 use clap::Parser;
 use crossterm::style::Color;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
-pub static CONFIG: OnceCell<Config> = OnceCell::new();
+pub static CONFIG: OnceLock<Config> = OnceLock::new();
 
 /// Command line args.
 #[derive(Parser)]
