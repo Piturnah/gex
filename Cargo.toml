@@ -10,9 +10,6 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/Piturnah/gex"
 
-[profile.release]
-strip = true
-
 [dependencies]
 anyhow = "1.0.68"
 clap = { version = "4.3.11", features = [ "cargo", "derive" ] }
