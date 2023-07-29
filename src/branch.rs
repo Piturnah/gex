@@ -7,14 +7,14 @@ use std::{
 use anyhow::{Context, Result};
 use crossterm::{
     cursor,
-    style::{Attribute, Color, SetForegroundColor},
+    style::{Attribute, SetForegroundColor},
     terminal::{self, ClearType},
 };
 
 use crate::{
     config::CONFIG,
     git_process,
-    render::{self, Renderer},
+    render::{self, Clear, Renderer, ResetAttributes},
 };
 
 pub struct BranchList {
@@ -32,7 +32,7 @@ impl render::Render for BranchList {
                 f,
                 "{}No branches yet.{}\r\n\nMake a commit or press b again to switch branch.",
                 SetForegroundColor(config.colors.heading),
-                SetForegroundColor(Color::Reset),
+                SetForegroundColor(config.colors.foreground),
             );
         }
 
@@ -43,14 +43,14 @@ impl render::Render for BranchList {
             if i == self.cursor {
                 let mut branch = branch.to_string();
                 branch.insert_str(2, &format!("{}", Attribute::Reverse));
-                write!(&mut branch, "{}", Attribute::Reset)?;
+                write!(&mut branch, "{ResetAttributes}")?;
                 f.insert_cursor();
                 writeln!(f, "\r{branch}")?;
             } else {
                 writeln!(f, "\r{branch}")?;
             }
             if branch.starts_with('*') {
-                write!(f, "{}", SetForegroundColor(Color::Reset))?;
+                write!(f, "{}", SetForegroundColor(config.colors.foreground))?;
             }
         }
         Ok(())
@@ -86,9 +86,8 @@ impl BranchList {
     pub fn checkout_new() -> Result<Output> {
         terminal::disable_raw_mode().context("failed to exit raw mode")?;
         print!(
-            "{}{}{}Name for the new branch: ",
-            cursor::MoveTo(0, 0),
-            terminal::Clear(ClearType::All),
+            "{}{}Name for the new branch: ",
+            Clear(ClearType::All),
             cursor::Show
         );
         drop(stdout().flush());

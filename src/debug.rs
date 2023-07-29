@@ -47,9 +47,7 @@ macro_rules! debug_draw {
                             term_width - prev_dimensions.0 as u16,
                             i as u16
                         ),
-                        ::crossterm::terminal::Clear(
-                            ::crossterm::terminal::ClearType::UntilNewLine
-                        ),
+                        $crate::render::Clear(::crossterm::terminal::ClearType::UntilNewLine),
                     )
                 });
 

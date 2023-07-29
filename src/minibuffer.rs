@@ -12,12 +12,12 @@ use anyhow::{Context, Result};
 use crossterm::{
     cursor::{self, SetCursorStyle},
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
-    style::{Color, SetForegroundColor},
+    style::SetForegroundColor,
     terminal::{self, ClearType},
 };
 use itertools::Itertools;
 
-use crate::{config::CONFIG, git_process};
+use crate::{config::CONFIG, git_process, render::Clear};
 
 #[derive(Default)]
 pub struct MiniBuffer {
@@ -83,7 +83,7 @@ impl MiniBuffer {
                 "{}{}\r\n{}{prompt}{command}{}{}",
                 cursor::MoveTo(0, term_height - 2),
                 "\u{2574}".repeat(term_width.into()),
-                terminal::Clear(ClearType::CurrentLine),
+                Clear(ClearType::CurrentLine),
                 cursor::MoveToColumn(cursor + prompt.len() as u16),
                 if input_buffer.len() == cursor.into() {
                     SetCursorStyle::DefaultUserShape
@@ -187,7 +187,7 @@ impl MiniBuffer {
         print!(
             "{}{}{}",
             cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
-            terminal::Clear(ClearType::FromCursorDown),
+            Clear(ClearType::FromCursorDown),
             cursor::Show,
         );
 
@@ -236,6 +236,7 @@ impl MiniBuffer {
             self.current_height = 0;
             return Ok(());
         };
+        let config = CONFIG.get().expect("config wasn't initialised");
         // Make sure raw mode is disabled so we can just print the message.
         terminal::disable_raw_mode().context("failed to exit raw mode")?;
         self.current_height = msg.lines().count() + 1;
@@ -249,14 +250,8 @@ impl MiniBuffer {
                 "{}{}\n{}{msg}{}",
                 cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
                 "─".repeat(term_width.into()),
-                SetForegroundColor(
-                    CONFIG
-                        .get()
-                        .expect("config wasn't initialised")
-                        .colors
-                        .error
-                ),
-                SetForegroundColor(Color::Reset),
+                SetForegroundColor(config.colors.error),
+                SetForegroundColor(config.colors.foreground),
             ),
         }
         terminal::enable_raw_mode().context("failed to enable raw mode")?;

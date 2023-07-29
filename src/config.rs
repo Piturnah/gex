@@ -8,6 +8,14 @@ use crossterm::style::Color;
 use serde::Deserialize;
 
 pub static CONFIG: OnceLock<Config> = OnceLock::new();
+#[macro_export]
+macro_rules! config {
+    () => {
+        $crate::config::CONFIG
+            .get()
+            .expect("config wasn't initialised")
+    };
+}
 
 /// Command line args.
 #[derive(Parser)]
@@ -63,6 +71,8 @@ impl Default for Options {
 #[derive(Deserialize)]
 #[serde(default)]
 pub struct Colors {
+    pub foreground: Color,
+    pub background: Color,
     pub heading: Color,
     pub hunk_head: Color,
     pub addition: Color,
@@ -77,6 +87,8 @@ impl Default for Colors {
         // of the box and this clause can be removed.
         if std::env::var("NO_COLOR").map_or(false, |v| !v.is_empty()) {
             Self {
+                foreground: Color::Reset,
+                background: Color::Reset,
                 heading: Color::Reset,
                 hunk_head: Color::Reset,
                 addition: Color::Reset,
@@ -86,6 +98,8 @@ impl Default for Colors {
             }
         } else {
             Self {
+                foreground: Color::Reset,
+                background: Color::Reset,
                 heading: Color::Yellow,
                 hunk_head: Color::Blue,
                 addition: Color::DarkGreen,

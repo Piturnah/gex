@@ -133,13 +133,17 @@ ws_error_highlight = "new" # override git's diff.wsErrorHighlight
 
 # Named colours use the terminal colour scheme. You can also describe your colours
 # by RGB "rgb_(r,g,b)" or by Ansi "ansi_(value)".
+#
+# This example uses a Gruvbox colour theme.
 [colors]
-heading = "yellow"
-hunk_head = "blue"
-addition = "dark_green"
-deletion = "dark_red"
-key = "green"
-error = "red"
+foreground = "rgb_(223,191,142)"
+background = "rgb_(40,40,40)"
+heading = "rgb_(227,168,78)"
+hunk_head = "rgb_(125,174,163)"
+addition = "rgb_(169,182,101)"
+deletion = "rgb_(234,105,98)"
+key = "rgb_(169,182,101)"
+error = "rgb_(234,105,98)"
 ```
 
 ## Versioning

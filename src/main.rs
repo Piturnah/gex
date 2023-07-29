@@ -21,7 +21,7 @@ use config::Clargs;
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEventKind},
-    style::{Attribute, Color, SetForegroundColor},
+    style::{Attribute, SetForegroundColor},
     terminal::{self, ClearType},
 };
 use git2::Repository;
@@ -30,7 +30,7 @@ use crate::{
     command::GexCommand,
     config::{Config, CONFIG},
     minibuffer::{MessageType, MiniBuffer},
-    render::Render,
+    render::{Clear, Render, ResetAttributes},
 };
 
 mod branch;
@@ -186,17 +186,17 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
             print!(
                 "{}{title:═^term_width$}{}{}{}",
                 cursor::MoveTo(0, term_height - 1 - subcmds.len() as u16),
-                terminal::Clear(ClearType::FromCursorDown),
+                Clear(ClearType::FromCursorDown),
                 subcmds
                     .iter()
                     .map(|(k, v)| format!(
                         "\r\n {}{}{k}{} => {v}",
                         SetForegroundColor(config.colors.key),
                         Attribute::Bold,
-                        Attribute::Reset,
+                        ResetAttributes,
                     ))
                     .collect::<String>(),
-                SetForegroundColor(Color::Reset),
+                SetForegroundColor(config.colors.foreground),
                 term_width = term_width as usize,
                 title = format!(" {cmd:?} Options "),
             );

@@ -1,13 +1,8 @@
-//! Rendering! Woooooo!
-//!
-//! This module implements a type [`Renderer`] and a trait [`Render`].
 use std::fmt;
 
-use crossterm::{
-    cursor::MoveTo,
-    style::{Attribute, ResetColor},
-    terminal::{self, ClearType},
-};
+use crossterm::{cursor::MoveTo, terminal::ClearType};
+
+use crate::render::{Clear, ResetAttributes};
 
 /// The [`Renderer`] type contains a buffer to be rendered to the screen. It handles scrolling based
 /// on the cursor's position and will only write the lines that should be visible.
@@ -87,7 +82,7 @@ impl Renderer {
         lookahead: usize,
         truncate: bool,
     ) {
-        print!("{}", terminal::Clear(ClearType::All));
+        print!("{}", Clear(ClearType::All));
 
         let (cursor_start_idx, cursor_end_idx) = self.selected_item;
         let count_lines = self.buffer.lines().count();
@@ -121,12 +116,7 @@ impl Renderer {
                 .map(|l| truncate_ansi(l, width))
                 .enumerate()
             {
-                print!(
-                    "{}{l}{}{}",
-                    MoveTo(0, row as u16),
-                    Attribute::Reset,
-                    ResetColor
-                );
+                print!("{}{l}{}", MoveTo(0, row as u16), ResetAttributes);
             }
         } else {
             for (row, l) in self
@@ -138,7 +128,7 @@ impl Renderer {
             {
                 print!("{}{l}", MoveTo(0, row as u16));
             }
-            print!("{}", Attribute::Reset);
+            print!("{ResetAttributes}");
         }
         self.buffer.clear();
     }

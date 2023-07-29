@@ -8,7 +8,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context, Error, Result};
-use crossterm::style::{self, Attribute, Color};
+use crossterm::style::{self, Attribute};
 use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
 
@@ -17,7 +17,7 @@ use crate::{
     git_process,
     minibuffer::{MessageType, MiniBuffer},
     parse::{self, parse_hunk_new, parse_hunk_old},
-    render::{self, Renderer},
+    render::{self, Renderer, ResetAttributes, ResetColor},
 };
 
 pub trait Expand {
@@ -53,7 +53,7 @@ impl fmt::Display for Hunk {
             "{}{}{}",
             style::SetForegroundColor(config.colors.hunk_head),
             if self.expanded { "⌄" } else { "›" },
-            head.replace(" @@", &format!(" @@{}", Attribute::Reset))
+            head.replace(" @@", &format!(" @@{ResetAttributes}"))
         );
 
         if self.expanded {
@@ -87,7 +87,7 @@ impl fmt::Display for Hunk {
                     Some(' ') => write!(
                         &mut outbuf,
                         "\r\n{} {}",
-                        style::SetForegroundColor(Color::Reset),
+                        style::SetForegroundColor(config.colors.foreground),
                         if ws_error_highlight.context {
                             format_trailing_whitespace(&line[1..], config)
                         } else {
@@ -158,7 +158,7 @@ impl render::Render for FileDiff {
         let config = CONFIG.get().expect("config wasn't initialised");
         write!(
             f,
-            "\r{}{}{}{}",
+            "\r{}{}{}{ResetAttributes}",
             if self.expanded { "⌄" } else { "›" },
             match self.kind {
                 DiffType::Renamed => "[RENAME] ",
@@ -166,14 +166,13 @@ impl render::Render for FileDiff {
                 _ => "",
             },
             self.path,
-            Attribute::Reset,
         )?;
         if self.expanded {
             if self.hunks.is_empty() {
                 if let Ok(file_content) = fs::read_to_string(&self.path) {
                     let ws_error_highlight = config.options.ws_error_highlight;
 
-                    write!(f, "{}", Attribute::Reset)?;
+                    write!(f, "{ResetAttributes}")?;
                     for l in file_content.lines() {
                         write!(
                             f,
@@ -194,10 +193,10 @@ impl render::Render for FileDiff {
                 for (i, hunk) in self.hunks.iter().enumerate() {
                     if self.selected && i + 1 == self.cursor {
                         f.insert_cursor();
-                        write!(f, "{}\r\n{}{hunk}", Attribute::Reset, Attribute::Reverse)?;
+                        write!(f, "{ResetAttributes}\r\n{}{hunk}", Attribute::Reverse)?;
                         f.insert_item_end();
                     } else {
-                        write!(f, "{}\r\n{hunk}", Attribute::Reset)?;
+                        write!(f, "{ResetAttributes}\r\n{hunk}")?;
                     }
                 }
             }
@@ -290,7 +289,7 @@ impl render::Render for Status {
             "\rOn branch {}{}{}",
             Attribute::Bold,
             self.branch,
-            Attribute::Reset
+            ResetAttributes,
         )?;
 
         // Display most recent commit
@@ -301,7 +300,7 @@ impl render::Render for Status {
                 "{}\r\n{}{}{}",
                 Attribute::Dim,
                 head.next().unwrap(), // !self.head.is_empty()
-                Attribute::Reset,
+                ResetAttributes,
                 head.map(|w| format!(" {w}")).collect::<String>()
             )?;
         }
@@ -311,7 +310,7 @@ impl render::Render for Status {
                 f,
                 "\r\n{}nothing to commit, working tree clean{}",
                 style::SetForegroundColor(config.colors.heading),
-                style::SetForegroundColor(Color::Reset)
+                style::SetForegroundColor(config.colors.foreground)
             )?;
             drop(stdout().flush());
         }
@@ -322,30 +321,30 @@ impl render::Render for Status {
                     f,
                     "\r\n{}Untracked files{} {}({}){}",
                     style::SetForegroundColor(config.colors.heading),
-                    style::ResetColor,
+                    ResetColor,
                     style::Attribute::Dim,
                     self.count_untracked,
-                    style::Attribute::Reset,
+                    ResetAttributes
                 )?;
             } else if index == self.count_untracked && self.count_unstaged != 0 {
                 writeln!(
                     f,
                     "\r\n{}Unstaged changes{} {}({}){}",
                     style::SetForegroundColor(config.colors.heading),
-                    style::ResetColor,
+                    ResetColor,
                     style::Attribute::Dim,
                     self.count_unstaged,
-                    style::Attribute::Reset,
+                    ResetAttributes
                 )?;
             } else if index == self.count_untracked + self.count_unstaged {
                 writeln!(
                     f,
                     "\r\n{}Staged changes{} {}({}){}",
                     style::SetForegroundColor(config.colors.heading),
-                    style::ResetColor,
+                    ResetColor,
                     style::Attribute::Dim,
                     self.count_staged,
-                    style::Attribute::Reset,
+                    ResetAttributes
                 )?;
             }
 
@@ -355,7 +354,7 @@ impl render::Render for Status {
             }
             write!(f, "\r    ")?;
             file.render(f)?;
-            writeln!(f, "{}", Attribute::Reset)?;
+            writeln!(f, "{ResetAttributes}")?;
         }
 
         Ok(())
