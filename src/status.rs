@@ -91,7 +91,7 @@ impl fmt::Display for Hunk {
                         if ws_error_highlight.context {
                             format_trailing_whitespace(&line[1..], config)
                         } else {
-                            Cow::Borrowed(line)
+                            Cow::Borrowed(&line[1..])
                         }
                     ),
                     _ => unreachable!(
