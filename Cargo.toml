@@ -9,6 +9,7 @@ exclude = [".github/", ".gitignore", "shell.nix"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/Piturnah/gex"
+homepage = "https://github.com/Piturnah/gex"
 
 [dependencies]
 anyhow = "1.0.68"
