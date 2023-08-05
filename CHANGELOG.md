@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.6.1](https://github.com/Piturnah/gex/compare/v0.6.0...v0.6.1)
+## [0.6.1](https://github.com/Piturnah/gex/compare/v0.6.0...v0.6.1) - 2023-08-05
 ### Added
 - Support for custom colour themes via `colors` in config file ([#30](https://github.com/Piturnah/gex/issues/30))
 - Support for `NO_COLOR` environment variable ([#50](https://github.com/Piturnah/gex/issues/50))
