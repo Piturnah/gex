@@ -139,6 +139,7 @@ ws_error_highlight = "new" # override git's diff.wsErrorHighlight
 foreground = "#ebdbb2"
 background = "#282828"
 heading = "#fabd2f"
+hunk_head = "#d3869b"
 addition = "#b8bb26"
 deletion = "#fb4934"
 key = "#d79921"
