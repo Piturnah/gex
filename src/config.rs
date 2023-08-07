@@ -83,8 +83,11 @@ pub struct Colors {
 
 impl Default for Colors {
     fn default() -> Self {
-        // NOTE: When crossterm is updated (current: 0.26) it should include support for this out
-        // of the box and this clause can be removed.
+        // We have to force colour output here regardless of NO_COLOR setting, because then we can
+        // handle it ourselves. The NO_COLOR standard specifies that colour output should be
+        // enabled when the user has explicitly set it, which can be achieved here by detecting the
+        // env variable and then enabling color granularly based on the user config.
+        crossterm::style::force_color_output(true);
         if std::env::var("NO_COLOR").map_or(false, |v| !v.is_empty()) {
             Self {
                 foreground: Color::Reset,

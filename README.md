@@ -132,18 +132,17 @@ truncate_lines = true # `false` is not recommended - see #37
 ws_error_highlight = "new" # override git's diff.wsErrorHighlight
 
 # Named colours use the terminal colour scheme. You can also describe your colours
-# by RGB "rgb_(r,g,b)" or by Ansi "ansi_(value)".
+# by hex string "#RRGGBB", RGB "rgb_(r,g,b)" or by Ansi "ansi_(value)".
 #
 # This example uses a Gruvbox colour theme.
 [colors]
-foreground = "rgb_(223,191,142)"
-background = "rgb_(40,40,40)"
-heading = "rgb_(227,168,78)"
-hunk_head = "rgb_(125,174,163)"
-addition = "rgb_(169,182,101)"
-deletion = "rgb_(234,105,98)"
-key = "rgb_(169,182,101)"
-error = "rgb_(234,105,98)"
+foreground = "#ebdbb2"
+background = "#282828"
+heading = "#fabd2f"
+addition = "#b8bb26"
+deletion = "#fb4934"
+key = "#d79921"
+error = "#cc241d"
 ```
 
 ## Versioning
