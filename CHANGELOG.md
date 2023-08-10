@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.1...main)
+## [0.6.2](https://github.com/Piturnah/gex/compare/v0.6.1...v0.6.2) - 2023-08-10
 ### Added
-- Support for hex strings (#RRGGBB) in config file for colour themes ([#51](https://github.com/Piturnah/gex/issues/51))
+- Support for hex strings (`#RRGGBB`) in config file for colour themes ([#51](https://github.com/Piturnah/gex/issues/51))
 
 ## [0.6.1](https://github.com/Piturnah/gex/compare/v0.6.0...v0.6.1) - 2023-08-05
 ### Added
