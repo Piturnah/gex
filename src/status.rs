@@ -84,9 +84,9 @@ impl fmt::Display for Hunk {
                             Cow::Borrowed(line)
                         }
                     ),
-                    Some(' ') => write!(
+                    Some(c) => write!(
                         &mut outbuf,
-                        "\r\n{} {}",
+                        "\r\n{}{c}{}",
                         style::SetForegroundColor(config.colors.foreground),
                         if ws_error_highlight.context {
                             format_trailing_whitespace(&line[1..], config)
@@ -94,9 +94,12 @@ impl fmt::Display for Hunk {
                             Cow::Borrowed(&line[1..])
                         }
                     ),
-                    _ => unreachable!(
-                        "every line in hunk has one of '+', '-', or ' ' inserted after parsing"
-                    ),
+                    // I think this case never happens, but if it does, it just means the line was
+                    // empty.
+                    None => {
+                        outbuf.push('\n');
+                        Ok(())
+                    }
                 }?;
             }
         }
