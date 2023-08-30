@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.2...main)
+## [0.6.3](https://github.com/Piturnah/gex/compare/v0.6.2...v0.6.3) - 2023-08-30
 ### Fixed
 - Entering unreachable code on inserting trailing newline ([#62](https://github.com/Piturnah/gex/issues/62))
 - Incorrect positioning of "new branch" prompt ([#63](https://github.com/Piturnah/gex/issues/63))
