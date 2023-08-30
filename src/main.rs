@@ -216,7 +216,8 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
         // the loop to avoid re-rendering. If it's a key event without KeyEventKind::Release,
         // handle it and break.
         loop {
-            let Event::Key(event) = event::read().context("failed to read a terminal event")? else {
+            let Event::Key(event) = event::read().context("failed to read a terminal event")?
+            else {
                 break;
             };
             if event.kind == KeyEventKind::Release {

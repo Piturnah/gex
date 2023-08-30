@@ -34,7 +34,9 @@ fn get_hunks(diff: &[&str]) -> Result<Vec<String>> {
     let hunk_groups = diff.iter().group_by(|line| line.starts_with("@@"));
     let mut hunk_groups = hunk_groups.into_iter();
     loop {
-        let Some((key, mut lines)) = hunk_groups.next() else { break };
+        let Some((key, mut lines)) = hunk_groups.next() else {
+            break;
+        };
         let hunk_head = *lines.next().context("expected another line in diff")?;
         if !key {
             continue;
