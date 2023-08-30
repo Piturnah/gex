@@ -28,11 +28,11 @@ impl fmt::Display for Clear {
                 write!(f, "{}", style::SetBackgroundColor(color))?;
                 match self.0 {
                     ClearType::All => {
-                        write!(f, "{}", cursor::MoveTo(0, 0),)?;
+                        write!(f, "{}{}", cursor::SavePosition, cursor::MoveTo(0, 0),)?;
                         for _ in 0..rows {
                             write!(f, "{:width$}", ' ', width = cols as usize)?;
                         }
-                        write!(f, "{}", cursor::MoveTo(0, 0))
+                        write!(f, "{}", cursor::RestorePosition)
                     }
                     ClearType::Purge => write!(
                         f,

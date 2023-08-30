@@ -86,7 +86,8 @@ impl BranchList {
     pub fn checkout_new() -> Result<Output> {
         terminal::disable_raw_mode().context("failed to exit raw mode")?;
         print!(
-            "{}{}Name for the new branch: ",
+            "{}{}{}Name for the new branch: ",
+            cursor::MoveTo(0, 0),
             Clear(ClearType::All),
             cursor::Show
         );
