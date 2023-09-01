@@ -27,17 +27,26 @@ pub static MESSAGES: Mutex<Vec<(String, MessageType)>> = Mutex::new(Vec::new());
 /// The callback type for getting input.
 pub type Callback = Rc<dyn Fn(Option<&str>) -> Result<()>>;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Default)]
 enum State {
-    Input,
+    #[default]
     Normal,
+    Input,
 }
 
+#[derive(Default)]
+enum History {
+    #[default]
+    Command,
+    Git,
+}
+
+#[derive(Default)]
 pub struct MiniBuffer {
     /// The current height of the buffer, including the border.
     current_height: usize,
     /// History of commands sent via `:`.
-    pub git_command_history: Vec<String>,
+    git_command_history: Vec<String>,
     /// History of commands sent via `!`.
     command_history: Vec<String>,
 
@@ -45,22 +54,9 @@ pub struct MiniBuffer {
     prompt: &'static str,
     cursor: usize,
     history_cursor: usize,
+    // Which history to use.
+    history: History,
     state: State,
-}
-
-impl Default for MiniBuffer {
-    fn default() -> Self {
-        Self {
-            current_height: Default::default(),
-            git_command_history: Vec::default(),
-            command_history: Vec::default(),
-            buffer: String::default(),
-            prompt: Default::default(),
-            cursor: Default::default(),
-            history_cursor: Default::default(),
-            state: State::Normal,
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -136,9 +132,13 @@ impl MiniBuffer {
             ref mut history_cursor,
             ..
         } = self;
-        let history = &self.git_command_history;
+        let history = match self.history {
+            History::Command => &mut self.command_history,
+            History::Git => &mut self.git_command_history,
+        };
         match (key_event.code, key_event.modifiers) {
             (KeyCode::Enter, _) => {
+                history.push(self.buffer.clone());
                 callback(Some(&self.buffer))?;
                 self.state = State::Normal;
                 self.buffer.clear();
@@ -217,7 +217,12 @@ impl MiniBuffer {
 
     /// Get a git command or shell command from the user and execute it.
     pub fn command(&mut self, git_cmd: bool, view: &mut View) {
-        let prompt = if git_cmd { ":git " } else { "!" };
+        let (prompt, history) = if git_cmd {
+            (":git ", History::Git)
+        } else {
+            ("!", History::Command)
+        };
+        self.history = history;
         self.get_input(
             Rc::new(move |cmd: Option<&str>| {
                 crossterm::execute!(stdout(), cursor::MoveToColumn(0))?;
