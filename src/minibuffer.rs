@@ -52,9 +52,9 @@ impl Default for MiniBuffer {
     fn default() -> Self {
         Self {
             current_height: Default::default(),
-            git_command_history: Default::default(),
-            command_history: Default::default(),
-            buffer: Default::default(),
+            git_command_history: Vec::default(),
+            command_history: Vec::default(),
+            buffer: String::default(),
             prompt: Default::default(),
             cursor: Default::default(),
             history_cursor: Default::default(),
@@ -118,12 +118,15 @@ impl MiniBuffer {
         *view = View::Input(callback, Box::new(view.clone()));
     }
 
-    // Should only be called as part of the main event loop.
-    pub fn handle_input<'a>(
+    /// `return_view`: the [`View`](crate::View) to switch to after exiting `View::Input`.
+    ///
+    /// # Notes
+    ///
+    /// Should only be called as part of the main event loop.
+    pub fn handle_input(
         &mut self,
         key_event: KeyEvent,
         callback: &Callback,
-        // The view to return to after exiting.
         return_view: View,
         view: &mut View,
     ) -> Result<()> {
@@ -145,7 +148,7 @@ impl MiniBuffer {
                 *cursor = cursor.saturating_sub(1);
             }
             (KeyCode::Right, _) | (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
-                if (*cursor as usize) < buffer.len() {
+                if *cursor < buffer.len() {
                     *cursor += 1;
                 }
             }
@@ -170,7 +173,7 @@ impl MiniBuffer {
             (KeyCode::Char('b'), KeyModifiers::ALT) => {
                 while *cursor > 0 {
                     *cursor = cursor.saturating_sub(1);
-                    if word_boundary(&buffer, *cursor) {
+                    if word_boundary(buffer, *cursor) {
                         break;
                     }
                 }
@@ -178,7 +181,7 @@ impl MiniBuffer {
             (KeyCode::Char('f'), KeyModifiers::ALT) => {
                 while *cursor < buffer.len() {
                     *cursor += 1;
-                    if word_boundary(&buffer, *cursor) {
+                    if word_boundary(buffer, *cursor) {
                         break;
                     }
                 }
@@ -232,7 +235,7 @@ impl MiniBuffer {
                                     .next()
                                     .map(|cmd| Command::new(cmd).args(words).output())
                             },
-                            |sh| Some(Command::new(sh).args(["-c", &cmd]).output()),
+                            |sh| Some(Command::new(sh).args(["-c", cmd]).output()),
                         );
 
                         output.map(|o| o.context("failed to run command"))

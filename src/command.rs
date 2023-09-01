@@ -161,7 +161,7 @@ impl GexCommand {
                 match subcmd {
                     SubCommand::Stash => MiniBuffer::push_command_output(&git_process(&["stash"])?),
                     SubCommand::Pop => {
-                        MiniBuffer::push_command_output(&git_process(&["stash", "pop"])?)
+                        MiniBuffer::push_command_output(&git_process(&["stash", "pop"])?);
                     }
                 }
                 status.fetch(repo, &config.options)?;

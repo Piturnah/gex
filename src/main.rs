@@ -97,7 +97,7 @@ fn run(clargs: &Clargs) -> Result<()> {
     std::env::set_current_dir(repo.path().parent().context("`.git` cannot be root dir")?)
         .context("failed to set working directory")?;
 
-    let mut minibuffer = MiniBuffer::new();
+    let minibuffer = MiniBuffer::new();
 
     let config = CONFIG.get_or_init(|| {
         Config::read_from_file(&clargs.config_file)
@@ -174,7 +174,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
         print!("{ResetAttributes}");
         match state.view {
             View::Status | View::Command(_) | View::Input(..) => {
-                state.status.render(&mut state.renderer)?
+                state.status.render(&mut state.renderer)?;
             }
             View::BranchList => state.branch_list.render(&mut state.renderer)?,
         }
@@ -247,7 +247,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         if state.status.cursor
                             < state.status.count_untracked + state.status.count_unstaged
                         {
-                            state.status.stage(&mut state.minibuffer)?;
+                            state.status.stage()?;
                             state.status.fetch(&state.repo, &config.options)?;
                         }
                     }
@@ -259,7 +259,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         if state.status.cursor
                             >= state.status.count_untracked + state.status.count_unstaged
                         {
-                            state.status.unstage(&mut state.minibuffer)?;
+                            state.status.unstage()?;
                             state.status.fetch(&state.repo, &config.options)?;
                         }
                     }
