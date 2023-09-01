@@ -71,7 +71,7 @@ impl MiniBuffer {
     }
 
     pub fn is_empty() -> bool {
-        MESSAGES.try_lock().expect("couldn't get rwlock").is_empty()
+        MESSAGES.try_lock().expect("couldn't get mutex").is_empty()
     }
 
     /// Push a new message onto the message stack.
@@ -79,7 +79,7 @@ impl MiniBuffer {
         if !msg.is_empty() {
             MESSAGES
                 .try_lock()
-                .expect("couldn't get rwlock")
+                .expect("couldn't get mutex")
                 .push((msg.trim().to_string(), msg_type));
         }
     }
