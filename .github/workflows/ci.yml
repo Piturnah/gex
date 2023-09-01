@@ -10,10 +10,21 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
-
+  Test:
     runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+    - name: Test
+      run: cargo test
 
+  Lint:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - name: Install Rust toolchain
@@ -23,8 +34,6 @@ jobs:
         profile: minimal
         components: clippy, rustfmt
         override: true
-    - name: Test
-      run: cargo test
     - name: Clippy
       run: cargo clippy -- -D warnings
     - name: Format
