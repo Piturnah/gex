@@ -59,6 +59,7 @@ pub enum View {
     Status,
     BranchList,
     Command(GexCommand),
+    Input(minibuffer::Callback),
 }
 
 pub fn git_process(args: &[&str]) -> Result<Output> {
@@ -99,7 +100,7 @@ fn run(clargs: &Clargs) -> Result<()> {
     let config = CONFIG.get_or_init(|| {
         Config::read_from_file(&clargs.config_file)
             .unwrap_or_else(|e| {
-                minibuffer.push(&format!("{e:?}"), MessageType::Error);
+                MiniBuffer::push(&format!("{e:?}"), MessageType::Error);
                 Some((Config::default(), Vec::new()))
             })
             .map_or_else(Config::default, |(config, unused_keys)| {
@@ -109,7 +110,7 @@ fn run(clargs: &Clargs) -> Result<()> {
                         warning.push_str("\n    ");
                         warning.push_str(&key);
                     }
-                    minibuffer.push(&warning, MessageType::Error);
+                    MiniBuffer::push(&warning, MessageType::Error);
                 }
                 config
             })
@@ -135,7 +136,7 @@ fn run(clargs: &Clargs) -> Result<()> {
         .map(|s| s.starts_with("en"))
         .unwrap_or(true)
     {
-        state.minibuffer.push("WARNING: Non-English locale detected. For now, Gex only supports English locale setting.
+        MiniBuffer::push("WARNING: Non-English locale detected. For now, Gex only supports English locale setting.
 Set locale to English, e.g.:
 
         $ LANG=en_GB gex
@@ -168,8 +169,11 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
         let (term_width, term_height) =
             terminal::size().context("failed to query terminal dimensions")?;
 
+        print!("{ResetAttributes}");
         match state.view {
-            View::Status | View::Command(_) => state.status.render(&mut state.renderer)?,
+            View::Status | View::Command(_) | View::Input(_) => {
+                state.status.render(&mut state.renderer)?
+            }
             View::BranchList => state.branch_list.render(&mut state.renderer)?,
         }
         state.renderer.show_and_clear(
@@ -207,6 +211,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
         // Draw the current `debug!` window.
         debug_draw!();
 
+        state.minibuffer.pop_message();
         state.minibuffer.render(term_width, term_height)?;
 
         // Handle input
@@ -224,7 +229,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                 continue;
             }
 
-            if !state.minibuffer.is_empty() {
+            if !MiniBuffer::is_empty() {
                 break;
             }
 
@@ -245,9 +250,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         }
                     }
                     KeyCode::Char('S') => {
-                        state
-                            .minibuffer
-                            .push_command_output(&git_process(&["add", "."])?);
+                        MiniBuffer::push_command_output(&git_process(&["add", "."])?);
                         state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('u') => {
@@ -259,25 +262,21 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         }
                     }
                     KeyCode::Char('U') => {
-                        state
-                            .minibuffer
-                            .push_command_output(&git_process(&["reset"])?);
+                        MiniBuffer::push_command_output(&git_process(&["reset"])?);
                         state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Tab | KeyCode::Char(' ') => state.status.expand()?,
                     KeyCode::Char('F') => {
-                        state
-                            .minibuffer
-                            .push_command_output(&git_process(&["pull"])?);
+                        MiniBuffer::push_command_output(&git_process(&["pull"])?);
                         state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('r') => state.status.fetch(&state.repo, &config.options)?,
                     KeyCode::Char(':') => {
-                        state.minibuffer.command(term_width, term_height, true)?;
+                        state.minibuffer.command(true, &mut state.view);
                         state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('!') => {
-                        state.minibuffer.command(term_width, term_height, false)?;
+                        state.minibuffer.command(false, &mut state.view);
                         state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('q') => {
@@ -315,9 +314,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         state.branch_list.cursor = state.branch_list.branches.len() - 1;
                     }
                     KeyCode::Char(' ') | KeyCode::Enter => {
-                        state
-                            .minibuffer
-                            .push_command_output(&state.branch_list.checkout()?);
+                        MiniBuffer::push_command_output(&state.branch_list.checkout()?);
                         state.status.fetch(&state.repo, &config.options)?;
                         state.view = View::Status;
                     }
@@ -351,6 +348,9 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     KeyCode::Char(c) => cmd.handle_input(c, &mut state, config)?,
                     _ => {}
                 },
+                View::Input(ref callback) => {
+                    state.minibuffer.handle_input(event, callback)?;
+                }
             };
             break;
         }

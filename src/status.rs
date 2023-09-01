@@ -652,7 +652,7 @@ impl Status {
                     // waiting on the child process to finish.
                     .map(|mut stderr| stderr.read_to_string(&mut stderr_buf))
                     .context("failed to read stderr of child process")??;
-                mini_buffer.push(&stderr_buf, MessageType::Error);
+                MiniBuffer::push(&stderr_buf, MessageType::Error);
             }
         }
 

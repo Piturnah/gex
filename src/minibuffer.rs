@@ -6,31 +6,63 @@ use std::{
     io::{stdout, Write},
     process::{Command, Output},
     str,
+    sync::Mutex,
 };
 
 use anyhow::{Context, Result};
 use crossterm::{
     cursor::{self, SetCursorStyle},
-    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
+    event::{KeyCode, KeyEvent, KeyModifiers},
     style::SetForegroundColor,
     terminal::{self, ClearType},
 };
 use itertools::Itertools;
 
-use crate::{config::CONFIG, git_process, render::Clear};
+use crate::{config, git_process, render::Clear, View};
 
-#[derive(Default)]
+/// The messages to be sent to the buffer are maintained in this mutex as a stack.
+pub static MESSAGES: Mutex<Vec<(String, MessageType)>> = Mutex::new(Vec::new());
+
+/// The callback type for getting input.
+pub type Callback = Box<dyn Fn(Option<&str>) -> Result<()>>;
+
+#[derive(PartialEq, Eq)]
+enum State {
+    Input,
+    Normal,
+}
+
 pub struct MiniBuffer {
-    /// The messages to be sent are maintained in this struct as a stack.
-    messages: Vec<(String, MessageType)>,
     /// The current height of the buffer, including the border.
     current_height: usize,
     /// History of commands sent via `:`.
-    git_command_history: Vec<String>,
+    pub git_command_history: Vec<String>,
     /// History of commands sent via `!`.
     command_history: Vec<String>,
+
+    buffer: String,
+    prompt: &'static str,
+    cursor: usize,
+    history_cursor: usize,
+    state: State,
 }
 
+impl Default for MiniBuffer {
+    fn default() -> Self {
+        Self {
+            current_height: Default::default(),
+            git_command_history: Default::default(),
+            command_history: Default::default(),
+            buffer: Default::default(),
+            prompt: Default::default(),
+            cursor: Default::default(),
+            history_cursor: Default::default(),
+            state: State::Normal,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum MessageType {
     Note,
     Error,
@@ -41,149 +73,190 @@ impl MiniBuffer {
         Self::default()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.messages.is_empty()
+    pub fn is_empty() -> bool {
+        MESSAGES.try_lock().expect("couldn't get rwlock").is_empty()
     }
 
     /// Push a new message onto the message stack.
-    pub fn push(&mut self, msg: &str, msg_type: MessageType) {
+    pub fn push(msg: &str, msg_type: MessageType) {
         if !msg.is_empty() {
-            self.messages.push((msg.trim().to_string(), msg_type));
+            MESSAGES
+                .try_lock()
+                .expect("couldn't get rwlock")
+                .push((msg.trim().to_string(), msg_type));
         }
     }
 
-    pub fn push_command_output(&mut self, output: &Output) {
+    pub fn push_command_output(output: &Output) {
         match str::from_utf8(&output.stdout) {
-            Ok(s) => self.push(s, MessageType::Note),
-            Err(e) => self.push(
+            Ok(s) => Self::push(s, MessageType::Note),
+            Err(e) => Self::push(
                 &format!("Received invalid UTF8 stdout from git: {e}"),
                 MessageType::Error,
             ),
         }
         match str::from_utf8(&output.stderr) {
-            Ok(s) => self.push(s, MessageType::Error),
-            Err(e) => self.push(
+            Ok(s) => Self::push(s, MessageType::Error),
+            Err(e) => Self::push(
                 &format!("Received invalid UTF8 stderr from git: {e}"),
                 MessageType::Error,
             ),
         }
     }
 
-    fn take_input<'a>(
-        prompt: &str,
-        term_width: u16,
-        term_height: u16,
-        history: &'a mut Vec<String>,
-    ) -> Option<&'a str> {
-        let mut input_buffer = String::new();
-        let mut cursor = 0;
-        let mut history_cursor = 0;
-        loop {
-            print!(
-                "{}{}\r\n{}{prompt}{command}{}{}",
-                cursor::MoveTo(0, term_height - 2),
-                "\u{2574}".repeat(term_width.into()),
-                Clear(ClearType::CurrentLine),
-                cursor::MoveToColumn(cursor + prompt.len() as u16),
-                if input_buffer.len() == cursor.into() {
-                    SetCursorStyle::DefaultUserShape
-                } else {
-                    SetCursorStyle::SteadyBar
-                },
-                command = input_buffer
-            );
-            drop(stdout().flush());
+    /// Get some user input from this minibuffer and run `callback` on it.
+    ///
+    /// # Notes
+    ///
+    /// You probably want to switch the view to something else at the end of your callback.
+    pub fn get_input(&mut self, callback: Callback, prompt: Option<&'static str>, view: &mut View) {
+        self.state = State::Input;
+        self.prompt = prompt.unwrap_or("");
+        *view = View::Input(callback);
+    }
 
-            // TODO: ideally I'd like to refactor it such that all the inputs are received in the
-            // same place as everywhere else (currently in `main.rs`). This would solve other minor
-            // issues like the minibuffer not adjusting when the terminal font is increased. This
-            // could probably be achieved by having the minibuffer be a `View`.
-            if let Event::Key(key_event) = event::read().expect("failed to read a terminal event") {
-                if key_event.kind == KeyEventKind::Release {
-                    continue;
-                }
-                match (key_event.code, key_event.modifiers) {
-                    (KeyCode::Enter, _) => break,
-                    (KeyCode::Left, _) | (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
-                        cursor = cursor.saturating_sub(1);
-                    }
-                    (KeyCode::Right, _) | (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
-                        if (cursor as usize) < input_buffer.len() {
-                            cursor += 1;
-                        }
-                    }
-                    (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
-                        if history_cursor < history.len() {
-                            history_cursor += 1;
-                            history[history.len() - history_cursor].clone_into(&mut input_buffer);
-                            cursor = input_buffer.len() as u16;
-                        }
-                    }
-                    (KeyCode::Down, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-                        history_cursor = history_cursor.saturating_sub(1);
-                        if history_cursor == 0 {
-                            input_buffer.clear();
-                        } else {
-                            history[history.len() - history_cursor].clone_into(&mut input_buffer);
-                        }
-                        cursor = input_buffer.len() as u16;
-                    }
-                    (KeyCode::Home, _) => cursor = 0,
-                    (KeyCode::End, _) => cursor = input_buffer.len() as u16,
-                    (KeyCode::Char('b'), KeyModifiers::ALT) => {
-                        while cursor > 0 {
-                            cursor = cursor.saturating_sub(1);
-                            if word_boundary(&input_buffer, cursor as usize) {
-                                break;
-                            }
-                        }
-                    }
-                    (KeyCode::Char('f'), KeyModifiers::ALT) => {
-                        while cursor < input_buffer.len() as u16 {
-                            cursor += 1;
-                            if word_boundary(&input_buffer, cursor as usize) {
-                                break;
-                            }
-                        }
-                    }
-                    (KeyCode::Char(c), _) => {
-                        input_buffer.insert(cursor.into(), c);
-                        cursor += 1;
-                    }
-                    (KeyCode::Backspace, _) => {
-                        if cursor > 0 {
-                            cursor -= 1;
-                            input_buffer.remove(cursor.into());
-                        }
-                    }
-                    (KeyCode::Delete, _) => {
-                        if (cursor as usize) < input_buffer.len()
-                            || cursor == 0 && input_buffer.len() == 1
-                        {
-                            input_buffer.remove(cursor.into());
-                        } else if !input_buffer.is_empty() {
-                            input_buffer.pop();
-                            cursor -= 1;
-                        }
-                    }
-                    (KeyCode::Esc, _) => {
-                        input_buffer.clear();
-                        break;
-                    }
-                    _ => {}
+    /// Should only be called as part of the main event loop.
+    pub fn handle_input<'a>(&mut self, key_event: KeyEvent, callback: &Callback) -> Result<()> {
+        let Self {
+            ref mut buffer,
+            ref mut cursor,
+            ref mut history_cursor,
+            ..
+        } = self;
+        let history = &self.git_command_history;
+        crate::debug!("{}", cursor);
+        match (key_event.code, key_event.modifiers) {
+            (KeyCode::Enter, _) => {
+                callback(Some(&self.buffer))?;
+                self.state = State::Normal;
+                self.buffer.clear();
+                *cursor = 0;
+            }
+            (KeyCode::Left, _) | (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
+                *cursor = cursor.saturating_sub(1);
+            }
+            (KeyCode::Right, _) | (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
+                if (*cursor as usize) < buffer.len() {
+                    *cursor += 1;
                 }
             }
+            (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
+                if *history_cursor < history.len() {
+                    *history_cursor += 1;
+                    history[history.len() - *history_cursor].clone_into(buffer);
+                    *cursor = buffer.len();
+                }
+            }
+            (KeyCode::Down, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                *history_cursor = history_cursor.saturating_sub(1);
+                if *history_cursor == 0 {
+                    buffer.clear();
+                } else {
+                    history[history.len() - *history_cursor].clone_into(buffer);
+                }
+                *cursor = buffer.len();
+            }
+            (KeyCode::Home, _) => *cursor = 0,
+            (KeyCode::End, _) => *cursor = buffer.len(),
+            (KeyCode::Char('b'), KeyModifiers::ALT) => {
+                while *cursor > 0 {
+                    *cursor = cursor.saturating_sub(1);
+                    if word_boundary(&buffer, *cursor) {
+                        break;
+                    }
+                }
+            }
+            (KeyCode::Char('f'), KeyModifiers::ALT) => {
+                while *cursor < buffer.len() {
+                    *cursor += 1;
+                    if word_boundary(&buffer, *cursor) {
+                        break;
+                    }
+                }
+            }
+            (KeyCode::Char(' '), _) => panic!("`{}` {}", buffer, cursor),
+            (KeyCode::Char(c), _) => {
+                buffer.insert(*cursor, c);
+                *cursor += 1;
+            }
+            (KeyCode::Backspace, _) => {
+                if *cursor > 0 {
+                    *cursor -= 1;
+                    buffer.remove(*cursor);
+                }
+            }
+            (KeyCode::Delete, _) => {
+                if (*cursor) < buffer.len() || *cursor == 0 && buffer.len() == 1 {
+                    buffer.remove(*cursor);
+                } else if !buffer.is_empty() {
+                    buffer.pop();
+                    *cursor -= 1;
+                }
+            }
+            (KeyCode::Esc, _) => {
+                callback(None)?;
+                self.state = State::Normal;
+                self.buffer.clear();
+                *cursor = 0;
+            }
+            _ => {}
         }
-        (!input_buffer.is_empty()).then(|| {
-            history.push(input_buffer);
-            history.last().expect("we just pushed an elem").as_str()
-        })
+        Ok(())
     }
 
     /// Call to enter command mode. It will be exited automatically in the render call after the
     /// command is sent.
-    pub fn command(&mut self, term_width: u16, term_height: u16, git_cmd: bool) -> Result<()> {
-        // Clear the git output, if there is any.
+    pub fn command(&mut self, git_cmd: bool, view: &mut View) {
+        let prompt = if git_cmd { ":git " } else { "!" };
+        self.get_input(
+            Box::new(move |cmd: Option<&str>| {
+                crossterm::execute!(stdout(), cursor::MoveToColumn(0))?;
+                terminal::disable_raw_mode().context("failed to disable raw mode")?;
+                if let Some(cmd) = cmd {
+                    let cmd_output = if git_cmd {
+                        let output = git_process(&cmd.split_whitespace().collect::<Vec<_>>());
+                        Some(output)
+                    } else {
+                        // TODO: lazy_static the shell or something.
+                        let output = env::var("SHELL").map_or_else(
+                            |_| {
+                                let mut words = cmd.split_whitespace();
+                                words
+                                    .next()
+                                    .map(|cmd| Command::new(cmd).args(words).output())
+                            },
+                            |sh| Some(Command::new(sh).args(["-c", &cmd]).output()),
+                        );
+
+                        output.map(|o| o.context("failed to run command"))
+                    };
+                    match cmd_output {
+                        Some(Ok(cmd_output)) => Self::push_command_output(&cmd_output),
+                        Some(Err(e)) => Self::push(&format!("{e:?}"), MessageType::Error),
+                        None => {}
+                    }
+                }
+                terminal::enable_raw_mode().context("failed to enable raw mode")?;
+                print!("{}", cursor::Hide);
+                Ok(())
+            }),
+            Some(prompt),
+            view,
+        );
+    }
+
+    /// Render the contents of the buffer.
+    pub fn render(&mut self, term_width: u16, term_height: u16) -> Result<()> {
+        let msg = &self.buffer;
+        if self.state != State::Input && msg.is_empty() {
+            return Ok(());
+        }
+        if self.state == State::Normal {
+            // Make sure raw mode is disabled so we can just print the message.
+            terminal::disable_raw_mode().context("failed to exit raw mode")?;
+        }
+        self.current_height = msg.lines().count() + 1;
+
         print!(
             "{}{}{}",
             cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
@@ -191,72 +264,49 @@ impl MiniBuffer {
             cursor::Show,
         );
 
-        let (prompt, history) = if git_cmd {
-            (":git ", &mut self.git_command_history)
-        } else {
-            ("!", &mut self.command_history)
+        let (border, prompt) = match self.state {
+            State::Normal => ("─", ""),
+            State::Input => ("\u{2574}", self.prompt),
         };
-        let cmd = Self::take_input(prompt, term_width, term_height, history);
 
-        crossterm::execute!(stdout(), cursor::MoveToColumn(0))?;
-        terminal::disable_raw_mode().context("failed to disable raw mode")?;
-        if let Some(cmd) = cmd {
-            let cmd_output = if git_cmd {
-                let output = git_process(&cmd.split_whitespace().collect::<Vec<_>>());
-                Some(output)
-            } else {
-                // TODO: lazy_static the shell or something.
-                let output = env::var("SHELL").map_or_else(
-                    |_| {
-                        let mut words = cmd.split_whitespace();
-                        words
-                            .next()
-                            .map(|cmd| Command::new(cmd).args(words).output())
-                    },
-                    |sh| Some(Command::new(sh).args(["-c", cmd]).output()),
-                );
-
-                output.map(|o| o.context("failed to run command"))
-            };
-            match cmd_output {
-                Some(Ok(cmd_output)) => self.push_command_output(&cmd_output),
-                Some(Err(e)) => self.push(&format!("{e:?}"), MessageType::Error),
-                None => {}
-            }
+        print!(
+            "{}{}\n{}{msg}",
+            cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
+            border.repeat(term_width.into()),
+            prompt,
+        );
+        if self.state == State::Normal {
+            terminal::enable_raw_mode().context("failed to enable raw mode")?;
         }
-        terminal::enable_raw_mode().context("failed to enable raw mode")?;
+        if self.state == State::Input {
+            print!(
+                "{}{}{}",
+                cursor::Show,
+                cursor::MoveToColumn((self.cursor + prompt.len()) as u16),
+                if self.buffer.len() == self.cursor {
+                    SetCursorStyle::DefaultUserShape
+                } else {
+                    SetCursorStyle::SteadyBar
+                },
+            );
+        } else {
+            self.buffer.clear();
+        }
 
-        print!("{}", cursor::Hide);
+        drop(stdout().flush());
         Ok(())
     }
 
-    /// Render the most recent unsent message.
-    pub fn render(&mut self, term_width: u16, term_height: u16) -> Result<()> {
-        let Some((msg, msg_type)) = self.messages.pop() else {
-            self.current_height = 0;
-            return Ok(());
+    /// Pops the most recent message sent into the minibuffer.
+    pub fn pop_message(&mut self) {
+        let Some((msg, msg_type)) = MESSAGES.try_lock().expect("couldn't get mutex lock").pop()
+        else {
+            return;
         };
-        let config = CONFIG.get().expect("config wasn't initialised");
-        // Make sure raw mode is disabled so we can just print the message.
-        terminal::disable_raw_mode().context("failed to exit raw mode")?;
-        self.current_height = msg.lines().count() + 1;
-        match msg_type {
-            MessageType::Note => print!(
-                "{}{}\n{msg}",
-                cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
-                "─".repeat(term_width.into()),
-            ),
-            MessageType::Error => print!(
-                "{}{}\n{}{msg}{}",
-                cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
-                "─".repeat(term_width.into()),
-                SetForegroundColor(config.colors.error),
-                SetForegroundColor(config.colors.foreground),
-            ),
-        }
-        terminal::enable_raw_mode().context("failed to enable raw mode")?;
-        drop(stdout().flush());
-        Ok(())
+        self.buffer = match msg_type {
+            MessageType::Note => msg,
+            MessageType::Error => format!("{}{msg}", SetForegroundColor(config!().colors.error)),
+        };
     }
 }
 
