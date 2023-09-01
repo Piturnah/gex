@@ -78,3 +78,45 @@ pub fn parse_hunk_new(header: &str) -> Result<&str> {
         .with_context(|| format!("tried to parse strange hunk header: {header}"))?;
     Ok(old)
 }
+
+#[cfg(test)]
+mod tests {
+    use test_case::test_case;
+
+    const ISSUE_62: &str = "diff --git a/asteroid-loop/index.html b/asteroid-loop/index.html
+index d79df71..e2d1e9f 100644
+--- a/asteroid-loop/index.html
++++ b/asteroid-loop/index.html
+@@ -14,15 +14,10 @@
+     var unityInstance = UnityLoader.instantiate(\"unityContainer\", \"Build/thing build.json\", { onProgress: UnityProgress });
+   </script>
+   <script src=\"https://code.jquery.com/jquery-1.10.2.js\"></script>
+-  <script>
+-    $(function () {
+-      $(\"#header\").load(\"/assets/header.html\");
+-    });
+-  </script>
+ </head>
+ 
+ <body>
+-  <div id=\"header\"></div>
++  <#header />
+   <div class=\"webgl-content\">
+     <div id=\"unityContainer\" style=\"width: 960px; height: 540px\"></div>
+     <div class=\"footer\">
+@@ -32,4 +27,4 @@
+   </div>
+ </body>
+ 
+-</html>
+\\ No newline at end of file
++</html>";
+
+    #[test_case(ISSUE_62 ; "issue 62")]
+    fn parse(diff: &str) {
+        let parsed = super::parse_diff(diff);
+        assert!(parsed.is_ok());
+        let parsed = parsed.unwrap();
+        assert_eq!(parsed.len(), 1);
+    }
+}

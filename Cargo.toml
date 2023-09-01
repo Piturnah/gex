@@ -25,6 +25,9 @@ serde_ignored = "0.1.9"
 toml = "0.7.6"
 vte = "0.11.1"
 
+[dev-dependencies]
+test-case = "3.1.0"
+
 #       Tokee
 #      (Gecko gekko)                _____________
 #                            __,---'::.-  -::_ _ `-----.___      ______

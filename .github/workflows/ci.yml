@@ -23,8 +23,8 @@ jobs:
         profile: minimal
         components: clippy, rustfmt
         override: true
-    - name: Check
-      run: cargo check
+    - name: Test
+      run: cargo test
     - name: Clippy
       run: cargo clippy -- -D warnings
     - name: Format
