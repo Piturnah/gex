@@ -7,7 +7,7 @@ use std::{
 use anyhow::{Context, Result};
 use crossterm::{cursor, terminal};
 
-use crate::{branch::BranchList, config::Config, git_process, State, View};
+use crate::{branch::BranchList, config::Config, git_process, minibuffer::MiniBuffer, State, View};
 
 macro_rules! commands {
     ($($key:literal: $cmd:tt => [$($subkey:literal: $subcmd:tt),+$(,)?]),*$(,)?) => {
@@ -68,7 +68,6 @@ impl GexCommand {
     pub fn handle_input(self, key: char, state: &mut State, config: &Config) -> Result<()> {
         use SubCommand::*;
         let State {
-            ref mut minibuffer,
             ref mut status,
             ref mut view,
             repo,
@@ -84,7 +83,7 @@ impl GexCommand {
                 match subcmd {
                     SubCommand::New => {
                         let checkout = BranchList::checkout_new()?;
-                        minibuffer.push_command_output(&checkout);
+                        MiniBuffer::push_command_output(&checkout);
                         status.fetch(repo, &config.options)?;
                         *view = View::Status;
                     }
@@ -100,7 +99,7 @@ impl GexCommand {
                     SubCommand::Commit => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .context("failed to leave alternate screen")?;
-                        minibuffer.push_command_output(
+                        MiniBuffer::push_command_output(
                             &Command::new("git")
                                 .arg("commit")
                                 .stdout(Stdio::inherit())
@@ -113,7 +112,7 @@ impl GexCommand {
                             .context("failed to enter alternate screen")?;
                     }
                     SubCommand::Extend => {
-                        minibuffer.push_command_output(
+                        MiniBuffer::push_command_output(
                             &Command::new("git")
                                 .args(["commit", "--amend", "--no-edit"])
                                 .stdout(Stdio::inherit())
@@ -126,7 +125,7 @@ impl GexCommand {
                     SubCommand::Amend => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
                             .context("failed to leave alternate screen")?;
-                        minibuffer.push_command_output(
+                        MiniBuffer::push_command_output(
                             &Command::new("git")
                                 .args(["commit", "--amend"])
                                 .stdout(Stdio::inherit())
@@ -148,9 +147,9 @@ impl GexCommand {
                 crossterm::execute!(stdout(), cursor::MoveToColumn(0), cursor::Show)?;
                 terminal::disable_raw_mode().context("failed to disable raw mode")?;
                 match subcmd {
-                    SubCommand::Remote => minibuffer.push_command_output(&git_process(&["push"])?),
+                    SubCommand::Remote => MiniBuffer::push_command_output(&git_process(&["push"])?),
                     SubCommand::Force => {
-                        minibuffer.push_command_output(&git_process(&["push", "--force"])?);
+                        MiniBuffer::push_command_output(&git_process(&["push", "--force"])?);
                     }
                 }
                 crossterm::execute!(stdout(), cursor::Hide)?;
@@ -160,9 +159,9 @@ impl GexCommand {
             Stash(subcmd) => {
                 use stash::SubCommand;
                 match subcmd {
-                    SubCommand::Stash => minibuffer.push_command_output(&git_process(&["stash"])?),
+                    SubCommand::Stash => MiniBuffer::push_command_output(&git_process(&["stash"])?),
                     SubCommand::Pop => {
-                        minibuffer.push_command_output(&git_process(&["stash", "pop"])?);
+                        MiniBuffer::push_command_output(&git_process(&["stash", "pop"])?);
                     }
                 }
                 status.fetch(repo, &config.options)?;

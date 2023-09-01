@@ -596,7 +596,7 @@ impl Status {
         Ok(())
     }
 
-    fn stage_or_unstage(&mut self, command: Stage, mini_buffer: &mut MiniBuffer) -> Result<()> {
+    fn stage_or_unstage(&mut self, command: Stage) -> Result<()> {
         if self.file_diffs.is_empty() {
             return Ok(());
         }
@@ -652,7 +652,7 @@ impl Status {
                     // waiting on the child process to finish.
                     .map(|mut stderr| stderr.read_to_string(&mut stderr_buf))
                     .context("failed to read stderr of child process")??;
-                mini_buffer.push(&stderr_buf, MessageType::Error);
+                MiniBuffer::push(&stderr_buf, MessageType::Error);
             }
         }
 
@@ -663,12 +663,12 @@ impl Status {
         Ok(())
     }
 
-    pub fn stage(&mut self, mini_buffer: &mut MiniBuffer) -> Result<()> {
-        self.stage_or_unstage(Stage::Add, mini_buffer)
+    pub fn stage(&mut self) -> Result<()> {
+        self.stage_or_unstage(Stage::Add)
     }
 
-    pub fn unstage(&mut self, mini_buffer: &mut MiniBuffer) -> Result<()> {
-        self.stage_or_unstage(Stage::Reset, mini_buffer)
+    pub fn unstage(&mut self) -> Result<()> {
+        self.stage_or_unstage(Stage::Reset)
     }
 
     /// Toggles expand on the selected diff item.

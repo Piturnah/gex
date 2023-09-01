@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.3...main)
+### Fixed
+- Minibuffer border messed up on terminal resize ([#65](https://github.com/Piturnah/gex/pull/65))
+
 ## [0.6.3](https://github.com/Piturnah/gex/compare/v0.6.2...v0.6.3) - 2023-08-30
 ### Fixed
 - Entering unreachable code on inserting trailing newline ([#62](https://github.com/Piturnah/gex/issues/62))
