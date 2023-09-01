@@ -258,14 +258,20 @@ impl MiniBuffer {
     /// Render the contents of the buffer.
     pub fn render(&mut self, term_width: u16, term_height: u16) -> Result<()> {
         let msg = &self.buffer;
-        if self.state != State::Input && msg.is_empty() {
-            return Ok(());
-        }
+        self.current_height = std::cmp::max(msg.lines().count() + 1, 2);
+
         if self.state == State::Normal {
+            if msg.is_empty() {
+                return Ok(());
+            }
             // Make sure raw mode is disabled so we can just print the message.
             terminal::disable_raw_mode().context("failed to exit raw mode")?;
         }
-        self.current_height = msg.lines().count() + 1;
+
+        let (border, prompt) = match self.state {
+            State::Normal => ("─", ""),
+            State::Input => ("\u{2574}", self.prompt),
+        };
 
         print!(
             "{}{}{}",
@@ -274,33 +280,29 @@ impl MiniBuffer {
             cursor::Show,
         );
 
-        let (border, prompt) = match self.state {
-            State::Normal => ("─", ""),
-            State::Input => ("\u{2574}", self.prompt),
-        };
-
         print!(
-            "{}{}\n{}{msg}",
+            "{}{}\r\n{prompt}{msg}",
             cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
             border.repeat(term_width.into()),
-            prompt,
         );
-        if self.state == State::Normal {
-            terminal::enable_raw_mode().context("failed to enable raw mode")?;
-        }
-        if self.state == State::Input {
-            print!(
-                "{}{}{}",
-                cursor::Show,
-                cursor::MoveToColumn((self.cursor + prompt.len()) as u16),
-                if self.buffer.len() == self.cursor {
-                    SetCursorStyle::DefaultUserShape
-                } else {
-                    SetCursorStyle::SteadyBar
-                },
-            );
-        } else {
-            self.buffer.clear();
+
+        match self.state {
+            State::Normal => {
+                terminal::enable_raw_mode().context("failed to enable raw mode")?;
+                self.buffer.clear();
+            }
+            State::Input => {
+                print!(
+                    "{}{}{}",
+                    cursor::Show,
+                    cursor::MoveToColumn((self.cursor + prompt.len()) as u16),
+                    if self.buffer.len() == self.cursor {
+                        SetCursorStyle::DefaultUserShape
+                    } else {
+                        SetCursorStyle::SteadyBar
+                    },
+                );
+            }
         }
 
         drop(stdout().flush());
