@@ -13,6 +13,7 @@ use std::{
     io::{stdin, stdout, BufRead, Write},
     panic,
     process::{self, Command, Output},
+    rc::Rc,
 };
 
 use anyhow::{Context, Result};
@@ -29,7 +30,7 @@ use git2::Repository;
 use crate::{
     command::GexCommand,
     config::{Config, CONFIG},
-    minibuffer::{MessageType, MiniBuffer},
+    minibuffer::{Callback, MessageType, MiniBuffer},
     render::{Clear, Render, ResetAttributes},
 };
 
@@ -55,11 +56,12 @@ pub struct State {
     renderer: Renderer,
 }
 
+#[derive(Clone)]
 pub enum View {
     Status,
     BranchList,
     Command(GexCommand),
-    Input(minibuffer::Callback),
+    Input(Callback, Box<View>),
 }
 
 pub fn git_process(args: &[&str]) -> Result<Output> {
@@ -171,7 +173,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
 
         print!("{ResetAttributes}");
         match state.view {
-            View::Status | View::Command(_) | View::Input(_) => {
+            View::Status | View::Command(_) | View::Input(..) => {
                 state.status.render(&mut state.renderer)?
             }
             View::BranchList => state.branch_list.render(&mut state.renderer)?,
@@ -348,8 +350,20 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     KeyCode::Char(c) => cmd.handle_input(c, &mut state, config)?,
                     _ => {}
                 },
-                View::Input(ref callback) => {
-                    state.minibuffer.handle_input(event, callback)?;
+                View::Input(ref callback, ref return_view) => {
+                    // This clone should be very cheap as we should never be constructing a
+                    // View::Input with the return view as View::Input.
+                    //
+                    // NOTE: This all indicates there is probably a better way to represent the
+                    // View type, as it never actually needs to be recursive -- then we would also
+                    // be able to just #[derive(Copy)].
+                    debug_assert!(!matches!(**return_view, View::Input(..)));
+                    state.minibuffer.handle_input(
+                        event,
+                        &Rc::clone(callback),
+                        (**return_view).clone(),
+                        &mut state.view,
+                    )?;
                 }
             };
             break;

@@ -5,6 +5,7 @@ use std::{
     env,
     io::{stdout, Write},
     process::{Command, Output},
+    rc::Rc,
     str,
     sync::Mutex,
 };
@@ -24,7 +25,7 @@ use crate::{config, git_process, render::Clear, View};
 pub static MESSAGES: Mutex<Vec<(String, MessageType)>> = Mutex::new(Vec::new());
 
 /// The callback type for getting input.
-pub type Callback = Box<dyn Fn(Option<&str>) -> Result<()>>;
+pub type Callback = Rc<dyn Fn(Option<&str>) -> Result<()>>;
 
 #[derive(PartialEq, Eq)]
 enum State {
@@ -105,18 +106,27 @@ impl MiniBuffer {
     }
 
     /// Get some user input from this minibuffer and run `callback` on it.
-    ///
-    /// # Notes
-    ///
-    /// You probably want to switch the view to something else at the end of your callback.
     pub fn get_input(&mut self, callback: Callback, prompt: Option<&'static str>, view: &mut View) {
+        self.cursor = 0;
+        self.buffer.clear();
+        self.history_cursor = 0;
         self.state = State::Input;
         self.prompt = prompt.unwrap_or("");
-        *view = View::Input(callback);
+        // This clone should be very cheap as we should never be calling this method while already
+        // in View::Input.
+        debug_assert!(!matches!(view, View::Input(..)));
+        *view = View::Input(callback, Box::new(view.clone()));
     }
 
-    /// Should only be called as part of the main event loop.
-    pub fn handle_input<'a>(&mut self, key_event: KeyEvent, callback: &Callback) -> Result<()> {
+    // Should only be called as part of the main event loop.
+    pub fn handle_input<'a>(
+        &mut self,
+        key_event: KeyEvent,
+        callback: &Callback,
+        // The view to return to after exiting.
+        return_view: View,
+        view: &mut View,
+    ) -> Result<()> {
         let Self {
             ref mut buffer,
             ref mut cursor,
@@ -124,13 +134,12 @@ impl MiniBuffer {
             ..
         } = self;
         let history = &self.git_command_history;
-        crate::debug!("{}", cursor);
         match (key_event.code, key_event.modifiers) {
             (KeyCode::Enter, _) => {
                 callback(Some(&self.buffer))?;
                 self.state = State::Normal;
                 self.buffer.clear();
-                *cursor = 0;
+                *view = return_view;
             }
             (KeyCode::Left, _) | (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
                 *cursor = cursor.saturating_sub(1);
@@ -174,7 +183,6 @@ impl MiniBuffer {
                     }
                 }
             }
-            (KeyCode::Char(' '), _) => panic!("`{}` {}", buffer, cursor),
             (KeyCode::Char(c), _) => {
                 buffer.insert(*cursor, c);
                 *cursor += 1;
@@ -197,19 +205,18 @@ impl MiniBuffer {
                 callback(None)?;
                 self.state = State::Normal;
                 self.buffer.clear();
-                *cursor = 0;
+                *view = return_view;
             }
             _ => {}
         }
         Ok(())
     }
 
-    /// Call to enter command mode. It will be exited automatically in the render call after the
-    /// command is sent.
+    /// Get a git command or shell command from the user and execute it.
     pub fn command(&mut self, git_cmd: bool, view: &mut View) {
         let prompt = if git_cmd { ":git " } else { "!" };
         self.get_input(
-            Box::new(move |cmd: Option<&str>| {
+            Rc::new(move |cmd: Option<&str>| {
                 crossterm::execute!(stdout(), cursor::MoveToColumn(0))?;
                 terminal::disable_raw_mode().context("failed to disable raw mode")?;
                 if let Some(cmd) = cmd {
