@@ -168,7 +168,7 @@ impl Default for WsErrorHighlight {
     /// If none was provided by the gex config, we will look in the git config. If we couldn't get
     /// that one then we'll just provide `Self::GIT_DEFAULT`.
     fn default() -> Self {
-        let Ok(Ok(git_config)) = git2::Config::open_default().map(|mut config| config.snapshot())
+        let Ok(git_config) = git2::Config::open_default().and_then(|mut config| config.snapshot())
         else {
             return Self::GIT_DEFAULT;
         };
