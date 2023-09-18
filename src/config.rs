@@ -31,14 +31,14 @@ pub struct Clargs {
 }
 
 /// The top-level of the config parsed from the config file.
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Debug, PartialEq, Eq)]
 #[serde(default)]
 pub struct Config {
     pub options: Options,
     pub colors: Colors,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(default)]
 pub struct Options {
     pub auto_expand_files: bool,
@@ -48,7 +48,7 @@ pub struct Options {
     pub ws_error_highlight: WsErrorHighlight,
 }
 
-#[derive(Deserialize, Clone, Copy, Debug)]
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(try_from = "String")]
 pub struct WsErrorHighlight {
     pub old: bool,
@@ -68,7 +68,7 @@ impl Default for Options {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(default)]
 pub struct Colors {
     pub foreground: Color,
@@ -215,5 +215,62 @@ impl FromStr for WsErrorHighlight {
             }
         }
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::style::Color;
+
+    // Should be up to date with the example config in the README.
+    #[test]
+    fn parse_readme_example() {
+        const INPUT: &str = "auto_expand_files = false
+auto_expand_hunks = true
+lookahead_lines = 5
+truncate_lines = true # `false` is not recommended - see #37
+ws_error_highlight = \"new\" # override git's diff.wsErrorHighlight
+
+# Named colours use the terminal colour scheme. You can also describe your colours
+# by hex string \"#RRGGBB\", RGB \"rgb_(r,g,b)\" or by Ansi \"ansi_(value)\".
+#
+# This example uses a Gruvbox colour theme.
+[colors]
+foreground = \"#ebdbb2\"
+background = \"#282828\"
+heading = \"#fabd2f\"
+hunk_head = \"#d3869b\"
+addition = \"#b8bb26\"
+deletion = \"#fb4934\"
+key = \"#d79921\"
+error = \"#cc241d\"
+";
+        assert_eq!(
+            toml::from_str(INPUT),
+            Ok(Config {
+                options: Options {
+                    auto_expand_files: false,
+                    auto_expand_hunks: true,
+                    lookahead_lines: 5,
+                    truncate_lines: true,
+                    ws_error_highlight: WsErrorHighlight {
+                        old: false,
+                        new: true,
+                        context: false
+                    }
+                },
+                colors: Colors {
+                    foreground: Color::from((235, 219, 178)),
+                    background: Color::from((40, 40, 40)),
+                    heading: Color::from((250, 189, 47)),
+                    hunk_head: Color::from((211, 134, 155)),
+                    addition: Color::from((184, 187, 38)),
+                    deletion: Color::from((251, 73, 52)),
+                    key: Color::from((215, 153, 33)),
+                    error: Color::from((204, 36, 29))
+                }
+            })
+        )
     }
 }
