@@ -15,8 +15,9 @@ use nom::{bytes::complete::take_until, IResult};
 use crate::{
     config::{Config, Options, CONFIG},
     git_process,
+    highlight::SyntaxHighlight,
     minibuffer::{MessageType, MiniBuffer},
-    parse::{self, parse_hunk_new, parse_hunk_old, SyntaxHighlight},
+    parse::{self, parse_hunk_new, parse_hunk_old},
     render::{self, Renderer, ResetAttributes, ResetColor},
 };
 

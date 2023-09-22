@@ -38,6 +38,7 @@ mod branch;
 mod command;
 mod config;
 mod debug;
+mod highlight;
 mod minibuffer;
 mod parse;
 mod render;

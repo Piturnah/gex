@@ -1,73 +1,10 @@
-use std::{collections::HashMap, iter};
+use std::collections::HashMap;
 
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use nom::{bytes::complete::tag, character::complete::not_line_ending, IResult};
-use syntect::{
-    easy::HighlightLines,
-    highlighting::{Color, FontStyle, Style, Theme, ThemeSet},
-    parsing::{SyntaxReference, SyntaxSet},
-    util::as_24_bit_terminal_escaped,
-};
 
-// Diff styles:
-const MARKER_NONE: Style = Style {
-    foreground: Color::WHITE,
-    background: Color::BLACK,
-    font_style: FontStyle::empty(),
-};
-
-const MARKER_ADDED: Style = Style {
-    foreground: Color {
-        r: 0x78,
-        g: 0xde,
-        b: 0x0c,
-        a: 0xff,
-    },
-    background: Color::BLACK,
-    font_style: FontStyle::empty(),
-};
-const MARKER_REMOVED: Style = Style {
-    foreground: Color {
-        r: 0xd3,
-        g: 0x2e,
-        b: 0x09,
-        a: 0xff,
-    },
-    background: Color::BLACK,
-    font_style: FontStyle::empty(),
-};
-
-#[derive(Debug)]
-pub struct SyntaxHighlight {
-    syntax_set: SyntaxSet,
-    theme: Theme,
-}
-
-impl SyntaxHighlight {
-    pub fn new() -> Self {
-        Self {
-            syntax_set: SyntaxSet::load_defaults_newlines(),
-            // TODO: theme configuration
-            theme: ThemeSet::load_defaults().themes["base16-eighties.dark"].clone(),
-        }
-    }
-
-    fn get_syntax(&self, path: &str) -> &SyntaxReference {
-        // TODO: probably better to use std::path?
-        let file_ext = path.rsplit('.').next().unwrap_or("");
-        self.syntax_set
-            .find_syntax_by_extension(file_ext)
-            .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text())
-    }
-}
-
-// TODO: just a workaround so that Status::default() still works
-impl Default for SyntaxHighlight {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+use crate::highlight::{highlight_hunk, SyntaxHighlight};
 
 /// The returned hashmap associates a filename with a `Vec` of `String` where the strings contain
 /// the content of each hunk.
@@ -84,43 +21,12 @@ pub fn parse_diff<'a>(
         .skip(1)
     {
         let path = get_path(diff)?;
+        // get language syntax here, since all hunks are from the same file
         let syntax = highlight.get_syntax(path);
-        let mut highlighter = HighlightLines::new(syntax, &highlight.theme);
         let hunks = get_hunks(diff)?
-            .into_iter()
-            .map(|hunk| {
-                let s: String = hunk
-                    .lines()
-                    .map(|line| {
-                        let Some(diff_char) = line.chars().next() else {
-                            return line.to_owned();
-                        };
-
-                        let diff_char_len = diff_char.len_utf8();
-
-                        // add marker and one space
-                        let (marker, diff_line) = match diff_char {
-                            '+' => ((MARKER_ADDED, "+ "), &line[diff_char_len..]),
-                            '-' => ((MARKER_REMOVED, "- "), &line[diff_char_len..]),
-                            _ => ((MARKER_NONE, " "), line),
-                        };
-
-                        let Ok(ranges) =
-                            highlighter.highlight_line(diff_line, &highlight.syntax_set)
-                        else {
-                            // Syntax highighting failed, fallback to no highlighting
-                            // TODO: propagate error?
-                            return diff_line.to_owned();
-                        };
-
-                        let ranges: Vec<_> = iter::once(marker).chain(ranges).collect();
-                        as_24_bit_terminal_escaped(&ranges, false)
-                    })
-                    .join("\n");
-                s
-            })
+            .iter()
+            .map(|hunk| highlight_hunk(hunk, highlight, syntax))
             .collect();
-
         diffs.insert(path, hunks);
     }
     Ok(diffs)
