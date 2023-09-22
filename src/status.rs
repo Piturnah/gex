@@ -16,7 +16,7 @@ use crate::{
     config::{Config, Options, CONFIG},
     git_process,
     minibuffer::{MessageType, MiniBuffer},
-    parse::{self, parse_hunk_new, parse_hunk_old},
+    parse::{self, parse_hunk_new, parse_hunk_old, SyntaxHighlight},
     render::{self, Renderer, ResetAttributes, ResetColor},
 };
 
@@ -280,6 +280,7 @@ pub struct Status {
     pub count_unstaged: usize,
     pub count_staged: usize,
     pub cursor: usize,
+    highlight: SyntaxHighlight,
 }
 
 impl render::Render for Status {
@@ -515,13 +516,25 @@ impl Status {
 
         // Get the diff information for unstaged changes
         let diff = git_process(&["diff", "--no-ext-diff"])?;
-        Self::populate_diffs(&mut unstaged, &self.file_diffs, &diff, options)
-            .context("failed to populate unstaged file diffs")?;
+        Self::populate_diffs(
+            &mut unstaged,
+            &self.file_diffs,
+            &diff,
+            options,
+            &self.highlight,
+        )
+        .context("failed to populate unstaged file diffs")?;
 
         // Get the diff information for staged changes
         let diff = git_process(&["diff", "--cached", "--no-ext-diff"])?;
-        Self::populate_diffs(&mut staged, &self.file_diffs, &diff, options)
-            .context("failed to populate unstaged file diffs")?;
+        Self::populate_diffs(
+            &mut staged,
+            &self.file_diffs,
+            &diff,
+            options,
+            &self.highlight,
+        )
+        .context("failed to populate unstaged file diffs")?;
 
         self.branch = branch;
         self.head = std::str::from_utf8(
@@ -559,9 +572,10 @@ impl Status {
         prev_file_diffs: &[FileDiff],
         diff: &Output,
         options: &Options,
+        highlight: &SyntaxHighlight,
     ) -> Result<()> {
         let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
-        let hunks = parse::parse_diff(diff)?;
+        let hunks = parse::parse_diff(diff, highlight)?;
         for file in file_diffs {
             if let Some(hunks) = hunks.get(file.path.as_str()) {
                 // Get all the diffs entries of this file from the previous iteration.
