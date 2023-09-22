@@ -534,7 +534,7 @@ impl Status {
             options,
             &self.highlight,
         )
-        .context("failed to populate unstaged file diffs")?;
+        .context("failed to populate staged file diffs")?;
 
         self.branch = branch;
         self.head = std::str::from_utf8(
