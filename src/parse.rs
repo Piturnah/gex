@@ -4,7 +4,10 @@ use anyhow::{Context, Result};
 use itertools::Itertools;
 use nom::{bytes::complete::tag, character::complete::not_line_ending, IResult};
 
-use crate::highlight::{highlight_hunk, SyntaxHighlight};
+use crate::{
+    highlight::{highlight_hunk, SyntaxHighlight},
+    hunk::Hunk,
+};
 
 /// The returned hashmap associates a filename with a `Vec` of `String` where the strings contain
 /// the content of each hunk.
@@ -23,11 +26,11 @@ pub fn parse_diff<'a>(
         let path = get_path(diff)?;
         // get language syntax here, since all hunks are from the same file
         let syntax = highlight.get_syntax(path);
-        let hunks = get_hunks(diff)?
-            .iter()
-            .map(|hunk| highlight_hunk(hunk, highlight, syntax))
+        let hunks: Result<Vec<_>> = get_hunks(diff)?
+            .into_iter()
+            .map(|hunk| Ok(highlight_hunk(&Hunk::from_string(hunk)?, highlight, syntax)))
             .collect();
-        diffs.insert(path, hunks);
+        diffs.insert(path, hunks?);
     }
     Ok(diffs)
 }

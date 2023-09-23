@@ -1,6 +1,3 @@
-use std::iter;
-
-use itertools::Itertools;
 use syntect::{
     easy::HighlightLines,
     highlighting::{Color, FontStyle, Style, Theme, ThemeSet},
@@ -8,15 +5,18 @@ use syntect::{
     util::as_24_bit_terminal_escaped,
 };
 
+use crate::hunk::{DiffLineType, Hunk};
+
 // Diff styles
 // TODO: use existing colors from configuration?
-const MARKER_NONE: Style = Style {
+
+const HEADER_MARKER_STYLE: Style = Style {
     foreground: Color::WHITE,
     background: Color::BLACK,
     font_style: FontStyle::empty(),
 };
 
-const MARKER_ADDED: Style = Style {
+const MARKER_ADDED_STYLE: Style = Style {
     foreground: Color {
         r: 0x78,
         g: 0xde,
@@ -32,7 +32,7 @@ const MARKER_ADDED: Style = Style {
     font_style: FontStyle::empty(),
 };
 
-const MARKER_REMOVED: Style = Style {
+const MARKER_REMOVED_STYLE: Style = Style {
     foreground: Color {
         r: 0xd3,
         g: 0x2e,
@@ -47,6 +47,19 @@ const MARKER_REMOVED: Style = Style {
     },
     font_style: FontStyle::empty(),
 };
+
+// const BG_ADDED_STRONG: Color = Color {
+//     r: 0x11,
+//     g: 0x4f,
+//     b: 0x05,
+//     a: 0xff,
+// };
+// const BG_REMOVED_STRONG: Color = Color {
+//     r: 0x77,
+//     g: 0x23,
+//     b: 0x05,
+//     a: 0xff,
+// };
 
 #[derive(Debug)]
 pub struct SyntaxHighlight {
@@ -79,78 +92,76 @@ impl Default for SyntaxHighlight {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum DiffStatus {
-    Unchanged,
-    Added,
-    Removed,
-}
+pub fn highlight_hunk(hunk: &Hunk, hl: &SyntaxHighlight, syntax: &SyntaxReference) -> String {
+    // TODO: move somewhere else?
+    let marker_added = as_24_bit_terminal_escaped(&[(MARKER_ADDED_STYLE, "\u{258c}")], true);
+    let marker_removed = as_24_bit_terminal_escaped(&[(MARKER_REMOVED_STYLE, "\u{258c}")], true);
 
-pub fn highlight_hunk(hunk: &str, highlight: &SyntaxHighlight, syntax: &SyntaxReference) -> String {
-    let mut highlighter = HighlightLines::new(syntax, &highlight.theme);
+    // separate highlighters for added and removed lines to keep the syntax intact
+    let mut hl_add = HighlightLines::new(syntax, &hl.theme);
+    let mut hl_rem = HighlightLines::new(syntax, &hl.theme);
 
-    if let Some(hunk) = try_highlight_single_line(hunk, highlight, syntax) {
-        return hunk;
-    }
-    
-    // syntax highlight each line
-    hunk.lines()
-        .map(|line| {
-            let Some(diff_char) = line.chars().next() else {
-                return line.to_owned();
-            };
+    let mut buf = String::new();
 
-            let diff_char_len = diff_char.len_utf8();
+    let (header_marker, header_content) = {
+        let header = hunk.header();
+        let header_content = hl_add
+            .highlight_line(header.1, &hl.syntax_set)
+            .and_then(|_| hl_rem.highlight_line(header.1, &hl.syntax_set));
+        (
+            as_24_bit_terminal_escaped(&[(HEADER_MARKER_STYLE, header.0)], false),
+            header_content.map_or_else(
+                |_| header.1.to_owned(),
+                |content| as_24_bit_terminal_escaped(&content, false),
+            ),
+        )
+    };
 
-            // add marker and one space
-            let (marker, diff_line, status) = match diff_char {
-                '+' => (
-                    (MARKER_ADDED, "\u{258c} "),
-                    &line[diff_char_len..],
-                    DiffStatus::Added,
-                ),
-                '-' => (
-                    (MARKER_REMOVED, "\u{258c} "),
-                    &line[diff_char_len..],
-                    DiffStatus::Removed,
-                ),
-                _ => ((MARKER_NONE, " "), line, DiffStatus::Unchanged),
-            };
+    buf.push_str(&header_marker);
+    buf.push_str(&header_content);
+    buf.push('\n');
 
-            let Ok(ranges) = highlighter.highlight_line(diff_line, &highlight.syntax_set) else {
-                // Syntax highlighting failed, fallback to no highlighting
-                // TODO: propagate error?
-                return diff_line.to_owned();
-            };
+    for (line_type, line_content) in hunk.lines() {
+        let ranges = match line_type {
+            DiffLineType::Unchanged => hl_add
+                .highlight_line(line_content, &hl.syntax_set)
+                .and_then(|_| hl_rem.highlight_line(line_content, &hl.syntax_set)),
+            DiffLineType::Added => hl_add.highlight_line(line_content, &hl.syntax_set),
+            DiffLineType::Removed => hl_rem.highlight_line(line_content, &hl.syntax_set),
+        };
 
-            let mut ranges: Vec<_> = iter::once(marker).chain(ranges).collect();
+        let Ok(mut ranges) = ranges else {
+            buf.push_str(line_content);
+            continue;
+        };
 
-            match status {
-                DiffStatus::Unchanged => (),
-                DiffStatus::Added => {
-                    for r in &mut ranges {
-                        r.0.background = MARKER_ADDED.background;
-                    }
-                }
-                DiffStatus::Removed => {
-                    for r in &mut ranges {
-                        r.0.background = MARKER_REMOVED.background;
-                    }
-                }
+        let bg = match line_type {
+            DiffLineType::Unchanged => {
+                buf.push(' ');
+                false
             }
+            DiffLineType::Added => {
+                buf.push_str(&marker_added);
+                for r in &mut ranges {
+                    r.0.background = MARKER_ADDED_STYLE.background;
+                }
+                true
+            }
+            DiffLineType::Removed => {
+                buf.push_str(&marker_removed);
+                for r in &mut ranges {
+                    r.0.background = MARKER_REMOVED_STYLE.background;
+                }
+                true
+            }
+        };
 
-            as_24_bit_terminal_escaped(&ranges, status != DiffStatus::Unchanged)
-        })
-        .join("\n")
-}
+        let highlighted_content = as_24_bit_terminal_escaped(&ranges, bg);
+        buf.push_str(&highlighted_content);
+        buf.push('\n');
+    }
 
-fn try_highlight_single_line(hunk: &str, highlight: &SyntaxHighlight, syntax: &SyntaxReference) -> Option<String> {
-    // TODO: attempt highlighting single line changes with strong inline highlight
-
-    // - foo(bar, baz);
-    //            --- strong background highlight (red)
-    // + foo(bar, BAZ);
-    //            --- strong background highlight (green)
-    
-    None
+    // according to docs of `as_24_bit_terminal_escaped`
+    buf.push_str("\x1b[0m");
+    buf
 }

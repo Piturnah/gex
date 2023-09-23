@@ -39,6 +39,7 @@ mod command;
 mod config;
 mod debug;
 mod highlight;
+mod hunk;
 mod minibuffer;
 mod parse;
 mod render;

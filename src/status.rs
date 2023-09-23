@@ -35,6 +35,7 @@ enum DiffType {
     Deleted,
 }
 
+// unify with hunk.rs:/Hunk
 #[derive(Debug, Clone)]
 pub struct Hunk {
     diff: String,
@@ -58,51 +59,26 @@ impl fmt::Display for Hunk {
         );
 
         if self.expanded {
-            let ws_error_highlight = CONFIG
-                .get()
-                .expect("config is initialised at the start of the program")
-                .options
-                .ws_error_highlight;
             for line in lines {
-                match line.chars().next() {
-                    Some('+') => write!(
-                        &mut outbuf,
-                        "\r\n{}{}",
-                        style::SetForegroundColor(config.colors.addition),
-                        if ws_error_highlight.new {
-                            format_trailing_whitespace(line, config)
-                        } else {
-                            Cow::Borrowed(line)
-                        }
-                    ),
-                    Some('-') => write!(
-                        &mut outbuf,
-                        "\r\n{}{}",
-                        style::SetForegroundColor(config.colors.deletion),
-                        if ws_error_highlight.old {
-                            format_trailing_whitespace(line, config)
-                        } else {
-                            Cow::Borrowed(line)
-                        }
-                    ),
-                    Some(c) => write!(
-                        &mut outbuf,
-                        "\r\n{}{c}{}",
-                        style::SetForegroundColor(config.colors.foreground),
-                        if ws_error_highlight.context {
-                            format_trailing_whitespace(&line[1..], config)
-                        } else {
-                            Cow::Borrowed(&line[1..])
-                        }
-                    ),
-                    // I think this case never happens, but if it does, it just means the line was
-                    // empty.
-                    None => {
-                        outbuf.push('\n');
-                        Ok(())
-                    }
-                }?;
+                write!(&mut outbuf, "\r\n{line}")?;
             }
+            // TODO
+            // let ws_error_highlight = CONFIG
+            //     .get()
+            //     .expect("config is initialised at the start of the program")
+            //     .options
+            //     .ws_error_highlight;
+            // for line in lines {
+            //     write!(
+            //         &mut outbuf,
+            //         "\r\n{}",
+            //         if ws_error_highlight.context {
+            //             format_trailing_whitespace(&line[1..], config)
+            //         } else {
+            //             Cow::Borrowed(&line[1..])
+            //         }
+            //     )?
+            // }
         }
         write!(f, "{outbuf}")
     }

@@ -286,6 +286,7 @@ dependencies = [
  "dirs",
  "git2",
  "itertools",
+ "line-span",
  "nom",
  "paste",
  "serde",
@@ -411,6 +412,12 @@ dependencies = [
  "pkg-config",
  "vcpkg",
 ]
+
+[[package]]
+name = "line-span"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29fc123b2f6600099ca18248f69e3ee02b09c4188c0d98e9a690d90dec3e408a"
 
 [[package]]
 name = "line-wrap"
