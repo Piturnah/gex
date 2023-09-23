@@ -160,6 +160,8 @@ pub fn highlight_hunk(hunk: &Hunk, hl: &SyntaxHighlight, syntax: &SyntaxReferenc
         buf.push_str(&highlighted_content);
         buf.push('\n');
     }
+    // workaround: remove trailing line break
+    buf.pop();
 
     // according to docs of `as_24_bit_terminal_escaped`
     buf.push_str("\x1b[0m");

@@ -35,6 +35,10 @@ impl Hunk {
         })
     }
 
+    pub fn raw(&self) -> &str {
+        &self.raw_hunk
+    }
+
     pub fn header(&self) -> (&str, &str) {
         (
             &self.raw_hunk[self.header.0.clone()],

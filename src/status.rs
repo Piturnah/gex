@@ -15,7 +15,7 @@ use nom::{bytes::complete::take_until, IResult};
 use crate::{
     config::{Config, Options, CONFIG},
     git_process,
-    highlight::SyntaxHighlight,
+    highlight::{highlight_hunk, SyntaxHighlight},
     minibuffer::{MessageType, MiniBuffer},
     parse::{self, parse_hunk_new, parse_hunk_old},
     render::{self, Renderer, ResetAttributes, ResetColor},
@@ -37,12 +37,13 @@ enum DiffType {
 
 // unify with hunk.rs:/Hunk
 #[derive(Debug, Clone)]
-pub struct Hunk {
+pub struct HunkDisplay {
     diff: String,
+    diff_highlighted: String,
     expanded: bool,
 }
 
-impl fmt::Display for Hunk {
+impl fmt::Display for HunkDisplay {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         use fmt::Write;
         let config = CONFIG.get().expect("config wasn't initialised");
@@ -59,6 +60,64 @@ impl fmt::Display for Hunk {
         );
 
         if self.expanded {
+            for line in lines {
+                write!(
+                    &mut outbuf,
+                    "\r\n{}{line}",
+                    style::SetForegroundColor(style::Color::DarkGrey)
+                )?;
+            }
+            // TODO
+            // let ws_error_highlight = CONFIG
+            //     .get()
+            //     .expect("config is initialised at the start of the program")
+            //     .options
+            //     .ws_error_highlight;
+            // for line in lines {
+            //     write!(
+            //         &mut outbuf,
+            //         "\r\n{}",
+            //         if ws_error_highlight.context {
+            //             format_trailing_whitespace(&line[1..], config)
+            //         } else {
+            //             Cow::Borrowed(&line[1..])
+            //         }
+            //     )?
+            // }
+        }
+        write!(f, "{outbuf}")
+    }
+}
+
+#[derive(Debug)]
+pub struct HighlightedHunkDisplay<'a> {
+    hunk: &'a HunkDisplay,
+}
+
+impl<'a> HighlightedHunkDisplay<'a> {
+    pub const fn new(hunk: &'a HunkDisplay) -> Self {
+        Self { hunk }
+    }
+}
+
+/// TODO(cptp): just a workaround
+impl<'a> fmt::Display for HighlightedHunkDisplay<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use fmt::Write;
+        let config = CONFIG.get().expect("config wasn't initialised");
+
+        let mut lines = self.hunk.diff_highlighted.lines();
+        let Some(head) = lines.next() else {
+            return Ok(());
+        };
+        let mut outbuf = format!(
+            "{}{}{}",
+            style::SetForegroundColor(config.colors.hunk_head),
+            if self.hunk.expanded { "⌄" } else { "›" },
+            head.replace(" @@", &format!(" @@{ResetAttributes}"))
+        );
+
+        if self.hunk.expanded {
             for line in lines {
                 write!(&mut outbuf, "\r\n{line}")?;
             }
@@ -104,13 +163,17 @@ fn format_trailing_whitespace<'s>(s: &'s str, config: &'_ Config) -> Cow<'s, str
     }
 }
 
-impl Hunk {
-    pub const fn new(diff: String, expanded: bool) -> Self {
-        Self { diff, expanded }
+impl HunkDisplay {
+    pub const fn new(diff: String, diff_highlighted: String, expanded: bool) -> Self {
+        Self {
+            diff,
+            diff_highlighted,
+            expanded,
+        }
     }
 }
 
-impl Expand for Hunk {
+impl Expand for HunkDisplay {
     fn toggle_expand(&mut self) {
         self.expanded = !self.expanded;
     }
@@ -124,7 +187,7 @@ impl Expand for Hunk {
 pub struct FileDiff {
     path: String,
     expanded: bool,
-    hunks: Vec<Hunk>,
+    hunks: Vec<HunkDisplay>,
     cursor: usize,
     kind: DiffType,
     // The implementation here involving this `selected` field is awful and hacky and I can't wait
@@ -173,7 +236,12 @@ impl render::Render for FileDiff {
                 for (i, hunk) in self.hunks.iter().enumerate() {
                     if self.selected && i + 1 == self.cursor {
                         f.insert_cursor();
-                        write!(f, "{ResetAttributes}\r\n{}{hunk}", Attribute::Reverse)?;
+                        write!(
+                            f,
+                            "{ResetAttributes}\r\n{}{}",
+                            Attribute::Reverse,
+                            HighlightedHunkDisplay::new(hunk)
+                        )?;
                         f.insert_item_end();
                     } else {
                         write!(f, "{ResetAttributes}\r\n{hunk}")?;
@@ -552,8 +620,9 @@ impl Status {
         highlight: &SyntaxHighlight,
     ) -> Result<()> {
         let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
-        let hunks = parse::parse_diff(diff, highlight)?;
+        let hunks = parse::parse_diff(diff)?;
         for file in file_diffs {
+            let syntax = highlight.get_syntax(&file.path);
             if let Some(hunks) = hunks.get(file.path.as_str()) {
                 // Get all the diffs entries of this file from the previous iteration.
                 let previous_file_entries = prev_file_diffs.iter().filter(|f| f.path == file.path);
@@ -567,7 +636,8 @@ impl Status {
                                     let h_header =
                                         h.diff.lines().next().expect("hunk should never be empty");
                                     let hunk_header =
-                                        hunk.lines().next().expect("hunk should never be empty");
+                                        // TODO(cptp): this has to be hunk.header().0
+                                        hunk.header().1;
                                     (parse_hunk_new(h_header).unwrap_or_else(|e| panic!("{e:?}"))
                                         == parse_hunk_new(hunk_header)
                                             .unwrap_or_else(|e| panic!("{e:?}")))
@@ -579,7 +649,8 @@ impl Status {
                             })
                             .map_or(options.auto_expand_hunks, |h| h.expanded);
 
-                        Hunk::new(hunk.clone(), expanded)
+                        let highlighted = highlight_hunk(hunk, highlight, syntax);
+                        HunkDisplay::new(hunk.raw().to_owned(), highlighted, expanded)
                     })
                     .collect();
             }

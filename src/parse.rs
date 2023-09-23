@@ -4,18 +4,11 @@ use anyhow::{Context, Result};
 use itertools::Itertools;
 use nom::{bytes::complete::tag, character::complete::not_line_ending, IResult};
 
-use crate::{
-    highlight::{highlight_hunk, SyntaxHighlight},
-    hunk::Hunk,
-};
+use crate::hunk::Hunk;
 
 /// The returned hashmap associates a filename with a `Vec` of `String` where the strings contain
 /// the content of each hunk.
-pub fn parse_diff<'a>(
-    input: &'a str,
-    highlight: &SyntaxHighlight,
-) -> Result<HashMap<&'a str, Vec<String>>> {
-    // HACK: persist this somewhere else
+pub fn parse_diff(input: &str) -> Result<HashMap<&str, Vec<Hunk>>> {
     let mut diffs = HashMap::new();
     for diff in input
         .lines()
@@ -25,12 +18,8 @@ pub fn parse_diff<'a>(
     {
         let path = get_path(diff)?;
         // get language syntax here, since all hunks are from the same file
-        let syntax = highlight.get_syntax(path);
-        let hunks: Result<Vec<_>> = get_hunks(diff)?
-            .into_iter()
-            .map(|hunk| Ok(highlight_hunk(&Hunk::from_string(hunk)?, highlight, syntax)))
-            .collect();
-        diffs.insert(path, hunks?);
+        let hunks = get_hunks(diff)?;
+        diffs.insert(path, hunks);
     }
     Ok(diffs)
 }
@@ -45,7 +34,7 @@ fn get_path<'a>(diff: &[&'a str]) -> Result<&'a str> {
     Ok(path)
 }
 
-fn get_hunks(diff: &[&str]) -> Result<Vec<String>> {
+fn get_hunks(diff: &[&str]) -> Result<Vec<Hunk>> {
     let mut hunks = Vec::new();
     let hunk_groups = diff.iter().group_by(|line| line.starts_with("@@"));
     let mut hunk_groups = hunk_groups.into_iter();
@@ -62,11 +51,11 @@ fn get_hunks(diff: &[&str]) -> Result<Vec<String>> {
         let (_key, hunk_tail) = hunk_groups
             .next()
             .context("strange output from `git diff`")?;
-        hunks.push(
+        hunks.push(Hunk::from_string(
             std::iter::once(hunk_head)
                 .chain(hunk_tail.copied())
                 .join("\n"),
-        );
+        )?);
     }
     Ok(hunks)
 }
@@ -99,8 +88,6 @@ pub fn parse_hunk_new(header: &str) -> Result<&str> {
 mod tests {
     use test_case::test_case;
 
-    use crate::parse::SyntaxHighlight;
-
     const ISSUE_62: &str = "diff --git a/asteroid-loop/index.html b/asteroid-loop/index.html
 index d79df71..e2d1e9f 100644
 --- a/asteroid-loop/index.html
@@ -132,8 +119,7 @@ index d79df71..e2d1e9f 100644
 
     #[test_case(ISSUE_62 ; "issue 62")]
     fn parse(diff: &str) {
-        let highlight = SyntaxHighlight::new();
-        let parsed = super::parse_diff(diff, &highlight);
+        let parsed = super::parse_diff(diff);
         assert!(parsed.is_ok());
         let parsed = parsed.unwrap();
         assert_eq!(parsed.len(), 1);
