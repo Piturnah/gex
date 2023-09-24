@@ -15,7 +15,7 @@ use nom::{bytes::complete::take_until, IResult};
 use crate::{
     config::{Config, Options, CONFIG},
     git_process,
-    highlight::{highlight_hunk, SyntaxHighlight},
+    highlight::{highlight_hunk, DiffHighlighter},
     minibuffer::{MessageType, MiniBuffer},
     parse::{self, parse_hunk_new, parse_hunk_old},
     render::{self, Renderer, ResetAttributes, ResetColor},
@@ -35,31 +35,74 @@ enum DiffType {
     Deleted,
 }
 
-// unify with hunk.rs:/Hunk
+// TODO(cptp): move hunk structs to `hunk.rs`
+
+/// A hunk displayed in the UI.
 #[derive(Debug, Clone)]
-pub struct HunkDisplay {
+pub struct HunkView {
+    /// The raw diff of the hunk.
     diff: String,
+    /// The highlighted diff of the hunk.
     diff_highlighted: String,
+    /// The hunk is currently expanded in the UI.
     expanded: bool,
 }
 
-impl fmt::Display for HunkDisplay {
+impl HunkView {
+    pub const fn new(diff: String, diff_highlighted: String, expanded: bool) -> Self {
+        Self {
+            diff,
+            diff_highlighted,
+            expanded,
+        }
+    }
+
+    pub const fn display(&self, highlighted: bool) -> HunkDisplay {
+        HunkDisplay(self, highlighted)
+    }
+}
+
+impl Expand for HunkView {
+    fn toggle_expand(&mut self) {
+        self.expanded = !self.expanded;
+    }
+
+    fn expanded(&self) -> bool {
+        self.expanded
+    }
+}
+
+/// Helper struct for [`HunkView`] that implements Display.
+///
+/// Allows switching between the highlighted and non highlighted version.
+#[derive(Clone, Copy)]
+pub struct HunkDisplay<'a>(&'a HunkView, bool);
+
+impl<'a> fmt::Display for HunkDisplay<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         use fmt::Write;
         let config = CONFIG.get().expect("config wasn't initialised");
+        let hunk = self.0;
+        let highlight = self.1;
 
-        let mut lines = self.diff.lines();
+        let mut lines = (if highlight {
+            &hunk.diff_highlighted
+        } else {
+            &hunk.diff
+        })
+        .lines();
+
         let Some(head) = lines.next() else {
             return Ok(());
         };
         let mut outbuf = format!(
             "{}{}{}",
             style::SetForegroundColor(config.colors.hunk_head),
-            if self.expanded { "⌄" } else { "›" },
+            if hunk.expanded { "⌄" } else { "›" },
             head.replace(" @@", &format!(" @@{ResetAttributes}"))
         );
 
-        if self.expanded {
+        if hunk.expanded {
             for line in lines {
                 write!(
                     &mut outbuf,
@@ -67,61 +110,7 @@ impl fmt::Display for HunkDisplay {
                     style::SetForegroundColor(style::Color::DarkGrey)
                 )?;
             }
-            // TODO
-            // let ws_error_highlight = CONFIG
-            //     .get()
-            //     .expect("config is initialised at the start of the program")
-            //     .options
-            //     .ws_error_highlight;
-            // for line in lines {
-            //     write!(
-            //         &mut outbuf,
-            //         "\r\n{}",
-            //         if ws_error_highlight.context {
-            //             format_trailing_whitespace(&line[1..], config)
-            //         } else {
-            //             Cow::Borrowed(&line[1..])
-            //         }
-            //     )?
-            // }
-        }
-        write!(f, "{outbuf}")
-    }
-}
-
-#[derive(Debug)]
-pub struct HighlightedHunkDisplay<'a> {
-    hunk: &'a HunkDisplay,
-}
-
-impl<'a> HighlightedHunkDisplay<'a> {
-    pub const fn new(hunk: &'a HunkDisplay) -> Self {
-        Self { hunk }
-    }
-}
-
-/// TODO(cptp): just a workaround
-impl<'a> fmt::Display for HighlightedHunkDisplay<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        use fmt::Write;
-        let config = CONFIG.get().expect("config wasn't initialised");
-
-        let mut lines = self.hunk.diff_highlighted.lines();
-        let Some(head) = lines.next() else {
-            return Ok(());
-        };
-        let mut outbuf = format!(
-            "{}{}{}",
-            style::SetForegroundColor(config.colors.hunk_head),
-            if self.hunk.expanded { "⌄" } else { "›" },
-            head.replace(" @@", &format!(" @@{ResetAttributes}"))
-        );
-
-        if self.hunk.expanded {
-            for line in lines {
-                write!(&mut outbuf, "\r\n{line}")?;
-            }
-            // TODO
+            // TODO(cptp): highlight white spaces?
             // let ws_error_highlight = CONFIG
             //     .get()
             //     .expect("config is initialised at the start of the program")
@@ -163,31 +152,11 @@ fn format_trailing_whitespace<'s>(s: &'s str, config: &'_ Config) -> Cow<'s, str
     }
 }
 
-impl HunkDisplay {
-    pub const fn new(diff: String, diff_highlighted: String, expanded: bool) -> Self {
-        Self {
-            diff,
-            diff_highlighted,
-            expanded,
-        }
-    }
-}
-
-impl Expand for HunkDisplay {
-    fn toggle_expand(&mut self) {
-        self.expanded = !self.expanded;
-    }
-
-    fn expanded(&self) -> bool {
-        self.expanded
-    }
-}
-
 #[derive(Debug)]
 pub struct FileDiff {
     path: String,
     expanded: bool,
-    hunks: Vec<HunkDisplay>,
+    hunks: Vec<HunkView>,
     cursor: usize,
     kind: DiffType,
     // The implementation here involving this `selected` field is awful and hacky and I can't wait
@@ -240,11 +209,11 @@ impl render::Render for FileDiff {
                             f,
                             "{ResetAttributes}\r\n{}{}",
                             Attribute::Reverse,
-                            HighlightedHunkDisplay::new(hunk)
+                            hunk.display(true)
                         )?;
                         f.insert_item_end();
                     } else {
-                        write!(f, "{ResetAttributes}\r\n{hunk}")?;
+                        write!(f, "{ResetAttributes}\r\n{}", hunk.display(false))?;
                     }
                 }
             }
@@ -316,7 +285,7 @@ enum Stage {
     Reset,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Status {
     pub branch: String,
     pub head: String,
@@ -325,7 +294,8 @@ pub struct Status {
     pub count_unstaged: usize,
     pub count_staged: usize,
     pub cursor: usize,
-    highlight: SyntaxHighlight,
+    // TODO(cptp): this feels a bit out of place here, maybe move it to `Config`
+    highlight: DiffHighlighter,
 }
 
 impl render::Render for Status {
@@ -411,9 +381,25 @@ impl render::Render for Status {
 }
 
 impl Status {
-    pub fn new(repo: &Repository, options: &Options) -> Result<Self> {
-        let mut status = Self::default();
-        status.fetch(repo, options)?;
+    pub fn new(repo: &Repository, config: &Config) -> Result<Self> {
+        let highlight = match &config.options.syntax_highlighting {
+            Some(theme_name) => DiffHighlighter::syntect(theme_name)?,
+            None => DiffHighlighter::Simple {
+                color_added: config.colors.addition,
+                color_removed: config.colors.deletion,
+            },
+        };
+        let mut status = Self {
+            branch: String::default(),
+            head: String::default(),
+            file_diffs: Vec::default(),
+            count_untracked: 0,
+            count_unstaged: 0,
+            count_staged: 0,
+            cursor: 0,
+            highlight,
+        };
+        status.fetch(repo, &config.options)?;
         Ok(status)
     }
 
@@ -617,11 +603,13 @@ impl Status {
         prev_file_diffs: &[FileDiff],
         diff: &Output,
         options: &Options,
-        highlight: &SyntaxHighlight,
+        highlight: &DiffHighlighter,
     ) -> Result<()> {
         let diff = std::str::from_utf8(&diff.stdout).context("malformed stdout from `git diff`")?;
         let hunks = parse::parse_diff(diff)?;
         for file in file_diffs {
+            // Get the syntax info for the specific file type here, since the hunks below are
+            // all from the same file.
             let syntax = highlight.get_syntax(&file.path);
             if let Some(hunks) = hunks.get(file.path.as_str()) {
                 // Get all the diffs entries of this file from the previous iteration.
@@ -636,7 +624,7 @@ impl Status {
                                     let h_header =
                                         h.diff.lines().next().expect("hunk should never be empty");
                                     let hunk_header =
-                                        // TODO(cptp): this has to be hunk.header().0
+                                        // TODO(cptp): this has to be hunk.header().0 once the parsing is correct
                                         hunk.header().1;
                                     (parse_hunk_new(h_header).unwrap_or_else(|e| panic!("{e:?}"))
                                         == parse_hunk_new(hunk_header)
@@ -650,7 +638,7 @@ impl Status {
                             .map_or(options.auto_expand_hunks, |h| h.expanded);
 
                         let highlighted = highlight_hunk(hunk, highlight, syntax);
-                        HunkDisplay::new(hunk.raw().to_owned(), highlighted, expanded)
+                        HunkView::new(hunk.raw().to_owned(), highlighted, expanded)
                     })
                     .collect();
             }

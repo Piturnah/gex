@@ -120,7 +120,7 @@ fn run(clargs: &Clargs) -> Result<()> {
             })
     });
 
-    let status = Status::new(&repo, &config.options)?;
+    let status = Status::new(&repo, config)?;
     let branch_list = BranchList::new()?;
     let view = View::Status;
     let renderer = Renderer::default();

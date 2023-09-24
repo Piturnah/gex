@@ -3,7 +3,6 @@ use std::ops::Range;
 use anyhow::{anyhow, bail, Result};
 use line_span::{LineSpan, LineSpans};
 
-// TODO: rename to RawHunk?
 pub struct Hunk {
     /// Raw hunk string.
     ///
@@ -53,7 +52,7 @@ impl Hunk {
     }
 
     fn parse_header(line: LineSpan) -> Result<(Range<usize>, Range<usize>)> {
-        // TODO
+        // TODO(cptp)
         let range = line.range();
         Ok((range.start..range.start, range))
     }
@@ -96,8 +95,8 @@ impl HunkLine {
         };
         let line_range = line.range();
         let diff_type = DiffLineType::try_from(first_char)
-            // fall back to unchanged
-            // TODO: this shouldn't happen, handle this better?
+            // fallback to unchanged
+            // TODO(cptp): this shouldn't happen, panic instead?
             .unwrap_or(DiffLineType::Unchanged);
         let range = (line_range.start + first_char.len_utf8())..line_range.end;
         Ok(Self { diff_type, range })
