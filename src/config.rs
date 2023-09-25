@@ -46,6 +46,7 @@ pub struct Options {
     pub lookahead_lines: usize,
     pub truncate_lines: bool,
     pub ws_error_highlight: WsErrorHighlight,
+    pub syntax_highlighting: Option<String>,
 }
 
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -64,6 +65,8 @@ impl Default for Options {
             lookahead_lines: 5,
             truncate_lines: true,
             ws_error_highlight: WsErrorHighlight::default(),
+            // TODO: decide on default
+            syntax_highlighting: Some("base16-ocean.dark".to_owned()),
         }
     }
 }
@@ -258,7 +261,8 @@ error = \"#cc241d\"
                         old: false,
                         new: true,
                         context: false
-                    }
+                    },
+                    syntax_highlighting: None
                 },
                 colors: Colors {
                     foreground: Color::from((235, 219, 178)),

@@ -4,9 +4,11 @@ use anyhow::{Context, Result};
 use itertools::Itertools;
 use nom::{bytes::complete::tag, character::complete::not_line_ending, IResult};
 
+use crate::hunk::Hunk;
+
 /// The returned hashmap associates a filename with a `Vec` of `String` where the strings contain
 /// the content of each hunk.
-pub fn parse_diff(input: &str) -> Result<HashMap<&str, Vec<String>>> {
+pub fn parse_diff(input: &str) -> Result<HashMap<&str, Vec<Hunk>>> {
     let mut diffs = HashMap::new();
     for diff in input
         .lines()
@@ -14,7 +16,10 @@ pub fn parse_diff(input: &str) -> Result<HashMap<&str, Vec<String>>> {
         .split(|l| l.starts_with("diff"))
         .skip(1)
     {
-        diffs.insert(get_path(diff)?, get_hunks(diff)?);
+        let path = get_path(diff)?;
+        // get language syntax here, since all hunks are from the same file
+        let hunks = get_hunks(diff)?;
+        diffs.insert(path, hunks);
     }
     Ok(diffs)
 }
@@ -29,7 +34,7 @@ fn get_path<'a>(diff: &[&'a str]) -> Result<&'a str> {
     Ok(path)
 }
 
-fn get_hunks(diff: &[&str]) -> Result<Vec<String>> {
+fn get_hunks(diff: &[&str]) -> Result<Vec<Hunk>> {
     let mut hunks = Vec::new();
     let hunk_groups = diff.iter().group_by(|line| line.starts_with("@@"));
     let mut hunk_groups = hunk_groups.into_iter();
@@ -46,11 +51,11 @@ fn get_hunks(diff: &[&str]) -> Result<Vec<String>> {
         let (_key, hunk_tail) = hunk_groups
             .next()
             .context("strange output from `git diff`")?;
-        hunks.push(
+        hunks.push(Hunk::from_string(
             std::iter::once(hunk_head)
                 .chain(hunk_tail.copied())
                 .join("\n"),
-        );
+        )?);
     }
     Ok(hunks)
 }
