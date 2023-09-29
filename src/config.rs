@@ -3,7 +3,7 @@
 use std::{fs, path::PathBuf, str::FromStr, sync::OnceLock};
 
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::{command, Parser};
 use crossterm::style::Color;
 use serde::Deserialize;
 
@@ -36,6 +36,7 @@ pub struct Clargs {
 pub struct Config {
     pub options: Options,
     pub colors: Colors,
+    pub keymap: Keymaps,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
@@ -123,6 +124,46 @@ impl Default for Colors {
                 key: Color::Green,
                 error: Color::Red,
             }
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[serde(default)]
+pub struct Keymaps {
+    pub navigation: Navigation,
+}
+
+impl Default for Keymaps {
+    fn default() -> Self {
+        Keymaps {
+            navigation: Navigation::default(),
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[serde(default)]
+pub struct Navigation {
+    pub move_down: char,
+    pub move_up: char,
+    pub next_file: char,
+    pub previous_file: char,
+    pub toggle_expand: char,
+    pub goto_top: char,
+    pub goto_bottom: char,
+}
+
+impl Default for Navigation {
+    fn default() -> Self {
+        Self {
+            move_down: 'j',
+            move_up: 'k',
+            next_file: 'J',
+            previous_file: 'K',
+            toggle_expand: ' ',
+            goto_top: 'g',
+            goto_bottom: 'G',
         }
     }
 }
@@ -262,6 +303,15 @@ addition = \"#b8bb26\"
 deletion = \"#fb4934\"
 key = \"#d79921\"
 error = \"#cc241d\"
+
+[keymap.navigation]
+move_down     = \"j\"
+move_up       = \"k\"
+next_file     = \"J\"
+previous_file = \"K\"
+toggle_expand = \" \"
+goto_top      = \"g\"
+goto_bottom   = \"G\"
 ";
         assert_eq!(
             toml::from_str(INPUT),
@@ -288,6 +338,17 @@ error = \"#cc241d\"
                     deletion: Color::from((251, 73, 52)),
                     key: Color::from((215, 153, 33)),
                     error: Color::from((204, 36, 29))
+                },
+                keymap: Keymaps {
+                    navigation: Navigation {
+                        move_down: 'j',
+                        move_up: 'k',
+                        next_file: 'J',
+                        previous_file: 'K',
+                        toggle_expand: ' ',
+                        goto_top: 'g',
+                        goto_bottom: 'G'
+                    }
                 }
             })
         )

@@ -239,12 +239,8 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
 
             match state.view {
                 View::Status => match event.code {
-                    KeyCode::Char('j') | KeyCode::Down => state.status.down()?,
-                    KeyCode::Char('k') | KeyCode::Up => state.status.up()?,
-                    KeyCode::Char('J') => state.status.file_down()?,
-                    KeyCode::Char('K') => state.status.file_up()?,
-                    KeyCode::Char('G') => state.status.cursor_last()?,
-                    KeyCode::Char('g') => state.status.cursor_first()?,
+                    KeyCode::Down => state.status.down()?,
+                    KeyCode::Up => state.status.up()?,
                     KeyCode::Char('s') => {
                         if state.status.cursor
                             < state.status.count_untracked + state.status.count_unstaged
@@ -304,14 +300,42 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         {
                             state.view = View::Command(*cmd);
                         }
+
+                        if c1 == config.keymap.navigation.move_down {
+                            state.status.down()?
+                        }
+
+                        if c1 == config.keymap.navigation.move_up {
+                            state.status.up()?
+                        }
+
+                        if c1 == config.keymap.navigation.next_file {
+                            state.status.file_down()?
+                        }
+
+                        if c1 == config.keymap.navigation.previous_file {
+                            state.status.file_up()?
+                        }
+
+                        if c1 == config.keymap.navigation.toggle_expand {
+                            state.status.expand()?
+                        }
+
+                        if c1 == config.keymap.navigation.goto_bottom {
+                            state.status.cursor_last()?
+                        }
+
+                        if c1 == config.keymap.navigation.goto_top {
+                            state.status.cursor_first()?
+                        }
                     }
                     _ => {}
                 },
                 View::BranchList => match event.code {
-                    KeyCode::Char('k') | KeyCode::Up => {
+                    KeyCode::Up => {
                         state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
                     }
-                    KeyCode::Char('j') | KeyCode::Down => {
+                    KeyCode::Down => {
                         state.branch_list.cursor = cmp::min(
                             state.branch_list.cursor + 1,
                             state.branch_list.branches.len() - 1,
@@ -337,6 +361,20 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         )
                         .context("failed to leave alternate screen")?;
                         process::exit(0);
+                    }
+                    KeyCode::Char(c1) => {
+                        if c1 == config.keymap.navigation.move_down {
+                            state.branch_list.cursor = cmp::min(
+                                state.branch_list.cursor + 1,
+                                state.branch_list.branches.len() - 1,
+                            );
+                        }
+
+                        if c1 == config.keymap.navigation.move_up {
+                            state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
+                        }
+
+                        // TODO: g, G, J, K
                     }
                     _ => {}
                 },
