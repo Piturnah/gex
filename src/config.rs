@@ -158,16 +158,18 @@ impl<'de> Deserialize<'de> for Keymaps {
                 let mut navigation = HashMap::new();
 
                 while let Some((section, section_values)) =
-                    map.next_entry::<String, HashMap<String, char>>()?
+                    map.next_entry::<String, HashMap<String, Vec<char>>>()?
                 {
                     if section == "navigation" {
-                        for (action, key) in section_values {
+                        for (action, keys) in section_values {
                             let ac: Action = Deserialize::deserialize(
                                 de::value::StringDeserializer::new(action),
                             )?;
 
                             // How can I do this without assuming Char ?
-                            navigation.insert(KeyCode::Char(key), ac);
+                            for key in keys {
+                                navigation.insert(KeyCode::Char(key), ac.clone());
+                            }
                         }
                     }
                 }
@@ -180,7 +182,7 @@ impl<'de> Deserialize<'de> for Keymaps {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all(deserialize = "snake_case"))]
 pub enum Action {
     MoveDown,
