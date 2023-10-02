@@ -29,7 +29,7 @@ use git2::Repository;
 
 use crate::{
     command::GexCommand,
-    config::{Config, CONFIG},
+    config::{Action, Config, CONFIG},
     minibuffer::{Callback, MessageType, MiniBuffer},
     render::{Clear, Render, ResetAttributes},
 };
@@ -238,99 +238,79 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
             }
 
             match state.view {
-                View::Status => match event.code {
-                    KeyCode::Down => state.status.down()?,
-                    KeyCode::Up => state.status.up()?,
-                    KeyCode::Char('s') => {
-                        if state.status.cursor
-                            < state.status.count_untracked + state.status.count_unstaged
-                        {
-                            state.status.stage()?;
+                View::Status => {
+                    match config.keymap.navigation.get(&event.code) {
+                        Some(Action::MoveDown) => state.status.down()?,
+                        Some(Action::MoveUp) => state.status.up()?,
+                        Some(Action::NextFile) => state.status.file_down()?,
+                        Some(Action::PreviousFile) => state.status.file_up()?,
+                        Some(Action::ToggleExpand) => state.status.expand()?,
+                        Some(Action::GotoBottom) => state.status.cursor_last()?,
+                        Some(Action::GotoTop) => state.status.cursor_first()?,
+                        _ => {
+                            todo!()
+                        }
+                    };
+
+                    match event.code {
+                        KeyCode::Char('s') => {
+                            if state.status.cursor
+                                < state.status.count_untracked + state.status.count_unstaged
+                            {
+                                state.status.stage()?;
+                                state.status.fetch(&state.repo, &config.options)?;
+                            }
+                        }
+                        KeyCode::Char('S') => {
+                            MiniBuffer::push_command_output(&git_process(&["add", "."])?);
                             state.status.fetch(&state.repo, &config.options)?;
                         }
-                    }
-                    KeyCode::Char('S') => {
-                        MiniBuffer::push_command_output(&git_process(&["add", "."])?);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('u') => {
-                        if state.status.cursor
-                            >= state.status.count_untracked + state.status.count_unstaged
-                        {
-                            state.status.unstage()?;
+                        KeyCode::Char('u') => {
+                            if state.status.cursor
+                                >= state.status.count_untracked + state.status.count_unstaged
+                            {
+                                state.status.unstage()?;
+                                state.status.fetch(&state.repo, &config.options)?;
+                            }
+                        }
+                        KeyCode::Char('U') => {
+                            MiniBuffer::push_command_output(&git_process(&["reset"])?);
                             state.status.fetch(&state.repo, &config.options)?;
                         }
-                    }
-                    KeyCode::Char('U') => {
-                        MiniBuffer::push_command_output(&git_process(&["reset"])?);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Tab | KeyCode::Char(' ') => state.status.expand()?,
-                    KeyCode::Char('e') => {
-                        state.status.open_editor()?;
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('F') => {
-                        MiniBuffer::push_command_output(&git_process(&["pull"])?);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('r') => state.status.fetch(&state.repo, &config.options)?,
-                    KeyCode::Char(':') => {
-                        state.minibuffer.command(true, &mut state.view);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('!') => {
-                        state.minibuffer.command(false, &mut state.view);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('q') => {
-                        terminal::disable_raw_mode().context("failed to disable raw mode")?;
-                        crossterm::execute!(
-                            stdout(),
-                            terminal::LeaveAlternateScreen,
-                            cursor::Show,
-                            cursor::MoveToColumn(0)
-                        )
-                        .context("failed to leave alternate screen")?;
-                        process::exit(0);
-                    }
-                    KeyCode::Char(c1) => {
-                        if let Some((_, cmd)) =
-                            GexCommand::commands().iter().find(|(c2, _)| c1 == *c2)
-                        {
-                            state.view = View::Command(*cmd);
+                        KeyCode::Char('F') => {
+                            MiniBuffer::push_command_output(&git_process(&["pull"])?);
+                            state.status.fetch(&state.repo, &config.options)?;
                         }
-
-                        if c1 == config.keymap.navigation.move_down {
-                            state.status.down()?
+                        KeyCode::Char('r') => state.status.fetch(&state.repo, &config.options)?,
+                        KeyCode::Char(':') => {
+                            state.minibuffer.command(true, &mut state.view);
+                            state.status.fetch(&state.repo, &config.options)?;
                         }
-
-                        if c1 == config.keymap.navigation.move_up {
-                            state.status.up()?
+                        KeyCode::Char('!') => {
+                            state.minibuffer.command(false, &mut state.view);
+                            state.status.fetch(&state.repo, &config.options)?;
                         }
-
-                        if c1 == config.keymap.navigation.next_file {
-                            state.status.file_down()?
+                        KeyCode::Char('q') => {
+                            terminal::disable_raw_mode().context("failed to disable raw mode")?;
+                            crossterm::execute!(
+                                stdout(),
+                                terminal::LeaveAlternateScreen,
+                                cursor::Show,
+                                cursor::MoveToColumn(0)
+                            )
+                            .context("failed to leave alternate screen")?;
+                            process::exit(0);
                         }
-
-                        if c1 == config.keymap.navigation.previous_file {
-                            state.status.file_up()?
+                        KeyCode::Char(c1) => {
+                            if let Some((_, cmd)) =
+                                GexCommand::commands().iter().find(|(c2, _)| c1 == *c2)
+                            {
+                                state.view = View::Command(*cmd);
+                            }
                         }
-
-                        if c1 == config.keymap.navigation.toggle_expand {
-                            state.status.expand()?
-                        }
-
-                        if c1 == config.keymap.navigation.goto_bottom {
-                            state.status.cursor_last()?
-                        }
-
-                        if c1 == config.keymap.navigation.goto_top {
-                            state.status.cursor_first()?
-                        }
-                    }
-                    _ => {}
-                },
+                        _ => {}
+                    };
+                }
                 View::BranchList => match event.code {
                     KeyCode::Up => {
                         state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
@@ -363,16 +343,16 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         process::exit(0);
                     }
                     KeyCode::Char(c1) => {
-                        if c1 == config.keymap.navigation.move_down {
-                            state.branch_list.cursor = cmp::min(
-                                state.branch_list.cursor + 1,
-                                state.branch_list.branches.len() - 1,
-                            );
-                        }
+                        // if c1 == config.keymap.navigation.move_down {
+                        //     state.branch_list.cursor = cmp::min(
+                        //         state.branch_list.cursor + 1,
+                        //         state.branch_list.branches.len() - 1,
+                        //     );
+                        // }
 
-                        if c1 == config.keymap.navigation.move_up {
-                            state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
-                        }
+                        // if c1 == config.keymap.navigation.move_up {
+                        //     state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
+                        // }
 
                         // TODO: g, G, J, K
                     }
