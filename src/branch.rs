@@ -68,7 +68,13 @@ impl BranchList {
     }
 
     pub fn fetch(&mut self) -> Result<()> {
-        let output = git_process(&["branch"])?;
+        let config = CONFIG.get().expect("config wasn't initialised");
+
+        let output = if config.options.sort_branch_list_by_commit_date {
+            git_process(&["branch", "--sort=-committerdate"])?
+        } else {
+            git_process(&["branch"])?
+        };
 
         self.branches = std::str::from_utf8(&output.stdout)
             .context("broken stdout from `git branch`")?
