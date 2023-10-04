@@ -262,11 +262,10 @@ impl MiniBuffer {
 
     /// Render the contents of the buffer.
     pub fn render(&mut self, term_width: u16, term_height: u16) -> Result<()> {
-        let msg = &self.buffer;
-        self.current_height = std::cmp::max(msg.lines().count() + 1, 2);
+        self.current_height = std::cmp::max(self.buffer.lines().count() + 1, 2);
 
         if self.state == State::Normal {
-            if msg.is_empty() {
+            if self.buffer.is_empty() {
                 return Ok(());
             }
             // Make sure raw mode is disabled so we can just print the message.
@@ -279,16 +278,11 @@ impl MiniBuffer {
         };
 
         print!(
-            "{}{}{}",
+            "{}{}{}\r\n{prompt}{}",
             cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
             Clear(ClearType::FromCursorDown),
-            cursor::Show,
-        );
-
-        print!(
-            "{}{}\r\n{prompt}{msg}",
-            cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
             border.repeat(term_width.into()),
+            self.buffer,
         );
 
         match self.state {

@@ -28,7 +28,7 @@ impl fmt::Display for Clear {
                 write!(f, "{}", style::SetBackgroundColor(color))?;
                 match self.0 {
                     ClearType::All => {
-                        write!(f, "{}{}", cursor::SavePosition, cursor::MoveTo(0, 0),)?;
+                        write!(f, "{}{}", cursor::SavePosition, cursor::MoveTo(0, 0))?;
                         for _ in 0..rows {
                             write!(f, "{:width$}", ' ', width = cols as usize)?;
                         }
@@ -44,8 +44,14 @@ impl fmt::Display for Clear {
                         let Ok((_, row)) = cursor::position() else {
                             return Err(fmt::Error);
                         };
-                        write!(f, "{}{}", cursor::SavePosition, cursor::MoveToNextLine(1))?;
-                        for _ in 0..rows - row {
+                        write!(
+                            f,
+                            "{}{}{}",
+                            cursor::SavePosition,
+                            cursor::MoveToColumn(0),
+                            cursor::MoveToNextLine(1)
+                        )?;
+                        for _ in 0..rows - row - 1 {
                             write!(f, "{:width$}", ' ', width = cols as usize)?;
                         }
                         write!(f, "{}", cursor::RestorePosition)
