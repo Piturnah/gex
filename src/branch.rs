@@ -14,7 +14,7 @@ use crossterm::{
 use crate::{
     config::CONFIG,
     git_process,
-    minibuffer::MiniBuffer,
+    minibuffer::{MessageType, MiniBuffer},
     render::{self, Clear, Renderer, ResetAttributes},
 };
 
@@ -77,7 +77,13 @@ impl BranchList {
                 if output.status.success() {
                     output
                 } else {
-                    MiniBuffer::push_command_output(&output);
+                    MiniBuffer::push(
+                        &format!(
+                            "`git branch --sort={sort_value}` failed!\n\n{}",
+                            String::from_utf8_lossy(&output.stderr)
+                        ),
+                        MessageType::Error,
+                    );
                     git_process(&["branch"])?
                 }
             }
