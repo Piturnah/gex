@@ -45,7 +45,7 @@ pub struct Options {
     pub auto_expand_hunks: bool,
     pub lookahead_lines: usize,
     pub truncate_lines: bool,
-    pub sort_branch_list_by_commit_date: bool,
+    pub sort_branches: Option<String>,
     pub ws_error_highlight: WsErrorHighlight,
 }
 
@@ -64,7 +64,7 @@ impl Default for Options {
             auto_expand_hunks: true,
             lookahead_lines: 5,
             truncate_lines: true,
-            sort_branch_list_by_commit_date: false,
+            sort_branches: None,
             ws_error_highlight: WsErrorHighlight::default(),
         }
     }
@@ -232,7 +232,7 @@ mod tests {
 auto_expand_hunks = true
 lookahead_lines = 5
 truncate_lines = true # `false` is not recommended - see #37
-sort_branch_list_by_commit_date = true
+sort_branches = \"-committerdate\"
 ws_error_highlight = \"new\" # override git's diff.wsErrorHighlight
 
 # Named colours use the terminal colour scheme. You can also describe your colours
@@ -257,7 +257,7 @@ error = \"#cc241d\"
                     auto_expand_hunks: true,
                     lookahead_lines: 5,
                     truncate_lines: true,
-                    sort_branch_list_by_commit_date: true,
+                    sort_branches: "-committerdate",
                     ws_error_highlight: WsErrorHighlight {
                         old: false,
                         new: true,

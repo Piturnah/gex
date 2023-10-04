@@ -14,6 +14,7 @@ use crossterm::{
 use crate::{
     config::CONFIG,
     git_process,
+    minibuffer::MiniBuffer,
     render::{self, Clear, Renderer, ResetAttributes},
 };
 
@@ -70,10 +71,17 @@ impl BranchList {
     pub fn fetch(&mut self) -> Result<()> {
         let config = CONFIG.get().expect("config wasn't initialised");
 
-        let output = if config.options.sort_branch_list_by_commit_date {
-            git_process(&["branch", "--sort=-committerdate"])?
-        } else {
-            git_process(&["branch"])?
+        let output = match config.options.sort_branches.as_ref() {
+            Some(sort_value) => {
+                let output = git_process(&["branch", &format!("--sort={sort_value}")])?;
+                if output.status.success() {
+                    output
+                } else {
+                    MiniBuffer::push_command_output(&output);
+                    git_process(&["branch"])?
+                }
+            }
+            None => git_process(&["branch"])?,
         };
 
         self.branches = std::str::from_utf8(&output.stdout)
