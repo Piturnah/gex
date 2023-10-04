@@ -158,7 +158,7 @@ impl<'de> Deserialize<'de> for Keymaps {
                 let mut navigation = HashMap::new();
 
                 while let Some((section, section_values)) =
-                    map.next_entry::<String, HashMap<String, Vec<char>>>()?
+                    map.next_entry::<String, HashMap<String, Vec<String>>>()?
                 {
                     if section == "navigation" {
                         for (action, keys) in section_values {
@@ -166,9 +166,20 @@ impl<'de> Deserialize<'de> for Keymaps {
                                 de::value::StringDeserializer::new(action),
                             )?;
 
-                            // How can I do this without assuming Char ?
                             for key in keys {
-                                navigation.insert(KeyCode::Char(key), ac.clone());
+                                if key.len() == 1 {
+                                    if let Some(c) = key.chars().next() {
+                                        let key = KeyCode::Char(c);
+                                        navigation.insert(key, ac.clone());
+                                        continue;
+                                    }
+                                }
+
+                                let key: KeyCode = Deserialize::deserialize(
+                                    de::value::StringDeserializer::new(key),
+                                )?;
+
+                                navigation.insert(key, ac.clone());
                             }
                         }
                     }
@@ -196,16 +207,17 @@ pub enum Action {
 
 impl Default for Keymaps {
     fn default() -> Self {
-        let mut navigation = HashMap::new();
-        navigation.insert(KeyCode::Char('j'), Action::MoveDown);
-        navigation.insert(KeyCode::Char('k'), Action::MoveUp);
-        navigation.insert(KeyCode::Char('J'), Action::NextFile);
-        navigation.insert(KeyCode::Char('K'), Action::PreviousFile);
-        navigation.insert(KeyCode::Char(' '), Action::ToggleExpand);
-        navigation.insert(KeyCode::Char('g'), Action::GotoTop);
-        navigation.insert(KeyCode::Char('G'), Action::GotoBottom);
-
-        Keymaps { navigation }
+        Self {
+            navigation: HashMap::from([
+                (KeyCode::Char('j'), Action::MoveDown),
+                (KeyCode::Char('k'), Action::MoveUp),
+                (KeyCode::Char('J'), Action::NextFile),
+                (KeyCode::Char('K'), Action::PreviousFile),
+                (KeyCode::Char(' '), Action::ToggleExpand),
+                (KeyCode::Char('g'), Action::GotoTop),
+                (KeyCode::Char('G'), Action::GotoBottom),
+            ]),
+        }
     }
 }
 
