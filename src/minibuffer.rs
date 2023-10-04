@@ -43,8 +43,6 @@ enum History {
 
 #[derive(Default)]
 pub struct MiniBuffer {
-    /// The current height of the buffer, including the border.
-    current_height: usize,
     /// History of commands sent via `:`.
     git_command_history: Vec<String>,
     /// History of commands sent via `!`.
@@ -262,8 +260,6 @@ impl MiniBuffer {
 
     /// Render the contents of the buffer.
     pub fn render(&mut self, term_width: u16, term_height: u16) -> Result<()> {
-        self.current_height = std::cmp::max(self.buffer.lines().count() + 1, 2);
-
         if self.state == State::Normal {
             if self.buffer.is_empty() {
                 return Ok(());
@@ -277,9 +273,10 @@ impl MiniBuffer {
             State::Input => ("\u{2574}", self.prompt),
         };
 
+        let current_height = std::cmp::max(self.buffer.lines().count() + 1, 2) as u16;
         print!(
             "{}{}{}\r\n{prompt}{}",
-            cursor::MoveTo(0, term_height.saturating_sub(self.current_height as u16)),
+            cursor::MoveTo(0, term_height.saturating_sub(current_height)),
             Clear(ClearType::FromCursorDown),
             border.repeat(term_width.into()),
             self.buffer,
