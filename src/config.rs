@@ -228,11 +228,13 @@ mod tests {
     // Should be up to date with the example config in the README.
     #[test]
     fn parse_readme_example() {
-        const INPUT: &str = "auto_expand_files = false
+        const INPUT: &str = "
+[options]
+auto_expand_files = false
 auto_expand_hunks = true
 lookahead_lines = 5
 truncate_lines = true # `false` is not recommended - see #37
-sort_branches = \"-committerdate\"
+sort_branches = \"-committerdate\" # filter to pass to `git branch --sort`. https://git-scm.com/docs/git-for-each-ref#_field_names 
 ws_error_highlight = \"new\" # override git's diff.wsErrorHighlight
 
 # Named colours use the terminal colour scheme. You can also describe your colours
@@ -257,7 +259,7 @@ error = \"#cc241d\"
                     auto_expand_hunks: true,
                     lookahead_lines: 5,
                     truncate_lines: true,
-                    sort_branches: "-committerdate",
+                    sort_branches: Some("-committerdate".to_string()),
                     ws_error_highlight: WsErrorHighlight {
                         old: false,
                         new: true,

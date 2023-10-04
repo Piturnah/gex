@@ -129,7 +129,7 @@ auto_expand_files = false
 auto_expand_hunks = true
 lookahead_lines = 5
 truncate_lines = true # `false` is not recommended - see #37
-sort_branches = "-committerdate" # filter to pass to `git branch --sort`
+sort_branches = "-committerdate" # filter to pass to `git branch --sort`. https://git-scm.com/docs/git-for-each-ref#_field_names
 ws_error_highlight = "new" # override git's diff.wsErrorHighlight
 
 # Named colours use the terminal colour scheme. You can also describe your colours
