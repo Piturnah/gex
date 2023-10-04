@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.3...main)
+### Added
+- Config option `sort_branches` to sort the branch list by some key ([#84](https://github.com/Piturnah/gex/pull/84)), thanks @LukeHalasy!
 ### Fixed
 - Minibuffer border messed up on terminal resize ([#65](https://github.com/Piturnah/gex/pull/65))
 
