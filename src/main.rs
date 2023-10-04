@@ -247,9 +247,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         Some(Action::ToggleExpand) => state.status.expand()?,
                         Some(Action::GotoBottom) => state.status.cursor_last()?,
                         Some(Action::GotoTop) => state.status.cursor_first()?,
-                        _ => {
-                            todo!()
-                        }
+                        _ => {}
                     };
 
                     match event.code {
