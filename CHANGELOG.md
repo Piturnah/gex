@@ -2,7 +2,9 @@
 
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.3...main)
 ### Added
-- Config option `sort_branches` to sort the branch list by some key ([#84](https://github.com/Piturnah/gex/pull/84)), thanks @LukeHalasy!
+- Config option `sort_branches` to sort the branch list by some key ([#84](https://github.com/Piturnah/gex/pull/84)), thanks **@LukeHalasy**!
+- Press <kbd>e</kbd> to edit the currently selected file or hunk (for supported editors) ([#85](https://github.com/Piturnah/gex/issues/85))
+  - New config option: `options.editor`
 ### Fixed
 - Minibuffer border messed up on terminal resize ([#65](https://github.com/Piturnah/gex/pull/65))
 

@@ -8,7 +8,11 @@ use std::{
 };
 
 use anyhow::{anyhow, Context, Error, Result};
-use crossterm::style::{self, Attribute};
+use crossterm::{
+    cursor,
+    style::{self, Attribute},
+    terminal,
+};
 use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
 
@@ -688,6 +692,45 @@ impl Status {
             file.hunks[file.cursor - 1].expanded = !file.hunks[file.cursor - 1].expanded;
         }
 
+        Ok(())
+    }
+
+    /// Open the current file in the configured editor. Return when the edit finishes.
+    pub fn open_editor(&self) -> Result<()> {
+        let editor = &crate::config!().options.editor;
+        let file = &self
+            .file_diffs
+            .get(self.cursor)
+            .expect("cursor is at invalid position");
+
+        let row = match file.cursor {
+            0 => 1,
+            n => parse_hunk_new(&file.hunks[n - 1].diff)?
+                .split_once(',')
+                .context("strange hunk header")?
+                .0
+                .parse()
+                .context("couldn't get starting line of hunk")?,
+        };
+        // If your editor isn't supported yet for opening at a specific line, please add the
+        // implementation below!
+        let args = match (editor.as_str(), row) {
+            (_, 1) => vec![file.path.clone()],
+            ("nvim" | "vim" | "vi" | "nano", _) => vec![format!("+{row}"), file.path.clone()],
+            ("hx", _) => vec![format!("{}:{row}", &file.path)],
+            _ => vec![file.path.clone()],
+        };
+
+        crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
+            .expect("failed to leave alternate screen");
+        Command::new(editor)
+            .args(&args)
+            .stdout(Stdio::inherit())
+            .stdin(Stdio::inherit())
+            .output()
+            .context("failed to open editor")?;
+        crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
+            .expect("failed to enter alternate screen");
         Ok(())
     }
 
