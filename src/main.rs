@@ -309,54 +309,59 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         _ => {}
                     };
                 }
-                View::BranchList => match event.code {
-                    KeyCode::Up => {
-                        state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
+                View::BranchList => {
+                    match config.keymap.navigation.get(&event.code) {
+                        Some(Action::MoveDown) => {
+                            state.branch_list.cursor = cmp::min(
+                                state.branch_list.cursor + 1,
+                                state.branch_list.branches.len() - 1,
+                            )
+                        }
+                        Some(Action::MoveUp) => {
+                            state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1)
+                        }
+                        _ => {}
                     }
-                    KeyCode::Down => {
-                        state.branch_list.cursor = cmp::min(
-                            state.branch_list.cursor + 1,
-                            state.branch_list.branches.len() - 1,
-                        );
-                    }
-                    KeyCode::Char('g' | 'K') => state.branch_list.cursor = 0,
-                    KeyCode::Char('G' | 'J') => {
-                        state.branch_list.cursor = state.branch_list.branches.len() - 1;
-                    }
-                    KeyCode::Char(' ') | KeyCode::Enter => {
-                        MiniBuffer::push_command_output(&state.branch_list.checkout()?);
-                        state.status.fetch(&state.repo, &config.options)?;
-                        state.view = View::Status;
-                    }
-                    KeyCode::Esc => state.view = View::Status,
-                    KeyCode::Char('q') => {
-                        terminal::disable_raw_mode().context("failed to disable raw mode")?;
-                        crossterm::execute!(
-                            stdout(),
-                            terminal::LeaveAlternateScreen,
-                            cursor::Show,
-                            cursor::MoveToColumn(0)
-                        )
-                        .context("failed to leave alternate screen")?;
-                        process::exit(0);
-                    }
-                    KeyCode::Char(_c1) => {
+                    match event.code {
+                        KeyCode::Char('g' | 'K') => state.branch_list.cursor = 0,
+                        KeyCode::Char('G' | 'J') => {
+                            state.branch_list.cursor = state.branch_list.branches.len() - 1;
+                        }
+                        KeyCode::Char(' ') | KeyCode::Enter => {
+                            MiniBuffer::push_command_output(&state.branch_list.checkout()?);
+                            state.status.fetch(&state.repo, &config.options)?;
+                            state.view = View::Status;
+                        }
+                        KeyCode::Esc => state.view = View::Status,
+                        KeyCode::Char('q') => {
+                            terminal::disable_raw_mode().context("failed to disable raw mode")?;
+                            crossterm::execute!(
+                                stdout(),
+                                terminal::LeaveAlternateScreen,
+                                cursor::Show,
+                                cursor::MoveToColumn(0)
+                            )
+                            .context("failed to leave alternate screen")?;
+                            process::exit(0);
+                        }
+                        KeyCode::Char(_c1) => {
 
-                        // if c1 == config.keymap.navigation.move_down {
-                        //     state.branch_list.cursor = cmp::min(
-                        //         state.branch_list.cursor + 1,
-                        //         state.branch_list.branches.len() - 1,
-                        //     );
-                        // }
+                            // if c1 == config.keymap.navigation.move_down {
+                            //     state.branch_list.cursor = cmp::min(
+                            //         state.branch_list.cursor + 1,
+                            //         state.branch_list.branches.len() - 1,
+                            //     );
+                            // }
 
-                        // if c1 == config.keymap.navigation.move_up {
-                        //     state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
-                        // }
+                            // if c1 == config.keymap.navigation.move_up {
+                            //     state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
+                            // }
 
-                        // TODO: g, G, J, K
+                            // TODO: g, G, J, K
+                        }
+                        _ => {}
                     }
-                    _ => {}
-                },
+                }
                 View::Command(cmd) => match event.code {
                     KeyCode::Esc => state.view = View::Status,
                     KeyCode::Char('q') => {
