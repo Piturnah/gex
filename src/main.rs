@@ -188,20 +188,22 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
 
         // Display the available subcommands
         if let View::Command(cmd) = state.view {
+            use std::fmt::Write;
             let subcmds = cmd.subcommands();
             print!(
                 "{}{title:═^term_width$}{}{}{}",
                 cursor::MoveTo(0, term_height - 1 - subcmds.len() as u16),
                 Clear(ClearType::FromCursorDown),
-                subcmds
-                    .iter()
-                    .map(|(k, v)| format!(
+                subcmds.iter().fold(String::new(), |mut acc, (k, v)| {
+                    let _ = write!(
+                        acc,
                         "\r\n {}{}{k}{} => {v}",
                         SetForegroundColor(config.colors.key),
                         Attribute::Bold,
-                        ResetAttributes,
-                    ))
-                    .collect::<String>(),
+                        ResetAttributes
+                    );
+                    acc
+                }),
                 SetForegroundColor(config.colors.foreground),
                 term_width = term_width as usize,
                 title = format!(" {cmd:?} Options "),

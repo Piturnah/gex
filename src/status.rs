@@ -308,7 +308,10 @@ impl render::Render for Status {
                 Attribute::Dim,
                 head.next().unwrap(), // !self.head.is_empty()
                 ResetAttributes,
-                head.map(|w| format!(" {w}")).collect::<String>()
+                head.fold(String::new(), |mut acc, w| {
+                    let _ = write!(acc, " {w}");
+                    acc
+                })
             )?;
         }
 
