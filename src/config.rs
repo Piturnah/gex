@@ -341,7 +341,9 @@ mod tests {
 [options]
 auto_expand_files = false
 auto_expand_hunks = true
+editor = \"nvim\"
 lookahead_lines = 5
+sort_branches = \"-committerdate\" # key to pass to `git branch --sort`. https://git-scm.com/docs/git-for-each-ref#_field_names 
 truncate_lines = true # `false` is not recommended - see #37
 ws_error_highlight = \"new\" # override git's diff.wsErrorHighlight
 
@@ -374,8 +376,10 @@ goto_bottom   = [\'G\']
                 options: Options {
                     auto_expand_files: false,
                     auto_expand_hunks: true,
+                    editor: "nvim".to_string(),
                     lookahead_lines: 5,
                     truncate_lines: true,
+                    sort_branches: Some("-committerdate".to_string()),
                     ws_error_highlight: WsErrorHighlight {
                         old: false,
                         new: true,

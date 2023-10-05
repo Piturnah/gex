@@ -275,6 +275,10 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                             MiniBuffer::push_command_output(&git_process(&["reset"])?);
                             state.status.fetch(&state.repo, &config.options)?;
                         }
+                        KeyCode::Char('e') => {
+                            state.status.open_editor()?;
+                            state.status.fetch(&state.repo, &config.options)?;
+                        }
                         KeyCode::Char('F') => {
                             MiniBuffer::push_command_output(&git_process(&["pull"])?);
                             state.status.fetch(&state.repo, &config.options)?;
