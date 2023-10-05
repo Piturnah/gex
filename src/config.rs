@@ -329,80 +329,84 @@ impl FromStr for WsErrorHighlight {
     }
 }
 
-// TODO: Uncomment and reconfigure
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crossterm::style::Color;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::style::Color;
 
-//     // Should be up to date with the example config in the README.
-//     #[test]
-//     fn parse_readme_example() {
-//         const INPUT: &str = "auto_expand_files = false
-// auto_expand_hunks = true
-// lookahead_lines = 5
-// truncate_lines = true # `false` is not recommended - see #37
-// ws_error_highlight = \"new\" # override git's diff.wsErrorHighlight
+    // Should be up to date with the example config in the README.
+    #[test]
+    fn parse_readme_example() {
+        const INPUT: &str = "
+[options]
+auto_expand_files = false
+auto_expand_hunks = true
+lookahead_lines = 5
+truncate_lines = true # `false` is not recommended - see #37
+ws_error_highlight = \"new\" # override git's diff.wsErrorHighlight
 
-// # Named colours use the terminal colour scheme. You can also describe your colours
-// # by hex string \"#RRGGBB\", RGB \"rgb_(r,g,b)\" or by Ansi \"ansi_(value)\".
-// #
-// # This example uses a Gruvbox colour theme.
-// [colors]
-// foreground = \"#ebdbb2\"
-// background = \"#282828\"
-// heading = \"#fabd2f\"
-// hunk_head = \"#d3869b\"
-// addition = \"#b8bb26\"
-// deletion = \"#fb4934\"
-// key = \"#d79921\"
-// error = \"#cc241d\"
+# Named colours use the terminal colour scheme. You can also describe your colours
+# by hex string \"#RRGGBB\", RGB \"rgb_(r,g,b)\" or by Ansi \"ansi_(value)\".
+#
+# This example uses a Gruvbox colour theme.
+[colors]
+foreground = \"#ebdbb2\"
+background = \"#282828\"
+heading = \"#fabd2f\"
+hunk_head = \"#d3869b\"
+addition = \"#b8bb26\"
+deletion = \"#fb4934\"
+key = \"#d79921\"
+error = \"#cc241d\"
 
-// [keymap.navigation]
-// move_down     = \"j\"
-// move_up       = \"k\"
-// next_file     = \"J\"
-// previous_file = \"K\"
-// toggle_expand = \" \"
-// goto_top      = \"g\"
-// goto_bottom   = \"G\"
-// ";
-//         assert_eq!(
-//             toml::from_str(INPUT),
-//             Ok(Config {
-//                 options: Options {
-//                     auto_expand_files: false,
-//                     auto_expand_hunks: true,
-//                     lookahead_lines: 5,
-//                     truncate_lines: true,
-//                     ws_error_highlight: WsErrorHighlight {
-//                         old: false,
-//                         new: true,
-//                         context: false
-//                     }
-//                 },
-//                 colors: Colors {
-//                     foreground: Color::from((235, 219, 178)),
-//                     background: Color::from((40, 40, 40)),
-//                     heading: Color::from((250, 189, 47)),
-//                     hunk_head: Color::from((211, 134, 155)),
-//                     addition: Color::from((184, 187, 38)),
-//                     deletion: Color::from((251, 73, 52)),
-//                     key: Color::from((215, 153, 33)),
-//                     error: Color::from((204, 36, 29))
-//                 },
-//                 // keymap: Keymaps {
-//                 //     navigation: Navigation {
-//                 //         move_down: 'j',
-//                 //         move_up: 'k',
-//                 //         next_file: 'J',
-//                 //         previous_file: 'K',
-//                 //         toggle_expand: ' ',
-//                 //         goto_top: 'g',
-//                 //         goto_bottom: 'G'
-//                 //     }
-//                 // }
-//             })
-//         )
-//     }
-// }
+[keymap.navigation]
+move_down     = [\'j\', \"Down\"]
+move_up       = [\'k\', \"Up\"]
+next_file     = [\'J\']
+previous_file = [\'K\']
+toggle_expand = [\" \", \"Tab\"]
+goto_top      = [\'g\']
+goto_bottom   = [\'G\']
+";
+        assert_eq!(
+            toml::from_str(INPUT),
+            Ok(Config {
+                options: Options {
+                    auto_expand_files: false,
+                    auto_expand_hunks: true,
+                    lookahead_lines: 5,
+                    truncate_lines: true,
+                    ws_error_highlight: WsErrorHighlight {
+                        old: false,
+                        new: true,
+                        context: false
+                    }
+                },
+                colors: Colors {
+                    foreground: Color::from((235, 219, 178)),
+                    background: Color::from((40, 40, 40)),
+                    heading: Color::from((250, 189, 47)),
+                    hunk_head: Color::from((211, 134, 155)),
+                    addition: Color::from((184, 187, 38)),
+                    deletion: Color::from((251, 73, 52)),
+                    key: Color::from((215, 153, 33)),
+                    error: Color::from((204, 36, 29))
+                },
+                keymap: Keymaps {
+                    navigation: HashMap::from([
+                        (KeyCode::Char('j'), Action::MoveDown),
+                        (KeyCode::Down, Action::MoveDown),
+                        (KeyCode::Char('k'), Action::MoveUp),
+                        (KeyCode::Up, Action::MoveUp),
+                        (KeyCode::Char('J'), Action::NextFile),
+                        (KeyCode::Char('K'), Action::PreviousFile),
+                        (KeyCode::Char(' '), Action::ToggleExpand),
+                        (KeyCode::Tab, Action::ToggleExpand),
+                        (KeyCode::Char('g'), Action::GotoTop),
+                        (KeyCode::Char('G'), Action::GotoBottom),
+                    ]),
+                }
+            })
+        )
+    }
+}
