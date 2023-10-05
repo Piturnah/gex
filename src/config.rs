@@ -43,10 +43,31 @@ pub struct Config {
 pub struct Options {
     pub auto_expand_files: bool,
     pub auto_expand_hunks: bool,
+    pub editor: String,
     pub lookahead_lines: usize,
-    pub truncate_lines: bool,
     pub sort_branches: Option<String>,
+    pub truncate_lines: bool,
     pub ws_error_highlight: WsErrorHighlight,
+}
+
+impl Options {
+    fn default_editor() -> String {
+        "nvim".to_string()
+    }
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            auto_expand_files: false,
+            auto_expand_hunks: true,
+            editor: Self::default_editor(),
+            lookahead_lines: 5,
+            sort_branches: None,
+            truncate_lines: true,
+            ws_error_highlight: WsErrorHighlight::default(),
+        }
+    }
 }
 
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -55,19 +76,6 @@ pub struct WsErrorHighlight {
     pub old: bool,
     pub new: bool,
     pub context: bool,
-}
-
-impl Default for Options {
-    fn default() -> Self {
-        Self {
-            auto_expand_files: false,
-            auto_expand_hunks: true,
-            lookahead_lines: 5,
-            truncate_lines: true,
-            sort_branches: None,
-            ws_error_highlight: WsErrorHighlight::default(),
-        }
-    }
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
@@ -232,9 +240,10 @@ mod tests {
 [options]
 auto_expand_files = false
 auto_expand_hunks = true
+editor = \"nvim\"
 lookahead_lines = 5
+sort_branches = \"-committerdate\" # key to pass to `git branch --sort`. https://git-scm.com/docs/git-for-each-ref#_field_names 
 truncate_lines = true # `false` is not recommended - see #37
-sort_branches = \"-committerdate\" # filter to pass to `git branch --sort`. https://git-scm.com/docs/git-for-each-ref#_field_names 
 ws_error_highlight = \"new\" # override git's diff.wsErrorHighlight
 
 # Named colours use the terminal colour scheme. You can also describe your colours
@@ -257,6 +266,7 @@ error = \"#cc241d\"
                 options: Options {
                     auto_expand_files: false,
                     auto_expand_hunks: true,
+                    editor: "nvim".to_string(),
                     lookahead_lines: 5,
                     truncate_lines: true,
                     sort_branches: Some("-committerdate".to_string()),

@@ -8,7 +8,11 @@ use std::{
 };
 
 use anyhow::{anyhow, Context, Error, Result};
-use crossterm::style::{self, Attribute};
+use crossterm::{
+    cursor,
+    style::{self, Attribute},
+    terminal,
+};
 use git2::{ErrorCode::UnbornBranch, Repository};
 use nom::{bytes::complete::take_until, IResult};
 
@@ -688,6 +692,28 @@ impl Status {
             file.hunks[file.cursor - 1].expanded = !file.hunks[file.cursor - 1].expanded;
         }
 
+        Ok(())
+    }
+
+    /// Open the current file in the configured editor. Return when the edit finishes.
+    pub fn open_editor(&self) -> Result<()> {
+        let editor = &crate::config!().options.editor;
+        let file_path = &self
+            .file_diffs
+            .get(self.cursor)
+            .expect("cursor is at invalid position")
+            .path;
+
+        crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
+            .expect("failed to leave alternate screen");
+        Command::new(editor)
+            .args([file_path])
+            .stdout(Stdio::inherit())
+            .stdin(Stdio::inherit())
+            .output()
+            .context("failed to open editor")?;
+        crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
+            .expect("failed to enter alternate screen");
         Ok(())
     }
 
