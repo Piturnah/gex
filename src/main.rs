@@ -340,7 +340,8 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         .context("failed to leave alternate screen")?;
                         process::exit(0);
                     }
-                    KeyCode::Char(c1) => {
+                    KeyCode::Char(_c1) => {
+
                         // if c1 == config.keymap.navigation.move_down {
                         //     state.branch_list.cursor = cmp::min(
                         //         state.branch_list.cursor + 1,
