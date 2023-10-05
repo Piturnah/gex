@@ -210,10 +210,13 @@ impl Default for Keymaps {
         Self {
             navigation: HashMap::from([
                 (KeyCode::Char('j'), Action::MoveDown),
+                (KeyCode::Down, Action::MoveDown),
                 (KeyCode::Char('k'), Action::MoveUp),
+                (KeyCode::Up, Action::MoveUp),
                 (KeyCode::Char('J'), Action::NextFile),
                 (KeyCode::Char('K'), Action::PreviousFile),
                 (KeyCode::Char(' '), Action::ToggleExpand),
+                (KeyCode::Tab, Action::ToggleExpand),
                 (KeyCode::Char('g'), Action::GotoTop),
                 (KeyCode::Char('G'), Action::GotoBottom),
             ]),
