@@ -147,8 +147,13 @@ impl<'de> Deserialize<'de> for Keymaps {
             type Value = Keymaps;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                // TODO: Dont know what to write here
-                formatter.write_str("A map ?")
+                formatter.write_str(
+                    "
+                        [keymap.SECTION]
+                        action_under_section = ['<CHARACTER_VALUE>', \"<KeyCode enum value name>\"],
+                        ...
+                    ",
+                )
             }
 
             fn visit_map<A>(self, mut map: A) -> std::result::Result<Self::Value, A::Error>
