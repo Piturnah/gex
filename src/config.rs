@@ -167,6 +167,7 @@ impl<'de> Deserialize<'de> for Keymaps {
                             )?;
 
                             for key in keys {
+                                // cross-term can't, with Serde,  directly deserialize '<CHARACTER_VALUE>' into a KeyCode
                                 if key.len() == 1 {
                                     if let Some(c) = key.chars().next() {
                                         let key = KeyCode::Char(c);
