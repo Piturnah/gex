@@ -18,10 +18,11 @@ use nom::{bytes::complete::take_until, IResult};
 
 use crate::{
     config::{Config, Options, CONFIG},
-    git_process,
+    debug, git_process,
     minibuffer::{MessageType, MiniBuffer},
     parse::{self, parse_hunk_new, parse_hunk_old},
     render::{self, Renderer, ResetAttributes, ResetColor},
+    status,
 };
 
 pub trait Expand {
@@ -284,6 +285,7 @@ pub struct Status {
     pub count_unstaged: usize,
     pub count_staged: usize,
     pub cursor: usize,
+    pub stash_list: Vec<String>, // pub stash_list: Vec<Stash>,
 }
 
 impl render::Render for Status {
@@ -365,6 +367,32 @@ impl render::Render for Status {
             write!(f, "\r    ")?;
             file.render(f)?;
             writeln!(f, "{ResetAttributes}")?;
+        }
+
+        if !self.stash_list.is_empty() {
+            writeln!(
+                f,
+                "\r\n{}Stash {}{}({}){}",
+                style::SetForegroundColor(config.colors.heading),
+                ResetColor,
+                style::Attribute::Dim,
+                self.stash_list.len(),
+                ResetAttributes
+            )?;
+
+            for (i, stash) in self.stash_list.iter().enumerate() {
+                if let Some(stash_cursor) = self.cursor.checked_sub(self.file_diffs.len()) {
+                    if i == stash_cursor {
+                        let mut stash = stash.to_string();
+                        stash.insert_str(0, &format!("{}", Attribute::Reverse));
+                        write!(&mut stash, "{ResetAttributes}")?;
+                        f.insert_cursor();
+                        writeln!(f, "\r{stash}")?;
+                        continue;
+                    }
+                }
+                writeln!(f, "\r{stash}")?;
+            }
         }
 
         Ok(())
@@ -555,6 +583,14 @@ impl Status {
         if let Some(file_diff) = self.file_diffs.get_mut(self.cursor) {
             file_diff.selected = true;
         }
+
+        let stash_list_output = git_process(&["stash", "list"])?;
+
+        self.stash_list = std::str::from_utf8(&stash_list_output.stdout)
+            .context("broken stdout from `git stash list`")?
+            .lines()
+            .map(|l| l.to_string())
+            .collect::<Vec<_>>();
 
         Ok(())
     }
@@ -781,31 +817,45 @@ impl Status {
 
     /// Move the cursor up one
     pub fn up(&mut self) -> Result<()> {
-        if self.file_diffs.is_empty() {
-            return Ok(());
-        }
+        let count_file_diffs = self.file_diffs.len();
 
-        let file = self
-            .file_diffs
-            .get_mut(self.cursor)
-            .context("cursor is at invalid position")?;
-
-        if file.up().is_err() {
-            match self.cursor.checked_sub(1) {
-                Some(v) => {
-                    self.cursor = v;
-                    file.selected = false;
-                    let new_file = self
-                        .file_diffs
-                        .get_mut(self.cursor)
-                        .context("cursor at invalid position")?;
-                    new_file.selected = true;
-                    if new_file.expanded() {
-                        new_file.cursor_last();
+        if let Some(file) = self.file_diffs.get_mut(self.cursor) {
+            if file.up().is_err() {
+                match self.cursor.checked_sub(1) {
+                    Some(v) => {
+                        self.cursor = v;
+                        file.selected = false;
+                        let new_file = self
+                            .file_diffs
+                            .get_mut(self.cursor)
+                            .context("cursor at invalid position")?;
+                        new_file.selected = true;
+                        if new_file.expanded() {
+                            new_file.cursor_last();
+                        }
                     }
+                    None => self.cursor = 0,
                 }
-                None => self.cursor = 0,
             }
+        } else if let Some(_) = self.stash_list.get(self.cursor - self.file_diffs.len()) {
+            if self.cursor - self.file_diffs.len() == 0 {
+                if count_file_diffs == 0 {
+                    return Ok(());
+                }
+
+                self.cursor -= 1;
+                let new_file = self
+                    .file_diffs
+                    .get_mut(self.cursor)
+                    .context("cursor at invalid position")?;
+                new_file.selected = true;
+                if new_file.expanded() {
+                    new_file.cursor_last();
+                }
+                return Ok(());
+            }
+
+            self.cursor -= 1;
         }
 
         Ok(())
@@ -813,31 +863,40 @@ impl Status {
 
     /// Move the cursor down one
     pub fn down(&mut self) -> Result<()> {
-        if self.file_diffs.is_empty() {
-            return Ok(());
-        }
-
         let count_file_diffs = self.file_diffs.len();
-        let file = self
-            .file_diffs
-            .get_mut(self.cursor)
-            .context("cursor is at invalid position")?;
+        let count_stash_list = self.stash_list.len();
 
-        if file.down().is_err() {
-            if self.cursor + 1 >= count_file_diffs {
+        if let Some(file) = self.file_diffs.get_mut(self.cursor) {
+            if file.down().is_err() {
+                if self.cursor + 1 >= count_file_diffs {
+                    if count_stash_list != 0 {
+                        // advance to stash list
+                        self.cursor += 1;
+                        file.selected = false;
+                        debug!("IN FILE SECTION: CURSOR COUNT: {:?}", self.cursor)
+                    }
+                    return Ok(());
+                }
+
+                self.cursor += 1;
+                file.selected = false;
+                let new_file = self
+                    .file_diffs
+                    .get_mut(self.cursor)
+                    .context("cursor at invalid position")?;
+                new_file.selected = true;
+                if new_file.expanded() {
+                    new_file.cursor_first();
+                }
+            }
+        } else if let Some(_) = self.stash_list.get(self.cursor - self.file_diffs.len()) {
+            if self.cursor + 1 >= count_file_diffs + count_stash_list {
+                debug!("returning ok");
                 return Ok(());
             }
 
             self.cursor += 1;
-            file.selected = false;
-            let new_file = self
-                .file_diffs
-                .get_mut(self.cursor)
-                .context("cursor at invalid position")?;
-            new_file.selected = true;
-            if new_file.expanded() {
-                new_file.cursor_first();
-            }
+            debug!("CURSOR COUNT: {:?}", self.cursor);
         }
 
         Ok(())
@@ -880,6 +939,21 @@ impl Status {
             .expect("cursor at `len() - 1`th pos of non-empty diffs");
         new_file.cursor_last();
         new_file.selected = true;
+        Ok(())
+    }
+
+    pub(crate) fn stash_pop(&self) -> Result<()> {
+        let stash_entry = self
+            .stash_list
+            .get(self.cursor - self.file_diffs.len())
+            .context("cursor at an invalid position")?;
+
+        if let Some(start) = stash_entry.find("{") {
+            if let Some(end) = stash_entry.find("}") {
+                git_process(&["stash", "pop", &stash_entry[start + 1..end]])?;
+            }
+        }
+
         Ok(())
     }
 }

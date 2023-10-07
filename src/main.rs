@@ -258,7 +258,9 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         state.status.fetch(&state.repo, &config.options)?;
                     }
                     KeyCode::Char('u') => {
-                        if state.status.cursor
+                        if state.status.cursor >= state.status.file_diffs.len() {
+                            state.status.stash_pop()?;
+                        } else if state.status.cursor
                             >= state.status.count_untracked + state.status.count_unstaged
                         {
                             state.status.unstage()?;
