@@ -9,6 +9,8 @@ use serde::{
     de::{self, Visitor},
     Deserialize,
 };
+
+#[allow(unused_imports)]
 use strum::{EnumIter, IntoEnumIterator};
 
 pub static CONFIG: OnceLock<Config> = OnceLock::new();

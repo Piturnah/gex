@@ -325,7 +325,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                             state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
                         }
                         Some(Action::GotoBottom) => {
-                            state.branch_list.cursor = state.branch_list.branches.len() - 1
+                            state.branch_list.cursor = state.branch_list.branches.len() - 1;
                         }
                         Some(Action::GotoTop) => state.branch_list.cursor = 0,
                         _ => {}
