@@ -9,6 +9,7 @@ use serde::{
     de::{self, Visitor},
     Deserialize,
 };
+use strum::{EnumIter, IntoEnumIterator};
 
 pub static CONFIG: OnceLock<Config> = OnceLock::new();
 #[macro_export]
@@ -202,7 +203,7 @@ impl<'de> Deserialize<'de> for Keymaps {
     }
 }
 
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, EnumIter)]
 #[serde(rename_all(deserialize = "snake_case"))]
 pub enum Action {
     MoveDown,
@@ -341,6 +342,20 @@ impl FromStr for WsErrorHighlight {
 mod tests {
     use super::*;
     use crossterm::style::Color;
+
+    #[test]
+    fn every_action_has_a_default_key() {
+        let mut action_list: Vec<Action> = Action::iter().collect();
+        for (_, action) in Keymaps::default().navigation {
+            action_list.retain(|x| x != &action);
+        }
+
+        assert!(
+            action_list.is_empty(),
+            "The following Actions do not have a default keybinding: {:?}",
+            action_list
+        )
+    }
 
     // Should be up to date with the example config in the README.
     #[test]
