@@ -160,7 +160,7 @@ impl<'de> Deserialize<'de> for Keymaps {
             where
                 A: serde::de::MapAccess<'de>,
             {
-                let mut navigation = HashMap::new();
+                let mut navigation = Self::Value::default().navigation;
 
                 while let Some((section, section_values)) =
                     map.next_entry::<String, HashMap<String, Vec<String>>>()?
@@ -170,6 +170,9 @@ impl<'de> Deserialize<'de> for Keymaps {
                             let ac: Action = Deserialize::deserialize(
                                 de::value::StringDeserializer::new(action),
                             )?;
+
+                            // over-write default key-map to action
+                            navigation.retain(|_, value| value != &ac);
 
                             for key in keys {
                                 // cross-term can't, with Serde,  directly deserialize '<CHARACTER_VALUE>' into a KeyCode
