@@ -2,6 +2,7 @@
 
 ## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.3...main)
 ### Added
+- Configuration options for navigation keymaps ([#77](https://github.com/Piturnah/gex/pull/77)), thanks **@LukeHalasy**!
 - Config option `sort_branches` to sort the branch list by some key ([#84](https://github.com/Piturnah/gex/pull/84)), thanks **@LukeHalasy**!
 - Press <kbd>e</kbd> to edit the currently selected file or hunk (for supported editors) ([#85](https://github.com/Piturnah/gex/issues/85))
   - New config option: `options.editor`
@@ -65,7 +66,7 @@
 ### Fixed
 - Receiving double inputs on certain terminals such as Windows Terminal
 - LF/CRLF warning breaks UI on hunk staging ([#26](https://github.com/Piturnah/gex/issues/26))
-- Bad diff preview when external diff tool is enabled ([#28](https://github.com/Piturnah/gex/pull/28))
+- Bad diff preview when external diff tool is enabled ([#28](https://github.com/Piturnah/gex/pull/28)), thanks **@vereym**!
 - Terminal left in bad state in case of panic
 - Cursor disappears in status view after jumping to top ([#31](https://github.com/Piturnah/gex/issues/31))
 
