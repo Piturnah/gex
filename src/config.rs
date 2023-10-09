@@ -10,8 +10,6 @@ use serde::{
     Deserialize,
 };
 
-#[allow(unused_imports)]
-
 pub static CONFIG: OnceLock<Config> = OnceLock::new();
 #[macro_export]
 macro_rules! config {
