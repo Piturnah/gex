@@ -1,11 +1,17 @@
 //! Gex configuration.
 #![allow(clippy::derivable_impls)]
-use std::{fs, path::PathBuf, str::FromStr, sync::OnceLock};
+use std::{collections::HashMap, fs, path::PathBuf, str::FromStr, sync::OnceLock};
 
 use anyhow::{Context, Result};
-use clap::Parser;
-use crossterm::style::Color;
-use serde::Deserialize;
+use clap::{command, Parser};
+use crossterm::{event::KeyCode, style::Color};
+use serde::{
+    de::{self, Visitor},
+    Deserialize,
+};
+
+#[allow(unused_imports)]
+use strum::{EnumIter, IntoEnumIterator};
 
 pub static CONFIG: OnceLock<Config> = OnceLock::new();
 #[macro_export]
@@ -36,6 +42,7 @@ pub struct Clargs {
 pub struct Config {
     pub options: Options,
     pub colors: Colors,
+    pub keymap: Keymaps,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
@@ -123,6 +130,108 @@ impl Default for Colors {
                 key: Color::Green,
                 error: Color::Red,
             }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Keymaps {
+    pub navigation: HashMap<KeyCode, Action>,
+}
+
+struct KeymapsVisitor;
+
+impl<'de> Deserialize<'de> for Keymaps {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        impl<'de> Visitor<'de> for KeymapsVisitor {
+            type Value = Keymaps;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str(
+                    "
+                        [keymap.SECTION]
+                        action_under_section = ['<CHARACTER_VALUE>', \"<KeyCode enum value name>\"],
+                        ...
+                    ",
+                )
+            }
+
+            fn visit_map<A>(self, mut map: A) -> std::result::Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                let mut navigation = Self::Value::default().navigation;
+
+                while let Some((section, section_values)) =
+                    map.next_entry::<String, HashMap<String, Vec<String>>>()?
+                {
+                    if section == "navigation" {
+                        for (action, keys) in section_values {
+                            let ac: Action = Deserialize::deserialize(
+                                de::value::StringDeserializer::new(action),
+                            )?;
+
+                            // over-write default key-map to action
+                            navigation.retain(|_, value| value != &ac);
+
+                            for key in keys {
+                                // cross-term can't, with Serde,  directly deserialize '<CHARACTER_VALUE>' into a KeyCode
+                                if key.len() == 1 {
+                                    if let Some(c) = key.chars().next() {
+                                        let key = KeyCode::Char(c);
+                                        navigation.insert(key, ac.clone());
+                                        continue;
+                                    }
+                                }
+
+                                let key: KeyCode = Deserialize::deserialize(
+                                    de::value::StringDeserializer::new(key),
+                                )?;
+
+                                navigation.insert(key, ac.clone());
+                            }
+                        }
+                    }
+                }
+
+                Ok(Keymaps { navigation })
+            }
+        }
+
+        deserializer.deserialize_map(KeymapsVisitor)
+    }
+}
+
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, EnumIter)]
+#[serde(rename_all(deserialize = "snake_case"))]
+pub enum Action {
+    MoveDown,
+    MoveUp,
+    NextFile,
+    PreviousFile,
+    ToggleExpand,
+    GotoTop,
+    GotoBottom,
+}
+
+impl Default for Keymaps {
+    fn default() -> Self {
+        Self {
+            navigation: HashMap::from([
+                (KeyCode::Char('j'), Action::MoveDown),
+                (KeyCode::Down, Action::MoveDown),
+                (KeyCode::Char('k'), Action::MoveUp),
+                (KeyCode::Up, Action::MoveUp),
+                (KeyCode::Char('J'), Action::NextFile),
+                (KeyCode::Char('K'), Action::PreviousFile),
+                (KeyCode::Char(' '), Action::ToggleExpand),
+                (KeyCode::Tab, Action::ToggleExpand),
+                (KeyCode::Char('g'), Action::GotoTop),
+                (KeyCode::Char('G'), Action::GotoBottom),
+            ]),
         }
     }
 }
@@ -236,6 +345,20 @@ mod tests {
     use super::*;
     use crossterm::style::Color;
 
+    #[test]
+    fn every_action_has_a_default_key() {
+        let mut action_list: Vec<Action> = Action::iter().collect();
+        for (_, action) in Keymaps::default().navigation {
+            action_list.retain(|x| x != &action);
+        }
+
+        assert!(
+            action_list.is_empty(),
+            "The following Actions do not have a default keybinding: {:?}",
+            action_list
+        )
+    }
+
     // Should be up to date with the example config in the README.
     #[test]
     fn parse_readme_example() {
@@ -262,6 +385,15 @@ addition = \"#b8bb26\"
 deletion = \"#fb4934\"
 key = \"#d79921\"
 error = \"#cc241d\"
+
+[keymap.navigation]
+move_down     = [\'j\', \"Down\"]
+move_up       = [\'k\', \"Up\"]
+next_file     = [\'J\']
+previous_file = [\'K\']
+toggle_expand = [\" \", \"Tab\"]
+goto_top      = [\'g\']
+goto_bottom   = [\'G\']
 ";
         assert_eq!(
             toml::from_str(INPUT),
@@ -288,6 +420,20 @@ error = \"#cc241d\"
                     deletion: Color::from((251, 73, 52)),
                     key: Color::from((215, 153, 33)),
                     error: Color::from((204, 36, 29))
+                },
+                keymap: Keymaps {
+                    navigation: HashMap::from([
+                        (KeyCode::Char('j'), Action::MoveDown),
+                        (KeyCode::Down, Action::MoveDown),
+                        (KeyCode::Char('k'), Action::MoveUp),
+                        (KeyCode::Up, Action::MoveUp),
+                        (KeyCode::Char('J'), Action::NextFile),
+                        (KeyCode::Char('K'), Action::PreviousFile),
+                        (KeyCode::Char(' '), Action::ToggleExpand),
+                        (KeyCode::Tab, Action::ToggleExpand),
+                        (KeyCode::Char('g'), Action::GotoTop),
+                        (KeyCode::Char('G'), Action::GotoBottom),
+                    ]),
                 }
             })
         )

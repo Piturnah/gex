@@ -29,7 +29,7 @@ use git2::Repository;
 
 use crate::{
     command::GexCommand,
-    config::{Config, CONFIG},
+    config::{Action, Config, CONFIG},
     minibuffer::{Callback, MessageType, MiniBuffer},
     render::{Clear, Render, ResetAttributes},
 };
@@ -238,108 +238,119 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
             }
 
             match state.view {
-                View::Status => match event.code {
-                    KeyCode::Char('j') | KeyCode::Down => state.status.down()?,
-                    KeyCode::Char('k') | KeyCode::Up => state.status.up()?,
-                    KeyCode::Char('J') => state.status.file_down()?,
-                    KeyCode::Char('K') => state.status.file_up()?,
-                    KeyCode::Char('G') => state.status.cursor_last()?,
-                    KeyCode::Char('g') => state.status.cursor_first()?,
-                    KeyCode::Char('s') => {
-                        if state.status.cursor
-                            < state.status.count_untracked + state.status.count_unstaged
-                        {
-                            state.status.stage()?;
+                View::Status => {
+                    match config.keymap.navigation.get(&event.code) {
+                        Some(Action::MoveDown) => state.status.down()?,
+                        Some(Action::MoveUp) => state.status.up()?,
+                        Some(Action::NextFile) => state.status.file_down()?,
+                        Some(Action::PreviousFile) => state.status.file_up()?,
+                        Some(Action::ToggleExpand) => state.status.expand()?,
+                        Some(Action::GotoBottom) => state.status.cursor_last()?,
+                        Some(Action::GotoTop) => state.status.cursor_first()?,
+                        _ => {}
+                    };
+
+                    match event.code {
+                        KeyCode::Char('s') => {
+                            if state.status.cursor
+                                < state.status.count_untracked + state.status.count_unstaged
+                            {
+                                state.status.stage()?;
+                                state.status.fetch(&state.repo, &config.options)?;
+                            }
+                        }
+                        KeyCode::Char('S') => {
+                            MiniBuffer::push_command_output(&git_process(&["add", "."])?);
                             state.status.fetch(&state.repo, &config.options)?;
                         }
-                    }
-                    KeyCode::Char('S') => {
-                        MiniBuffer::push_command_output(&git_process(&["add", "."])?);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('u') => {
-                        if state.status.cursor
-                            >= state.status.count_untracked + state.status.count_unstaged
-                        {
-                            state.status.unstage()?;
+                        KeyCode::Char('u') => {
+                            if state.status.cursor
+                                >= state.status.count_untracked + state.status.count_unstaged
+                            {
+                                state.status.unstage()?;
+                                state.status.fetch(&state.repo, &config.options)?;
+                            }
+                        }
+                        KeyCode::Char('U') => {
+                            MiniBuffer::push_command_output(&git_process(&["reset"])?);
                             state.status.fetch(&state.repo, &config.options)?;
                         }
-                    }
-                    KeyCode::Char('U') => {
-                        MiniBuffer::push_command_output(&git_process(&["reset"])?);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Tab | KeyCode::Char(' ') => state.status.expand()?,
-                    KeyCode::Char('e') => {
-                        state.status.open_editor()?;
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('F') => {
-                        MiniBuffer::push_command_output(&git_process(&["pull"])?);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('r') => state.status.fetch(&state.repo, &config.options)?,
-                    KeyCode::Char(':') => {
-                        state.minibuffer.command(true, &mut state.view);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('!') => {
-                        state.minibuffer.command(false, &mut state.view);
-                        state.status.fetch(&state.repo, &config.options)?;
-                    }
-                    KeyCode::Char('q') => {
-                        terminal::disable_raw_mode().context("failed to disable raw mode")?;
-                        crossterm::execute!(
-                            stdout(),
-                            terminal::LeaveAlternateScreen,
-                            cursor::Show,
-                            cursor::MoveToColumn(0)
-                        )
-                        .context("failed to leave alternate screen")?;
-                        process::exit(0);
-                    }
-                    KeyCode::Char(c1) => {
-                        if let Some((_, cmd)) =
-                            GexCommand::commands().iter().find(|(c2, _)| c1 == *c2)
-                        {
-                            state.view = View::Command(*cmd);
+                        KeyCode::Char('e') => {
+                            state.status.open_editor()?;
+                            state.status.fetch(&state.repo, &config.options)?;
                         }
+                        KeyCode::Char('F') => {
+                            MiniBuffer::push_command_output(&git_process(&["pull"])?);
+                            state.status.fetch(&state.repo, &config.options)?;
+                        }
+                        KeyCode::Char('r') => state.status.fetch(&state.repo, &config.options)?,
+                        KeyCode::Char(':') => {
+                            state.minibuffer.command(true, &mut state.view);
+                            state.status.fetch(&state.repo, &config.options)?;
+                        }
+                        KeyCode::Char('!') => {
+                            state.minibuffer.command(false, &mut state.view);
+                            state.status.fetch(&state.repo, &config.options)?;
+                        }
+                        KeyCode::Char('q') => {
+                            terminal::disable_raw_mode().context("failed to disable raw mode")?;
+                            crossterm::execute!(
+                                stdout(),
+                                terminal::LeaveAlternateScreen,
+                                cursor::Show,
+                                cursor::MoveToColumn(0)
+                            )
+                            .context("failed to leave alternate screen")?;
+                            process::exit(0);
+                        }
+                        KeyCode::Char(c1) => {
+                            if let Some((_, cmd)) =
+                                GexCommand::commands().iter().find(|(c2, _)| c1 == *c2)
+                            {
+                                state.view = View::Command(*cmd);
+                            }
+                        }
+                        _ => {}
+                    };
+                }
+                View::BranchList => {
+                    match config.keymap.navigation.get(&event.code) {
+                        Some(Action::MoveDown) => {
+                            state.branch_list.cursor = cmp::min(
+                                state.branch_list.cursor + 1,
+                                state.branch_list.branches.len() - 1,
+                            );
+                        }
+                        Some(Action::MoveUp) => {
+                            state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
+                        }
+                        Some(Action::GotoBottom) => {
+                            state.branch_list.cursor = state.branch_list.branches.len() - 1;
+                        }
+                        Some(Action::GotoTop) => state.branch_list.cursor = 0,
+                        _ => {}
                     }
-                    _ => {}
-                },
-                View::BranchList => match event.code {
-                    KeyCode::Char('k') | KeyCode::Up => {
-                        state.branch_list.cursor = state.branch_list.cursor.saturating_sub(1);
+                    match event.code {
+                        KeyCode::Char(' ') | KeyCode::Enter => {
+                            MiniBuffer::push_command_output(&state.branch_list.checkout()?);
+                            state.status.fetch(&state.repo, &config.options)?;
+                            state.view = View::Status;
+                        }
+                        KeyCode::Esc => state.view = View::Status,
+                        KeyCode::Char('q') => {
+                            terminal::disable_raw_mode().context("failed to disable raw mode")?;
+                            crossterm::execute!(
+                                stdout(),
+                                terminal::LeaveAlternateScreen,
+                                cursor::Show,
+                                cursor::MoveToColumn(0)
+                            )
+                            .context("failed to leave alternate screen")?;
+                            process::exit(0);
+                        }
+                        _ => {}
                     }
-                    KeyCode::Char('j') | KeyCode::Down => {
-                        state.branch_list.cursor = cmp::min(
-                            state.branch_list.cursor + 1,
-                            state.branch_list.branches.len() - 1,
-                        );
-                    }
-                    KeyCode::Char('g' | 'K') => state.branch_list.cursor = 0,
-                    KeyCode::Char('G' | 'J') => {
-                        state.branch_list.cursor = state.branch_list.branches.len() - 1;
-                    }
-                    KeyCode::Char(' ') | KeyCode::Enter => {
-                        MiniBuffer::push_command_output(&state.branch_list.checkout()?);
-                        state.status.fetch(&state.repo, &config.options)?;
-                        state.view = View::Status;
-                    }
-                    KeyCode::Esc => state.view = View::Status,
-                    KeyCode::Char('q') => {
-                        terminal::disable_raw_mode().context("failed to disable raw mode")?;
-                        crossterm::execute!(
-                            stdout(),
-                            terminal::LeaveAlternateScreen,
-                            cursor::Show,
-                            cursor::MoveToColumn(0)
-                        )
-                        .context("failed to leave alternate screen")?;
-                        process::exit(0);
-                    }
-                    _ => {}
-                },
+                }
                 View::Command(cmd) => match event.code {
                     KeyCode::Esc => state.view = View::Status,
                     KeyCode::Char('q') => {

@@ -147,6 +147,15 @@ addition = "#b8bb26"
 deletion = "#fb4934"
 key = "#d79921"
 error = "#cc241d"
+
+[keymap.navigation]
+move_down     = ['j', "Down"]
+move_up       = ['k', "Up"]
+next_file     = ['J']
+previous_file = ['K']
+toggle_expand = [" ", "Tab"]
+goto_top      = ['g']
+goto_bottom   = ['G']
 ```
 
 ## Versioning
