@@ -11,7 +11,6 @@ use serde::{
 };
 
 #[allow(unused_imports)]
-use strum::{EnumIter, IntoEnumIterator};
 
 pub static CONFIG: OnceLock<Config> = OnceLock::new();
 #[macro_export]
@@ -205,8 +204,9 @@ impl<'de> Deserialize<'de> for Keymaps {
     }
 }
 
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, EnumIter)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all(deserialize = "snake_case"))]
+#[cfg_attr(test, derive(strum::EnumIter))]
 pub enum Action {
     MoveDown,
     MoveUp,
@@ -344,6 +344,7 @@ impl FromStr for WsErrorHighlight {
 mod tests {
     use super::*;
     use crossterm::style::Color;
+    use strum::IntoEnumIterator;
 
     #[test]
     fn every_action_has_a_default_key() {
