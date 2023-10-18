@@ -65,10 +65,14 @@ pub enum View {
 }
 
 pub fn git_process(args: &[&str]) -> Result<Output> {
+    use std::fmt::Write;
     Command::new("git").args(args).output().with_context(|| {
         format!(
             "failed to run `git{}`",
-            args.iter().map(|a| " ".to_string() + a).collect::<String>()
+            args.iter().fold(String::new(), |mut acc, arg| {
+                let _ = write!(acc, " {arg}");
+                acc
+            })
         )
     })
 }
