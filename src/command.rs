@@ -89,6 +89,7 @@ impl GexCommand {
                                     BranchList::checkout_new(input)?;
                                     status::REFRESH_FLAG.store(true, Ordering::Release);
                                 }
+                                print!("{}", cursor::Hide);
                                 Ok(())
                             }),
                             Some("Name for the new branch: "),

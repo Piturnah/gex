@@ -95,7 +95,8 @@ impl BranchList {
         git_process(&["checkout", &self.branches[self.cursor][2..]])
     }
 
-    pub fn checkout_new(name: &str) -> Result<Output> {
-        git_process(&["checkout", "-b", name])
+    pub fn checkout_new(name: &str) -> Result<()> {
+        MiniBuffer::push_command_output(&git_process(&["checkout", "-b", name])?);
+        Ok(())
     }
 }
