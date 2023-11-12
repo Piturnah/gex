@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.3...main)
+## [0.6.4](https://github.com/Piturnah/gex/compare/v0.6.3...v0.6.4) - 2023-11-12
 ### Added
 - Configuration options for navigation keymaps ([#77](https://github.com/Piturnah/gex/pull/77)), thanks **@LukeHalasy**!
 - Config option `sort_branches` to sort the branch list by some key ([#84](https://github.com/Piturnah/gex/pull/84)), thanks **@LukeHalasy**!
@@ -8,6 +8,7 @@
   - New config option: `options.editor`
 ### Fixed
 - Minibuffer border messed up on terminal resize ([#65](https://github.com/Piturnah/gex/pull/65))
+- Couldn't use <kbd>Esc</kbd> to cancel creating new branch ([#78](https://github.com/Piturnah/gex/issues/78))
 
 ## [0.6.3](https://github.com/Piturnah/gex/compare/v0.6.2...v0.6.3) - 2023-08-30
 ### Fixed
