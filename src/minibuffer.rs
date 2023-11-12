@@ -100,16 +100,19 @@ impl MiniBuffer {
     }
 
     /// Get some user input from this minibuffer and run `callback` on it.
-    pub fn get_input(&mut self, callback: Callback, prompt: Option<&'static str>, view: &mut View) {
+    pub fn get_input(
+        &mut self,
+        callback: Callback,
+        prompt: Option<&'static str>,
+        view: &mut View,
+        return_view: View,
+    ) {
         self.cursor = 0;
         self.buffer.clear();
         self.history_cursor = 0;
         self.state = State::Input;
         self.prompt = prompt.unwrap_or("");
-        // This clone should be very cheap as we should never be calling this method while already
-        // in View::Input.
-        debug_assert!(!matches!(view, View::Input(..)));
-        *view = View::Input(callback, Box::new(view.clone()));
+        *view = View::Input(callback, Box::new(return_view));
     }
 
     /// `return_view`: the [`View`](crate::View) to switch to after exiting `View::Input`.
@@ -221,6 +224,12 @@ impl MiniBuffer {
             ("!", History::Command)
         };
         self.history = history;
+
+        // This clone should be very cheap as we should never be calling this method while already
+        // in View::Input.
+        debug_assert!(!matches!(view, View::Input(..)));
+        let return_view = view.clone();
+
         self.get_input(
             Rc::new(move |cmd: Option<&str>| {
                 crossterm::execute!(stdout(), cursor::MoveToColumn(0))?;
@@ -255,6 +264,7 @@ impl MiniBuffer {
             }),
             Some(prompt),
             view,
+            return_view,
         );
     }
 

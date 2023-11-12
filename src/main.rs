@@ -373,7 +373,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                         .context("failed to leave alternate screen")?;
                         process::exit(0);
                     }
-                    KeyCode::Char(c) => cmd.handle_input(c, &mut state, config)?,
+                    KeyCode::Char(c) => cmd.handle_input(c, &mut state)?,
                     _ => {}
                 },
                 View::Input(ref callback, ref return_view) => {

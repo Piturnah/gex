@@ -1,21 +1,13 @@
-use std::{
-    fmt,
-    io::{stdin, stdout, BufRead, Write},
-    process::Output,
-};
+use std::{fmt, process::Output};
 
 use anyhow::{Context, Result};
-use crossterm::{
-    cursor,
-    style::{Attribute, SetForegroundColor},
-    terminal::{self, ClearType},
-};
+use crossterm::style::{Attribute, SetForegroundColor};
 
 use crate::{
     config::CONFIG,
     git_process,
     minibuffer::{MessageType, MiniBuffer},
-    render::{self, Clear, Renderer, ResetAttributes},
+    render::{self, Renderer, ResetAttributes},
 };
 
 pub struct BranchList {
@@ -103,26 +95,7 @@ impl BranchList {
         git_process(&["checkout", &self.branches[self.cursor][2..]])
     }
 
-    pub fn checkout_new() -> Result<Output> {
-        terminal::disable_raw_mode().context("failed to exit raw mode")?;
-        print!(
-            "{}{}{}Name for the new branch: ",
-            cursor::MoveTo(0, 0),
-            Clear(ClearType::All),
-            cursor::Show
-        );
-        drop(stdout().flush());
-
-        let input = stdin()
-            .lock()
-            .lines()
-            .next()
-            .context("no stdin")?
-            .context("malformed stdin")?;
-
-        terminal::enable_raw_mode().context("failed to enter raw mode")?;
-        print!("{}", cursor::Hide);
-
-        git_process(&["checkout", "-b", &input])
+    pub fn checkout_new(name: &str) -> Result<Output> {
+        git_process(&["checkout", "-b", name])
     }
 }

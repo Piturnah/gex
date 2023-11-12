@@ -9,9 +9,7 @@ use std::{
 use anyhow::{Context, Result};
 use crossterm::{cursor, terminal};
 
-use crate::{
-    branch::BranchList, config::Config, git_process, minibuffer::MiniBuffer, status, State, View,
-};
+use crate::{branch::BranchList, git_process, minibuffer::MiniBuffer, status, State, View};
 
 macro_rules! commands {
     ($($key:literal: $cmd:tt => [$($subkey:literal: $subcmd:tt),+$(,)?]),*$(,)?) => {
@@ -69,12 +67,11 @@ commands! {
 
 impl GexCommand {
     #[allow(clippy::enum_glob_use)]
-    pub fn handle_input(self, key: char, state: &mut State, config: &Config) -> Result<()> {
+    pub fn handle_input(self, key: char, state: &mut State) -> Result<()> {
         use SubCommand::*;
         let State {
-            ref mut status,
             ref mut view,
-            repo,
+            ref mut minibuffer,
             ..
         } = state;
         let Some((_, cmd)) = self.subcommands().iter().find(|(c, _)| key == *c) else {
@@ -86,10 +83,18 @@ impl GexCommand {
                 use branch::SubCommand;
                 match subcmd {
                     SubCommand::New => {
-                        let checkout = BranchList::checkout_new()?;
-                        MiniBuffer::push_command_output(&checkout);
-                        status.fetch(repo, &config.options)?;
-                        *view = View::Status;
+                        minibuffer.get_input(
+                            Rc::new(|input| {
+                                if let Some(input) = input {
+                                    BranchList::checkout_new(input)?;
+                                    status::REFRESH_FLAG.store(true, Ordering::Release);
+                                }
+                                Ok(())
+                            }),
+                            Some("Name for the new branch: "),
+                            view,
+                            View::Status,
+                        );
                     }
                     SubCommand::Checkout => {
                         state.branch_list.fetch()?;

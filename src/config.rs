@@ -353,9 +353,8 @@ mod tests {
 
         assert!(
             action_list.is_empty(),
-            "The following Actions do not have a default keybinding: {:?}",
-            action_list
-        )
+            "The following Actions do not have a default keybinding: {action_list:?}"
+        );
     }
 
     // Should be up to date with the example config in the README.
@@ -435,6 +434,6 @@ goto_bottom   = [\'G\']
                     ]),
                 }
             })
-        )
+        );
     }
 }
