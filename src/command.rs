@@ -2,12 +2,16 @@ use std::{
     fmt,
     io::stdout,
     process::{Command, Stdio},
+    rc::Rc,
+    sync::atomic::Ordering,
 };
 
 use anyhow::{Context, Result};
 use crossterm::{cursor, terminal};
 
-use crate::{branch::BranchList, config::Config, git_process, minibuffer::MiniBuffer, State, View};
+use crate::{
+    branch::BranchList, config::Config, git_process, minibuffer::MiniBuffer, status, State, View,
+};
 
 macro_rules! commands {
     ($($key:literal: $cmd:tt => [$($subkey:literal: $subcmd:tt),+$(,)?]),*$(,)?) => {
@@ -107,7 +111,7 @@ impl GexCommand {
                                 .output()
                                 .context("failed to run `git commit`")?,
                         );
-                        status.fetch(repo, &config.options)?;
+                        status::REFRESH_FLAG.store(true, Ordering::Release);
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .context("failed to enter alternate screen")?;
                     }
@@ -120,7 +124,7 @@ impl GexCommand {
                                 .output()
                                 .context("failed to run `git commit`")?,
                         );
-                        status.fetch(repo, &config.options)?;
+                        status::REFRESH_FLAG.store(true, Ordering::Release);
                     }
                     SubCommand::Amend => {
                         crossterm::execute!(stdout(), terminal::LeaveAlternateScreen)
@@ -133,7 +137,7 @@ impl GexCommand {
                                 .output()
                                 .context("failed to run `git commit`")?,
                         );
-                        status.fetch(repo, &config.options)?;
+                        status::REFRESH_FLAG.store(true, Ordering::Release);
                         crossterm::execute!(stdout(), terminal::EnterAlternateScreen, cursor::Hide)
                             .context("failed to enter alternate screen")?;
                     }
@@ -164,7 +168,7 @@ impl GexCommand {
                         MiniBuffer::push_command_output(&git_process(&["stash", "pop"])?);
                     }
                 }
-                status.fetch(repo, &config.options)?;
+                status::REFRESH_FLAG.store(true, Ordering::Release);
                 *view = View::Status;
             }
         }

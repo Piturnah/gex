@@ -14,6 +14,7 @@ use std::{
     panic,
     process::{self, Command, Output},
     rc::Rc,
+    sync::atomic::Ordering,
 };
 
 use anyhow::{Context, Result};
@@ -178,6 +179,10 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
         print!("{ResetAttributes}");
         match state.view {
             View::Status | View::Command(_) | View::Input(..) => {
+                // If the flag is set then we need to fetch the status again before rendering.
+                if status::REFRESH_FLAG.swap(false, Ordering::Acquire) {
+                    state.status.fetch(&state.repo, &config.options)?;
+                }
                 state.status.render(&mut state.renderer)?;
             }
             View::BranchList => state.branch_list.render(&mut state.renderer)?,
@@ -260,41 +265,41 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                                 < state.status.count_untracked + state.status.count_unstaged
                             {
                                 state.status.stage()?;
-                                state.status.fetch(&state.repo, &config.options)?;
+                                status::REFRESH_FLAG.store(true, Ordering::Release);
                             }
                         }
                         KeyCode::Char('S') => {
                             MiniBuffer::push_command_output(&git_process(&["add", "."])?);
-                            state.status.fetch(&state.repo, &config.options)?;
+                            status::REFRESH_FLAG.store(true, Ordering::Release);
                         }
                         KeyCode::Char('u') => {
                             if state.status.cursor
                                 >= state.status.count_untracked + state.status.count_unstaged
                             {
                                 state.status.unstage()?;
-                                state.status.fetch(&state.repo, &config.options)?;
+                                status::REFRESH_FLAG.store(true, Ordering::Release);
                             }
                         }
                         KeyCode::Char('U') => {
                             MiniBuffer::push_command_output(&git_process(&["reset"])?);
-                            state.status.fetch(&state.repo, &config.options)?;
+                            status::REFRESH_FLAG.store(true, Ordering::Release);
                         }
                         KeyCode::Char('e') => {
                             state.status.open_editor()?;
-                            state.status.fetch(&state.repo, &config.options)?;
+                            status::REFRESH_FLAG.store(true, Ordering::Release);
                         }
                         KeyCode::Char('F') => {
                             MiniBuffer::push_command_output(&git_process(&["pull"])?);
-                            state.status.fetch(&state.repo, &config.options)?;
+                            status::REFRESH_FLAG.store(true, Ordering::Release);
                         }
-                        KeyCode::Char('r') => state.status.fetch(&state.repo, &config.options)?,
+                        KeyCode::Char('r') => status::REFRESH_FLAG.store(true, Ordering::Release),
                         KeyCode::Char(':') => {
                             state.minibuffer.command(true, &mut state.view);
-                            state.status.fetch(&state.repo, &config.options)?;
+                            status::REFRESH_FLAG.store(true, Ordering::Release);
                         }
                         KeyCode::Char('!') => {
                             state.minibuffer.command(false, &mut state.view);
-                            state.status.fetch(&state.repo, &config.options)?;
+                            status::REFRESH_FLAG.store(true, Ordering::Release);
                         }
                         KeyCode::Char('q') => {
                             terminal::disable_raw_mode().context("failed to disable raw mode")?;
@@ -337,7 +342,7 @@ See https://github.com/Piturnah/gex/issues/13.", MessageType::Error);
                     match event.code {
                         KeyCode::Char(' ') | KeyCode::Enter => {
                             MiniBuffer::push_command_output(&state.branch_list.checkout()?);
-                            state.status.fetch(&state.repo, &config.options)?;
+                            status::REFRESH_FLAG.store(true, Ordering::Release);
                             state.view = View::Status;
                         }
                         KeyCode::Esc => state.view = View::Status,

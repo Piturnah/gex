@@ -5,6 +5,7 @@ use std::{
     fmt, fs,
     io::{stdout, Read, Write},
     process::{Command, Output, Stdio},
+    sync::atomic::AtomicBool,
 };
 
 use anyhow::{anyhow, Context, Error, Result};
@@ -23,6 +24,8 @@ use crate::{
     parse::{self, parse_hunk_new, parse_hunk_old},
     render::{self, Renderer, ResetAttributes, ResetColor},
 };
+
+pub static REFRESH_FLAG: AtomicBool = AtomicBool::new(false);
 
 pub trait Expand {
     fn toggle_expand(&mut self);
