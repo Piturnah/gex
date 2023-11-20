@@ -27,7 +27,7 @@ vte = "0.12.1"
 
 [dev-dependencies]
 strum = { version = "0.25", features = ["derive"] }
-test-case = "3.2.1"
+test-case = "3.3.1"
 
 #       Tokee
 #      (Gecko gekko)                _____________
