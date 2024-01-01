@@ -12,7 +12,7 @@ repository = "https://github.com/Piturnah/gex"
 homepage = "https://github.com/Piturnah/gex"
 
 [dependencies]
-anyhow = "1.0.76"
+anyhow = "1.0.78"
 clap = { version = "4.4.11", features = ["cargo", "derive"] }
 crossterm = { version = "0.27.0", features = ["serde"] }
 dirs = "5.0.1"
