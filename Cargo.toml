@@ -29,6 +29,8 @@ vte = "0.13.0"
 strum = { version = "0.26", features = ["derive"] }
 test-case = "3.3.1"
 
+# Screenreader warning: The rest of this file is ascii art of a gecko.
+#
 #       Tokee
 #      (Gecko gekko)                _____________
 #                            __,---'::.-  -::_ _ `-----.___      ______
