@@ -693,9 +693,9 @@ impl Status {
             .context("cursor is at invalid position")?;
 
         if file.cursor == 0 {
-            file.expanded = !file.expanded;
+            file.toggle_expand();
         } else {
-            file.hunks[file.cursor - 1].expanded = !file.hunks[file.cursor - 1].expanded;
+            file.hunks[file.cursor - 1].toggle_expand();
         }
 
         Ok(())
