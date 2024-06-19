@@ -31,7 +31,7 @@ fn get_path<'a>(diff: &[&'a str]) -> Result<&'a str> {
 
 fn get_hunks(diff: &[&str]) -> Result<Vec<String>> {
     let mut hunks = Vec::new();
-    let hunk_groups = diff.iter().group_by(|line| line.starts_with("@@"));
+    let hunk_groups = diff.iter().chunk_by(|line| line.starts_with("@@"));
     let mut hunk_groups = hunk_groups.into_iter();
     loop {
         let Some((key, mut lines)) = hunk_groups.next() else {
