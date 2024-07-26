@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased](https://github.com/Piturnah/gex/compare/v0.6.4...main)
+### Changed
+- Gex will look in `$HOME/.config/` for a config file if it didn't find any in the usual spot ([#87](https://github.com/Piturnah/gex/issues/87))
+
 ## [0.6.4](https://github.com/Piturnah/gex/compare/v0.6.3...v0.6.4) - 2023-11-12
 ### Added
 - Configuration options for navigation keymaps ([#77](https://github.com/Piturnah/gex/pull/77)), thanks **@LukeHalasy**!

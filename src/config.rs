@@ -240,16 +240,30 @@ impl Config {
     /// If there is no config file, it will return `Ok(None)`.
     /// If there is a config file but it is unable to parse it, it will return `Err(_)`.
     pub fn read_from_file(path: &Option<String>) -> Result<Option<(Self, Vec<String>)>> {
-        let mut config_path;
-        if let Some(path) = path {
-            config_path = PathBuf::from(path);
-        } else if let Some(path) = dirs::config_dir() {
-            config_path = path;
-            config_path.push("gex");
-            config_path.push("config.toml");
+        let config_path = if let Some(path) = path {
+            PathBuf::from(path)
+        } else
+        // First we will try where dirs tells us.
+        if let Some(path) = dirs::config_dir()
+            .map(|mut path| {
+                path.push("gex");
+                path.push("config.toml");
+                path
+            })
+            .filter(|path| path.as_path().exists())
+            // If it doesn't exist, we'll try the usual suspect. (#87)
+            .or_else(|| {
+                dirs::home_dir().map(|mut path| {
+                    path.push("gex");
+                    path.push("config.toml");
+                    path
+                })
+            })
+        {
+            path
         } else {
             return Ok(None);
-        }
+        };
 
         let Ok(config) = fs::read_to_string(config_path) else {
             return Ok(None);

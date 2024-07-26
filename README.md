@@ -122,6 +122,8 @@ Gex will look for a config file in the following places:
 | MacOS   | `$HOME/Library/Application Support/gex/config.toml` |
 | Windows | `{FOLDERID_RoamingAppData}/gex/config.toml`         |
 
+On all platforms, gex will try `$HOME/.config/gex/config.toml` as a fallback.
+
 Here is an example `config.toml`:
 
 ```toml
