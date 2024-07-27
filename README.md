@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/e1cf91bd-2a6e-4d10-9e9e-f0b1c78a8484" alt="Gex">
+</p>
+
 # Gex
 
 [![crates.io](https://img.shields.io/crates/v/gex)](https://crates.io/crates/gex)
