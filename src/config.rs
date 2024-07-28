@@ -254,6 +254,7 @@ impl Config {
             // If it doesn't exist, we'll try the usual suspect. (#87)
             .or_else(|| {
                 dirs::home_dir().map(|mut path| {
+                    path.push(".config");
                     path.push("gex");
                     path.push("config.toml");
                     path
