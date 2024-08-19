@@ -13,7 +13,7 @@ homepage = "https://github.com/Piturnah/gex"
 
 [dependencies]
 anyhow = "1.0.86"
-clap = { version = "4.5.15", features = ["cargo", "derive"] }
+clap = { version = "4.5.16", features = ["cargo", "derive"] }
 crossterm = { version = "0.28.1", features = ["serde"] }
 dirs = "5.0.1"
 git2 = { version = "0.19.0", default-features = false }
