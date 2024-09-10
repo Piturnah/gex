@@ -409,8 +409,7 @@ fn restore_terminal() {
 }
 
 fn main() -> Result<()> {
-    run(&Clargs::parse()).map_err(|e| {
+    run(&Clargs::parse()).inspect_err(|_| {
         restore_terminal();
-        e
     })
 }
